@@ -1,0 +1,6 @@
+target/
+backend/data/
+*.class
+.idea/
+.vscode/
+.DS_Store

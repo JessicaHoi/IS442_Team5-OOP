@@ -8,7 +8,7 @@
 		<version>4.1.1</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>sg.edu.smu.is442t1</groupId>
+	<groupId>is442t1</groupId>
 	<artifactId>studybuddy</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name/>

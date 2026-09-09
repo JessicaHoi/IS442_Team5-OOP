@@ -1,4 +1,4 @@
-package sg.edu.smu.is442t1.studybuddy;
+package is442t1.studybuddy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
