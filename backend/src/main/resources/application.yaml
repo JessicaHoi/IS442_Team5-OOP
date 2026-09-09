@@ -1,3 +1,24 @@
 spring:
   application:
     name: studybuddy
+
+  # --- Local development database (H2, stored in a file) ---
+  datasource:
+    url: jdbc:h2:file:./data/studybuddy
+    username: sa
+    password: ""
+
+  # --- JPA / Hibernate ---
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # --- H2 browser console ---
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
