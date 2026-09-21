@@ -4,3 +4,7 @@ backend/data/
 .idea/
 .vscode/
 .DS_Store
+# frontend
+frontend/node_modules/
+frontend/dist/
+backend/src/main/resources/static/
