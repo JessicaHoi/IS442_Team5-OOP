@@ -5,6 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "student")
+@Table(name = "systemadministrator")
 public class SystemAdministrator extends User {
 }
