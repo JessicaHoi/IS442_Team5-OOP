@@ -1,6 +1,10 @@
 package is442t1.studybuddy.student;
 
 import is442t1.studybuddy.model.User;
+
+import java.util.ArrayList;
+
+import is442t1.studybuddy.course.Course;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
@@ -16,6 +20,7 @@ public class Student extends User {
     private String program;
     private Integer yearOfStudy;
     private String contactNum;
+    private ArrayList<Course> coursesTaken;
 
     public String getName() { 
         return name; 
