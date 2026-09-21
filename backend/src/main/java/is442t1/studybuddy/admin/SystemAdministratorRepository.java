@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface StudentRepository extends JpaRepository<SystemAdministrator, UUID> {
+public interface SystemAdministratorRepository extends JpaRepository<SystemAdministrator, UUID> {
     Optional<SystemAdministrator> findByEmail(String email);
     boolean existsByEmail(String email);
 }
