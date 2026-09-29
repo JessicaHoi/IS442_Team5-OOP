@@ -1,5 +1,6 @@
 target/
 backend/data/
+backend/.env
 *.class
 .idea/
 .vscode/

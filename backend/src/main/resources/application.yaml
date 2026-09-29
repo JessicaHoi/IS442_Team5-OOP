@@ -2,7 +2,12 @@ spring:
   application:
     name: studybuddy
 
+  # --- Local secrets (backend/.env, gitignored). Used by the supabase profile. ---
+  config:
+    import: optional:file:.env[.properties]
+
   # --- Local development database (H2, stored in a file) ---
+  # Run with the "supabase" profile to use Supabase instead (application-supabase.yaml).
   datasource:
     url: jdbc:h2:file:./data/studybuddy
     username: sa

@@ -43,6 +43,52 @@ To use the real backend during development, set `VITE_USE_MOCK=false` in `.env.d
 
 `npm run build` writes the bundle straight into Spring Boot's static resources, so the single jar serves both the API and the UI. The router uses hash URLs (`/#/matches`), so Spring only has to serve `index.html`. No server-side route fallback is needed. `pom.xml` is unchanged. Run the frontend build before `mvn package`.
 
+## Backend database
+
+By default the backend uses a local H2 file database in `backend/data/`. It needs no setup, and CI and `mvn test` use it. The `supabase` profile switches to the team's shared Supabase (PostgreSQL) database.
+
+1. Start the app from the `backend` folder, because `.env` and the H2 file are found relative to it:
+
+```bash
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
+```
+
+In Windows PowerShell, quote the flag: `.\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. In an IDE, set the active profile to `supabase` in the run configuration. If startup fails with `'url' must start with "jdbc"`, either the app didn't find `backend/.env` (check that the file exists and that the app runs from the `backend` folder), or `SUPABASE_DB_URL` was pasted in the dashboard's `postgresql://user:password@host` form. It must be `jdbc:postgresql://<host>:5432/postgres?sslmode=require`, with the username and password on their own lines.
+
+- **Schema.** The profile only validates the tables (`ddl-auto: validate`), so nobody changes the shared schema by accident. To create the tables the first time, run once with `SUPABASE_DDL_AUTO=update` and then remove it. For later entity changes, see [Changing an entity](#changing-an-entity).
+- **Use the session pooler (port 5432).** The direct connection is IPv6-only, which many networks can't reach. The transaction pooler (port 6543) needs extra JDBC driver settings.
+- **Connections.** Each running backend holds up to 3 connections, and the free tier's pooler limit is shared by the whole team. Stop the app when you aren't using it.
+- **Data API.** The backend talks to Postgres directly and doesn't use Supabase's REST API. Turn the Data API off in the project settings, or enable Row Level Security on every table, so the tables can't be read with the public anon key.
+
+### Where the tables come from
+
+There are no SQL files in the repo. Hibernate generates the tables from the `@Entity` classes when the app starts.
+
+- Each entity is a table, and each field is a column, with camelCase turned into snake_case (`courseCode` becomes `course_code`).
+- Annotations set the constraints: `@Id` for the primary key, `@Column(nullable = false, unique = true, length = 500)`, `@ManyToOne` for a foreign key column, and `@ElementCollection` or `@ManyToMany` for an extra table.
+- Column types depend on the Java type and on the database. `String` becomes `varchar(255)`, `UUID` becomes `uuid` and `LocalTime` becomes `time`. An `@Enumerated(EnumType.STRING)` enum is a native `enum` in H2 but a `varchar` with a `check` constraint in Postgres, so the local and Supabase schemas aren't identical.
+
+### Changing an entity
+
+The local H2 database updates itself on every start. Supabase needs a deliberate step, and `update` only ever adds tables and columns. It never renames, drops or changes an existing column.
+
+**Adding a field or entity.** Run once with `SUPABASE_DDL_AUTO=update` and look for `alter table ... add column` in the log. A new `nullable = false` field can't be added to a table that already has rows: Hibernate logs a warning (`GenerationTarget encountered exception`) and starts without the column. Add that column by hand with a default instead, for example `alter table course add column credits integer not null default 0;`.
+
+**Any other change.** Run the SQL yourself in Supabase's **SQL Editor** before running the new code against Supabase:
+
+| Entity change | SQL |
+|---|---|
+| Rename a field | `alter table course rename column course_name to title;` |
+| Remove a field | `alter table course drop column course_name;` |
+| Change the length or type | `alter table course alter column course_name type varchar(500);` |
+| Make a field required | `alter table course alter column course_name set not null;` |
+
+- To rename a Java field without touching the database, keep the old column name: `@Column(name = "course_name") private String title;`.
+- `validate` catches missing tables and columns, but not a wrong length or a missing `not null`.
+- Other tables have foreign keys that reference primary keys such as `course.course_code`. Changing a primary key means updating those tables too.
+- Apply schema changes to Supabase after the PR is merged, not from a feature branch, and tell the team. Put any manual SQL in the PR description, so there's a record of how the schema reached its current state.
+
 ## Architecture
 
 ```

@@ -1,0 +1,21 @@
+spring:
+  # --- Supabase (PostgreSQL). Values come from environment variables or backend/.env ---
+  datasource:
+    url: ${SUPABASE_DB_URL}
+    username: ${SUPABASE_DB_USERNAME}
+    password: ${SUPABASE_DB_PASSWORD}
+    hikari:
+      # The free-tier pooler only allows a few connections, shared by the whole team.
+      maximum-pool-size: 3
+
+  # --- JPA / Hibernate ---
+  jpa:
+    hibernate:
+      # validate: check the tables match the entities, never change them.
+      # Set SUPABASE_DDL_AUTO=update for one run to create or update the tables.
+      ddl-auto: ${SUPABASE_DDL_AUTO:validate}
+
+  # --- H2 console is only for the local database ---
+  h2:
+    console:
+      enabled: false
