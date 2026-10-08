@@ -6,42 +6,80 @@ Vue 3 + Bootstrap 5 single-page app for the Study Buddy Matcher System (IS442). 
 
 You need **Java 21+** for the backend and **Node 20.19+ (or 22.12+)** for the frontend. Maven comes with the project (`mvnw`), so you don't need to install it.
 
-### Option A: frontend only (built-in mock API)
+There are three ways to run the app:
 
-The quickest way to see the UI. API calls are answered in the browser by the mock (see [Configuration](#configuration)), so no backend is needed.
+| | Data comes from | Needs the backend? | Use it for |
+|---|---|---|---|
+| [A. Mock data](#option-a-mock-data-frontend-only) | Built-in mock API in the browser | No | UI work, and every page works |
+| [B. Supabase](#option-b-supabase-database) | The team's shared Supabase database | Yes | Testing against real, shared data |
+| [C. Local database](#option-c-local-database-h2) | An H2 file on your machine | Yes | Backend work without touching shared data |
+
+All three load the same demo accounts (see [Demo accounts](#demo-accounts)). Only some features have backend endpoints so far: sign-in, profile and preferences, and study groups. In B and C, pages that call missing endpoints show an error until those are built.
+
+### Option A: mock data (frontend only)
+
+API calls are answered in the browser by the mock (see [Configuration](#configuration)), so no backend or database is needed.
 
 ```bash
 cd frontend
-npm install
+npm install        # first time only
 npm run dev        # http://localhost:5173
 ```
 
-### Option B: backend and frontend together
+If you made a `frontend/.env.development.local` for option B or C, delete it (or set `VITE_USE_MOCK=true` in it) and restart `npm run dev`.
 
-**1. Start the backend** (terminal 1). Run it from the `backend` folder, because the local database and `.env` are found relative to it.
+### Option B: Supabase database
+
+**1. Add the database credentials** (first time only). Copy `backend/.env.example` to `backend/.env` and fill in the Supabase connection details as its comments explain. `backend/.env` is gitignored, so never commit it.
+
+**2. Load the schema and demo data** (once for the whole team; skip it if someone has already done it). This **wipes** the shared database, so tell the team first.
 
 ```bash
 cd backend
-./mvnw spring-boot:run       # Windows: .\mvnw spring-boot:run
+SUPABASE_DDL_AUTO=update ./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
+# Wait for "Started StudybuddyApplication", then stop it with Ctrl+C.
 ```
 
-It starts on http://localhost:8080 with a local H2 database in `backend/data/`. On the first start it loads the demo data: 10 courses, 50 students, study groups and connections. To use the team's Supabase database instead, see [Backend database](#backend-database).
+Then open the Supabase dashboard, go to **SQL Editor** and then **New query**, paste the whole of [`backend/supabase/seed-demo-data.sql`](backend/supabase/seed-demo-data.sql), and click **Run**. [backend/supabase/README.md](backend/supabase/README.md) has details and troubleshooting.
 
-**2. Point the frontend at the backend.** Create `frontend/.env.development.local` (gitignored) containing:
+**3. Start the backend** (terminal 1):
+
+```bash
+cd backend
+./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
+```
+
+On Windows PowerShell, quote the flag: `.\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. The backend starts on http://localhost:8080.
+
+**4. Point the frontend at the backend.** Create `frontend/.env.development.local` (gitignored) containing:
 
 ```
 VITE_USE_MOCK=false
 ```
 
-**3. Start the frontend** (terminal 2):
+**5. Start the frontend** (terminal 2):
 
 ```bash
 cd frontend
 npm install        # first time only
-npm run dev        # http://localhost:5173, proxies /api to http://localhost:8080
+npm run dev        # http://localhost:5173, sends /api calls to http://localhost:8080
 ```
 
-Delete `.env.development.local` (and restart `npm run dev`) to go back to the mock. Only some features have backend endpoints so far: sign-in, profile and preferences, and study groups. Pages that call missing endpoints show an error until those are built.
+Stop the backend when you're done. The free Supabase tier only allows a few connections, and the whole team shares them.
+
+### Option C: local database (H2)
+
+The same as option B, but the data lives in an H2 file in `backend/data/` on your machine. It needs no credentials or setup, and the demo data loads automatically the first time it starts.
+
+```bash
+# terminal 1
+cd backend
+./mvnw spring-boot:run       # Windows: .\mvnw spring-boot:run
+
+# terminal 2: with VITE_USE_MOCK=false in frontend/.env.development.local (step 4 of option B)
+cd frontend
+npm run dev
+```
 
 ### Demo accounts
 
@@ -54,8 +92,11 @@ The password for every account is `password`. The login page has one-click butto
 
 Any other seeded student can sign in with `<first>.<last>@smu.edu.sg`, e.g. `wei.jie.tan@smu.edu.sg`. The backend and the mock use the same demo data.
 
+To reset the demo data:
+
 - **Mock:** data is kept in the browser's localStorage, so a refresh doesn't wipe a live demo. Use **Reset demo data** on the login page to start over.
-- **Backend:** stop it, delete `backend/data/`, and start it again to reload the demo data.
+- **Supabase:** run `backend/supabase/seed-demo-data.sql` in the SQL Editor again.
+- **Local database:** stop the backend, delete `backend/data/`, and start it again.
 
 ### Tests and build
 
@@ -79,7 +120,7 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 | `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:8080` |
 | `BUILD_OUT_DIR` | Where `npm run build` writes the bundle | `../backend/src/main/resources/static` |
 
-To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 8080 (see [Quick start](#option-b-backend-and-frontend-together)).
+To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 8080 (see [Quick start](#quick-start)).
 
 ## Monolith packaging
 
@@ -98,6 +139,7 @@ cd backend
 
 In Windows PowerShell, quote the flag: `.\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. In an IDE, set the active profile to `supabase` in the run configuration. If startup fails with `'url' must start with "jdbc"`, either the app didn't find `backend/.env` (check that the file exists and that the app runs from the `backend` folder), or `SUPABASE_DB_URL` was pasted in the dashboard's `postgresql://user:password@host` form. It must be `jdbc:postgresql://<host>:5432/postgres?sslmode=require`, with the username and password on their own lines.
 
+- **Demo data.** To load the same demo accounts, courses and groups as the mock into Supabase, follow [backend/supabase/README.md](backend/supabase/README.md). It's a SQL script that wipes and reloads the Study Buddy tables.
 - **Schema.** The profile only validates the tables (`ddl-auto: validate`), so nobody changes the shared schema by accident. To create the tables the first time, run once with `SUPABASE_DDL_AUTO=update` and then remove it. For later entity changes, see [Changing an entity](#changing-an-entity).
 - **Use the session pooler (port 5432).** The direct connection is IPv6-only, which many networks can't reach. The transaction pooler (port 6543) needs extra JDBC driver settings.
 - **Connections.** Each running backend holds up to 3 connections, and the free tier's pooler limit is shared by the whole team. Stop the app when you aren't using it.
@@ -149,7 +191,7 @@ Spring Boot, layered by feature (`student/`, `group/`, `course/`, `auth/`, ...).
 - **Auth.** `POST /api/auth/login` checks the BCrypt hash and returns an opaque bearer token, kept in memory (a restart signs everyone out). `AuthInterceptor` checks the token on every `/api/**` call. `@RequireRole(Role.STUDENT)` on a controller restricts it to one role, and `@CurrentUser AuthenticatedUser` injects the caller. Hash passwords with the `PasswordEncoder` bean whenever an account is created.
 - **Errors.** Services throw `ValidationException` (400), `AuthenticationException` (401), `PermissionDeniedException` (403), `ResourceNotFoundException` (404) or `BusinessRuleException` (409). `GlobalExceptionHandler` turns them into `{ "message": ... }`.
 - **Configuration.** The `studybuddy.*` keys in `application.yaml` hold the token lifetime, the allowed group size range and the demo-data settings.
-- **Demo data.** On an empty local database, `DemoDataSeeder` loads `seed/demo-data.json`: the same 10 courses, 50 students (17 with two course preferences), groups and connections as the front-end mock. Every password is `password`. It never runs against Supabase unless `SUPABASE_SEED=true`. To reseed locally, stop the app and delete `backend/data/`.
+- **Demo data.** On an empty local database, `DemoDataSeeder` loads `seed/demo-data.json`: the same 10 courses, 50 students (17 with two course preferences), groups and connections as the front-end mock. Every password is `password`. It never runs against Supabase unless `SUPABASE_SEED=true`. For Supabase, use the SQL script in `backend/supabase/` instead. To reseed locally, stop the app and delete `backend/data/`.
 
 ## Architecture
 
