@@ -7,6 +7,7 @@ import LoadingState from '../ui/LoadingState.vue';
 import StatusBadge from '../ui/StatusBadge.vue';
 import { GROUP_FORMATS, MEETING_MODES, STUDY_GOALS, labelOf } from '../../utils/constants';
 import { programmeLine } from '../../utils/format';
+import { useLookupsStore } from '../../stores/lookups';
 
 defineProps({
 	modelValue: Boolean,
@@ -16,6 +17,8 @@ defineProps({
 	error: { type: String, default: '' },
 });
 defineEmits(['update:modelValue', 'request']);
+
+const lookups = useLookupsStore();
 </script>
 
 <template>
@@ -45,22 +48,30 @@ defineEmits(['update:modelValue', 'request']);
 				</dd>
 
 				<dt class="col-sm-4 section-title mb-0 pt-1">Looking for a buddy in</dt>
-				<dd class="col-sm-8 mb-0">{{ student.preferences.course ?? 'Not set' }}</dd>
-
-				<dt class="col-sm-4 section-title mb-0 pt-1">Study goals</dt>
 				<dd class="col-sm-8 mb-0 d-flex flex-wrap gap-1">
-					<span v-for="goal in student.preferences.goals" :key="goal" class="chip-static">{{ labelOf(STUDY_GOALS, goal) }}</span>
+					<span v-for="preference in student.preferences" :key="preference.course" class="chip-static">{{ preference.course }}</span>
+					<span v-if="student.preferences.length === 0">Not set</span>
 				</dd>
-
-				<dt class="col-sm-4 section-title mb-0 pt-1">Meeting mode</dt>
-				<dd class="col-sm-8 mb-0">{{ labelOf(MEETING_MODES, student.preferences.meetingMode) }}</dd>
-
-				<dt class="col-sm-4 section-title mb-0 pt-1">Group format</dt>
-				<dd class="col-sm-8 mb-0">{{ labelOf(GROUP_FORMATS, student.preferences.groupFormat) }}</dd>
-
-				<dt class="col-sm-4 section-title mb-0 pt-1">Weekly availability</dt>
-				<dd class="col-sm-8 mb-0"><AvailabilitySummary :slots="student.preferences.availability" /></dd>
 			</dl>
+
+			<section v-for="preference in student.preferences" :key="preference.course" class="border rounded-3 p-3 mt-3">
+				<h4 class="h6 mb-3"><i class="bi bi-book me-2 text-primary"></i>{{ lookups.courseLabel(preference.course) }}</h4>
+				<dl class="row mb-0 gy-2">
+					<dt class="col-sm-4 section-title mb-0 pt-1">Study goals</dt>
+					<dd class="col-sm-8 mb-0 d-flex flex-wrap gap-1">
+						<span v-for="goal in preference.goals" :key="goal" class="chip-static">{{ labelOf(STUDY_GOALS, goal) }}</span>
+					</dd>
+
+					<dt class="col-sm-4 section-title mb-0 pt-1">Meeting mode</dt>
+					<dd class="col-sm-8 mb-0">{{ labelOf(MEETING_MODES, preference.meetingMode) }}</dd>
+
+					<dt class="col-sm-4 section-title mb-0 pt-1">Group format</dt>
+					<dd class="col-sm-8 mb-0">{{ labelOf(GROUP_FORMATS, preference.groupFormat) }}</dd>
+
+					<dt class="col-sm-4 section-title mb-0 pt-1">Weekly availability</dt>
+					<dd class="col-sm-8 mb-0"><AvailabilitySummary :slots="preference.availability" /></dd>
+				</dl>
+			</section>
 		</div>
 
 		<template #footer>

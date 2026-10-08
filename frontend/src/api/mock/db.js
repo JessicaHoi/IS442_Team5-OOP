@@ -1,6 +1,7 @@
 import { createSeedData } from './seed';
 
-const STORAGE_KEY = 'studybuddy-mock-db';
+// Bump the version whenever the stored shape changes, so old browser data is not reused.
+const STORAGE_KEY = 'studybuddy-mock-db-v2';
 let db = null;
 
 function readStorage() {

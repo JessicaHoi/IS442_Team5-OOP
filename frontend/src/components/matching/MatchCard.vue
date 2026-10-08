@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router';
 import { GROUP_FORMATS, MEETING_MODES, STUDY_GOALS, labelOf } from '../../utils/constants';
 import { formatDuration } from '../../utils/availability';
 import { programmeLine } from '../../utils/format';
+import { preferenceFor } from '../../utils/preferences';
 import StudentAvatar from '../ui/StudentAvatar.vue';
 import StatusBadge from '../ui/StatusBadge.vue';
 import ScoreRing from '../ui/ScoreRing.vue';
@@ -13,11 +14,14 @@ const props = defineProps({
 	/** One result from GET /api/matches. */
 	match: { type: Object, required: true },
 	rank: { type: Number, required: true },
+	/** Course being searched; picks which of the student's preferences to show. */
+	course: { type: String, default: '' },
 });
 defineEmits(['view', 'request']);
 
 const expanded = ref(false);
 const student = computed(() => props.match.student);
+const preference = computed(() => preferenceFor(student.value.preferences, props.course));
 const showsStatus = computed(() => props.match.connectionStatus !== 'NONE');
 </script>
 
@@ -36,15 +40,17 @@ const showsStatus = computed(() => props.match.connectionStatus !== 'NONE');
 
 				<div class="d-flex flex-wrap gap-1 mb-2">
 					<span v-for="code in match.sharedCourses" :key="code" class="chip-static"><i class="bi bi-book"></i>{{ code }}</span>
-					<span v-for="goal in student.preferences.goals" :key="goal" class="chip-static">
+					<span v-for="goal in preference?.goals ?? []" :key="goal" class="chip-static">
 						{{ labelOf(STUDY_GOALS, goal) }}
 					</span>
 				</div>
 
 				<div class="d-flex flex-wrap column-gap-3 row-gap-1 small text-muted">
 					<span><i class="bi bi-calendar-check me-1"></i>{{ match.overlapMinutes ? `${formatDuration(match.overlapMinutes)} weekly overlap` : 'No shared time slots' }}</span>
-					<span><i class="bi bi-geo-alt me-1"></i>{{ labelOf(MEETING_MODES, student.preferences.meetingMode) }}</span>
-					<span><i class="bi bi-people me-1"></i>{{ labelOf(GROUP_FORMATS, student.preferences.groupFormat) }}</span>
+					<template v-if="preference">
+						<span><i class="bi bi-geo-alt me-1"></i>{{ labelOf(MEETING_MODES, preference.meetingMode) }}</span>
+						<span><i class="bi bi-people me-1"></i>{{ labelOf(GROUP_FORMATS, preference.groupFormat) }}</span>
+					</template>
 				</div>
 			</div>
 

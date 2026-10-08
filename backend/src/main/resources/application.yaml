@@ -27,3 +27,18 @@ spring:
     console:
       enabled: true
       path: /h2-console
+# --- Study Buddy settings ---
+studybuddy:
+  auth:
+    # How long a sign-in token stays valid. Tokens are held in memory, so a restart also signs everyone out.
+    token-ttl: 12h
+  group:
+    # Range a leader may choose for a group's maximum size (the front end uses the same limits).
+    min-size: 2
+    max-size: 20
+  seed:
+    # Load the demo data (10 courses, 50 students, groups) into an empty database at startup.
+    enabled: true
+    location: classpath:seed/demo-data.json
+    # Password for every demo account (local demo data only).
+    demo-password: password

@@ -24,9 +24,8 @@ route(
 		const student = db.students[user.id];
 		Object.assign(student, { school, programme: programme.trim(), yearOfStudy: Number(yearOfStudy), contactNumber: contactNumber.trim(), courses });
 		db.users.find((u) => u.id === user.id).name = name.trim();
-		if (student.preferences.course && !courses.includes(student.preferences.course)) {
-			student.preferences.course = null;
-		}
+		// A preference is only kept for a course the student still takes.
+		student.preferences = student.preferences.filter((preference) => courses.includes(preference.course));
 		return toOwnProfile(db, user.id);
 	},
 	{ role: 'STUDENT' },
@@ -37,17 +36,31 @@ route(
 	'/students/me/preferences',
 	({ db, user, body }) => {
 		const student = db.students[user.id];
-		const { course, meetingMode, groupFormat, goals, availability } = body;
-		if (!course || !student.courses.includes(course)) throw badRequest('Choose one of the courses you are taking.');
-		if (!isOneOf(MEETING_MODES, meetingMode)) throw badRequest('Choose a meeting mode.');
-		if (!isOneOf(GROUP_FORMATS, groupFormat)) throw badRequest('Choose a group format.');
-		if (!Array.isArray(goals) || goals.length === 0 || goals.some((goal) => !isOneOf(STUDY_GOALS, goal))) {
-			throw badRequest('Choose at least one study goal.');
+		const { preferences } = body;
+		if (!Array.isArray(preferences)) throw badRequest('Send the list of study preferences.');
+		const seen = new Set();
+		for (const { course, meetingMode, groupFormat, goals, availability } of preferences) {
+			if (!course || !student.courses.includes(course)) {
+				throw badRequest('Choose one of the courses you are taking for each preference.');
+			}
+			if (seen.has(course)) throw badRequest('Each course can only have one study preference.');
+			seen.add(course);
+			if (!isOneOf(MEETING_MODES, meetingMode)) throw badRequest('Choose a meeting mode.');
+			if (!isOneOf(GROUP_FORMATS, groupFormat)) throw badRequest('Choose a group format.');
+			if (!Array.isArray(goals) || goals.length === 0 || goals.some((goal) => !isOneOf(STUDY_GOALS, goal))) {
+				throw badRequest('Choose at least one study goal.');
+			}
+			if (!Array.isArray(availability) || availability.length === 0 || validateSlots(availability).some(Boolean)) {
+				throw badRequest('Add at least one valid availability slot.');
+			}
 		}
-		if (!Array.isArray(availability) || availability.length === 0 || validateSlots(availability).some(Boolean)) {
-			throw badRequest('Add at least one valid availability slot.');
-		}
-		student.preferences = { course, meetingMode, groupFormat, goals, availability };
+		student.preferences = preferences.map(({ course, meetingMode, groupFormat, goals, availability }) => ({
+			course,
+			meetingMode,
+			groupFormat,
+			goals,
+			availability,
+		}));
 		return toOwnProfile(db, user.id);
 	},
 	{ role: 'STUDENT' },

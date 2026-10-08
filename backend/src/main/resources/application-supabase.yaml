@@ -19,3 +19,8 @@ spring:
   h2:
     console:
       enabled: false
+
+# --- Never seed the shared database automatically. SUPABASE_SEED=true loads the demo data once into an empty database. ---
+studybuddy:
+  seed:
+    enabled: ${SUPABASE_SEED:false}

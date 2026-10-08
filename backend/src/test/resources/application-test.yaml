@@ -1,0 +1,12 @@
+# Used by tests annotated with @ActiveProfiles("test"): a private in-memory database per test context.
+spring:
+  datasource:
+    url: jdbc:h2:mem:studybuddy-test;DB_CLOSE_DELAY=-1
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+studybuddy:
+  seed:
+    enabled: false

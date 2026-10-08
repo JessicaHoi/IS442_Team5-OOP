@@ -14,6 +14,9 @@ public class Course {
     private String courseCode;
     private String courseName;
 
+    /** School offering the course, e.g. "School of Computing and Information Systems". */
+    private String school;
+
     public String getCourseName() { 
         return this.courseName; 
     }
@@ -28,5 +31,13 @@ public class Course {
 
     public void setCourseCode(String courseCode) {
         this.courseCode = courseCode;
+    }
+
+    public String getSchool() {
+        return school;
+    }
+
+    public void setSchool(String school) {
+        this.school = school;
     }
 }
