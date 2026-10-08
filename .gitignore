@@ -8,4 +8,6 @@ backend/.env
 # frontend
 frontend/node_modules/
 frontend/dist/
+# Personal Vite overrides, e.g. VITE_USE_MOCK=false
+frontend/.env*.local
 backend/src/main/resources/static/

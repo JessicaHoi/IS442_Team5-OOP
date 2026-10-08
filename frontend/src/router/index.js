@@ -53,7 +53,8 @@ const routes = [
 				path: 'groups/:id/manage',
 				name: 'group-manage',
 				component: () => import('../views/leader/GroupManageView.vue'),
-				props: (route) => ({ id: Number(route.params.id) }),
+				// Ids are opaque strings (UUIDs from the backend), so pass them through unchanged.
+				props: true,
 				meta: { ...student, title: 'Manage group' },
 			},
 			{

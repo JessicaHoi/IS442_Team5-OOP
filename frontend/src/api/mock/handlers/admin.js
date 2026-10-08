@@ -14,7 +14,7 @@ const emptyStudentProfile = () => ({
 	yearOfStudy: null,
 	contactNumber: '',
 	courses: [],
-	preferences: { course: null, meetingMode: 'EITHER', groupFormat: 'EITHER', goals: [], availability: [] },
+	preferences: [],
 });
 
 function loadUser(db, id) {

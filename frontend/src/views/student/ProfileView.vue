@@ -5,13 +5,13 @@ import { useLookupsStore } from '../../stores/lookups';
 import { useAuthStore } from '../../stores/auth';
 import { useToast } from '../../composables/useToast';
 import { useAsync } from '../../composables/useAsync';
-import { GROUP_FORMATS, MEETING_MODES, SCHOOLS, STUDY_GOALS, YEARS_OF_STUDY } from '../../utils/constants';
+import { SCHOOLS, YEARS_OF_STUDY } from '../../utils/constants';
 import { validateSlots } from '../../utils/availability';
+import { emptyPreference } from '../../utils/preferences';
 import PageHeader from '../../components/ui/PageHeader.vue';
 import FormField from '../../components/ui/FormField.vue';
 import ChipSelect from '../../components/ui/ChipSelect.vue';
-import SegmentedControl from '../../components/ui/SegmentedControl.vue';
-import AvailabilityEditor from '../../components/ui/AvailabilityEditor.vue';
+import PreferenceEditor from '../../components/profile/PreferenceEditor.vue';
 import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 
@@ -22,8 +22,12 @@ const auth = useAuthStore();
 const toast = useToast();
 
 const profile = reactive({ name: '', school: '', programme: '', yearOfStudy: '', contactNumber: '', courses: [] });
-const prefs = reactive({ course: '', meetingMode: 'EITHER', groupFormat: 'EITHER', goals: [], availability: [] });
+/** One study preference per course the student needs a buddy for. */
+const prefs = ref([]);
+const courseToAdd = ref('');
 const errors = ref({});
+/** Per-preference errors, keyed by course code. */
+const preferenceErrors = ref({});
 const submitted = ref(false);
 const saving = ref(false);
 
@@ -31,6 +35,10 @@ const courseOptions = computed(() =>
 	lookups.courses.map((course) => ({ value: course.code, label: course.code, title: course.name })),
 );
 const takenCourses = computed(() => lookups.courses.filter((course) => profile.courses.includes(course.code)));
+/** Courses the student takes but has no preference for yet. */
+const addableCourses = computed(() =>
+	takenCourses.value.filter((course) => !prefs.value.some((preference) => preference.course === course.code)),
+);
 
 function apply(me) {
 	Object.assign(profile, {
@@ -41,13 +49,11 @@ function apply(me) {
 		contactNumber: me.contactNumber ?? '',
 		courses: [...me.courses],
 	});
-	Object.assign(prefs, {
-		course: me.preferences.course ?? '',
-		meetingMode: me.preferences.meetingMode,
-		groupFormat: me.preferences.groupFormat,
-		goals: [...me.preferences.goals],
-		availability: me.preferences.availability.map((slot) => ({ ...slot })),
-	});
+	prefs.value = me.preferences.map((preference) => ({
+		...preference,
+		goals: [...preference.goals],
+		availability: preference.availability.map((slot) => ({ ...slot })),
+	}));
 }
 
 const { loading, error, run: load } = useAsync(async () => {
@@ -57,13 +63,28 @@ const { loading, error, run: load } = useAsync(async () => {
 
 onMounted(load);
 
-// A buddy course must be one of the courses the student is taking.
+// A buddy course must be one of the courses the student is taking (the server enforces the same rule).
 watch(
 	() => profile.courses,
 	(codes) => {
-		if (prefs.course && !codes.includes(prefs.course)) prefs.course = '';
+		prefs.value = prefs.value.filter((preference) => codes.includes(preference.course));
+		if (courseToAdd.value && !codes.includes(courseToAdd.value)) courseToAdd.value = '';
 	},
 );
+
+function addPreference() {
+	if (!courseToAdd.value) return;
+	prefs.value = [...prefs.value, emptyPreference(courseToAdd.value)];
+	courseToAdd.value = '';
+}
+
+function updatePreference(index, preference) {
+	prefs.value = prefs.value.map((current, i) => (i === index ? preference : current));
+}
+
+function removePreference(index) {
+	prefs.value = prefs.value.filter((_, i) => i !== index);
+}
 
 function validate() {
 	const found = {};
@@ -73,14 +94,24 @@ function validate() {
 	if (!profile.yearOfStudy) found.yearOfStudy = 'Choose your year.';
 	if (!PHONE_PATTERN.test(profile.contactNumber.trim())) found.contactNumber = 'Enter a valid phone number, e.g. +65 9123 4567.';
 	if (profile.courses.length === 0) found.courses = 'Select at least one course.';
-	if (!prefs.course) found.course = 'Choose the course you need a study buddy for.';
-	if (prefs.goals.length === 0) found.goals = 'Choose at least one study goal.';
-	if (prefs.availability.length === 0 || validateSlots(prefs.availability).some(Boolean)) {
-		found.availability = 'Add at least one valid time slot.';
+	if (prefs.value.length === 0) found.preferences = 'Add a preference for at least one course you need a study buddy for.';
+
+	const foundPerCourse = {};
+	for (const preference of prefs.value) {
+		const problems = {};
+		if (preference.goals.length === 0) problems.goals = 'Choose at least one study goal.';
+		if (preference.availability.length === 0 || validateSlots(preference.availability).some(Boolean)) {
+			problems.availability = 'Add at least one valid time slot.';
+		}
+		if (Object.keys(problems).length) foundPerCourse[preference.course] = problems;
 	}
+
 	errors.value = found;
-	return Object.keys(found).length === 0;
+	preferenceErrors.value = foundPerCourse;
+	return Object.keys(found).length === 0 && Object.keys(foundPerCourse).length === 0;
 }
+
+const hasErrors = computed(() => Object.keys(errors.value).length > 0 || Object.keys(preferenceErrors.value).length > 0);
 
 // Once a save has been attempted, re-check as the student fixes each field.
 watch([profile, prefs], () => submitted.value && validate(), { deep: true });
@@ -101,7 +132,7 @@ async function save() {
 			contactNumber: profile.contactNumber.trim(),
 			courses: profile.courses,
 		});
-		const saved = await studentsApi.updatePreferences({ ...prefs, availability: prefs.availability });
+		const saved = await studentsApi.updatePreferences(prefs.value);
 		auth.setDisplayName(profile.name.trim());
 		apply(saved);
 		submitted.value = false;
@@ -166,53 +197,44 @@ async function save() {
 			</section>
 
 			<section class="card-flat p-4 mb-4">
-				<h2 class="h6 mb-3">Study preferences</h2>
+				<h2 class="h6 mb-1">Study preferences</h2>
+				<p class="text-muted small mb-3">Add one preference for each course you need a study buddy for. Matches for a course use that course's preference.</p>
 
-				<div class="row">
+				<div class="d-flex flex-column gap-3 mb-3">
+					<PreferenceEditor
+						v-for="(preference, index) in prefs"
+						:key="preference.course"
+						:model-value="preference"
+						:course-label="lookups.courseLabel(preference.course)"
+						:errors="preferenceErrors[preference.course]"
+						@update:model-value="updatePreference(index, $event)"
+						@remove="removePreference(index)"
+					/>
+				</div>
+
+				<div class="row g-2 align-items-end">
 					<div class="col-md-8">
-						<FormField
-							label="Course I need a study buddy for"
-							required
-							:error="errors.course"
-							:hint="takenCourses.length === 0 ? 'Select your courses above first.' : ''"
-							v-slot="{ id, invalidClass }"
-						>
-							<select :id="id" v-model="prefs.course" class="form-select" :class="invalidClass" :disabled="takenCourses.length === 0">
-								<option value="" disabled>Select a course</option>
-								<option v-for="course in takenCourses" :key="course.code" :value="course.code">
-									{{ course.code }} · {{ course.name }}
-								</option>
-							</select>
-						</FormField>
+						<label for="add-preference-course" class="form-label">Add a course I need a study buddy for</label>
+						<select id="add-preference-course" v-model="courseToAdd" class="form-select" :disabled="addableCourses.length === 0">
+							<option value="" disabled>
+								{{ takenCourses.length === 0 ? 'Select your courses above first' : addableCourses.length === 0 ? 'Every course has a preference' : 'Select a course' }}
+							</option>
+							<option v-for="course in addableCourses" :key="course.code" :value="course.code">
+								{{ course.code }} · {{ course.name }}
+							</option>
+						</select>
+					</div>
+					<div class="col-md-4">
+						<button type="button" class="btn btn-outline-primary w-100" :disabled="!courseToAdd" @click="addPreference">
+							<i class="bi bi-plus-lg me-1"></i>Add preference
+						</button>
 					</div>
 				</div>
-
-				<div class="row">
-					<div class="col-md-6 mb-3">
-						<div class="form-label">Meeting mode</div>
-						<SegmentedControl v-model="prefs.meetingMode" :options="MEETING_MODES" />
-					</div>
-					<div class="col-md-6 mb-3">
-						<div class="form-label">Group format</div>
-						<SegmentedControl v-model="prefs.groupFormat" :options="GROUP_FORMATS" />
-					</div>
-				</div>
-
-				<div class="mb-3">
-					<div class="form-label">Study goals <span class="text-danger">*</span></div>
-					<ChipSelect v-model="prefs.goals" :options="STUDY_GOALS" />
-					<div v-if="errors.goals" class="invalid-feedback d-block">{{ errors.goals }}</div>
-				</div>
-
-				<div>
-					<div class="form-label">Weekly availability <span class="text-danger">*</span></div>
-					<AvailabilityEditor v-model="prefs.availability" />
-					<div v-if="errors.availability" class="invalid-feedback d-block">{{ errors.availability }}</div>
-				</div>
+				<div v-if="errors.preferences" class="invalid-feedback d-block">{{ errors.preferences }}</div>
 			</section>
 
 			<div class="save-bar d-flex justify-content-end align-items-center gap-3 py-3">
-				<span v-if="submitted && Object.keys(errors).length" class="small text-danger">
+				<span v-if="submitted && hasErrors" class="small text-danger">
 					<i class="bi bi-exclamation-circle me-1"></i>Some fields need attention.
 				</span>
 				<button type="submit" class="btn btn-primary px-4" :disabled="saving">

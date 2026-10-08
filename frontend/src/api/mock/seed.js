@@ -139,14 +139,27 @@ export function createSeedData() {
 			yearOfStudy: 1 + Math.floor(random() * 4),
 			contactNumber: randomPhoneNumber(),
 			courses,
-			preferences: {
-				course: pick(courses),
-				meetingMode,
-				groupFormat,
-				goals: sample(['CONCEPT_REVIEW', 'PROBLEM_SOLVING', 'EXAM_PREPARATION', 'PROJECT_DISCUSSION'], 1 + Math.floor(random() * 3)),
-				availability: randomAvailability(),
-			},
+			preferences: [
+				{
+					course: pick(courses),
+					meetingMode,
+					groupFormat,
+					goals: sample(['CONCEPT_REVIEW', 'PROBLEM_SOLVING', 'EXAM_PREPARATION', 'PROJECT_DISCUSSION'], 1 + Math.floor(random() * 3)),
+					availability: randomAvailability(),
+				},
+			],
 		};
+	}
+
+	/**
+	 * Give some students a second preference (same habits, another course) so
+	 * per-course preferences show up in the demo. Uses no randomness, so the
+	 * rest of the seeded data stays the same.
+	 */
+	function addSecondPreference(student) {
+		const [first] = student.preferences;
+		const otherCourse = student.courses.find((code) => code !== first.course);
+		if (otherCourse) student.preferences = [first, { ...first, course: otherCourse, availability: first.availability.map((slot) => ({ ...slot })) }];
 	}
 
 	// ---- Accounts and student profiles -------------------------------------
@@ -173,8 +186,9 @@ export function createSeedData() {
 			student.school = SCHOOLS[0];
 			student.programme = 'Information Systems';
 			student.courses = [...new Set(['IS442', ...student.courses.filter((code) => code.startsWith('IS') || code === 'STAT101')])];
-			student.preferences.course = 'IS442';
+			student.preferences[0].course = 'IS442';
 		}
+		if (index % 3 === 1) addSecondPreference(student);
 		students[id] = student;
 		users.push({
 			id,
@@ -196,16 +210,28 @@ export function createSeedData() {
 		yearOfStudy: 2,
 		contactNumber: '+65 9123 4567',
 		courses: ['IS442', 'IS212', 'IS216', 'STAT101'],
-		preferences: {
-			course: 'IS442',
-			meetingMode: 'IN_PERSON',
-			groupFormat: 'SMALL_GROUP',
-			goals: ['EXAM_PREPARATION', 'PROBLEM_SOLVING'],
-			availability: [
-				{ day: 'WED', start: '19:00', end: '21:00' },
-				{ day: 'FRI', start: '14:00', end: '16:00' },
-			],
-		},
+		preferences: [
+			{
+				course: 'IS442',
+				meetingMode: 'IN_PERSON',
+				groupFormat: 'SMALL_GROUP',
+				goals: ['EXAM_PREPARATION', 'PROBLEM_SOLVING'],
+				availability: [
+					{ day: 'WED', start: '19:00', end: '21:00' },
+					{ day: 'FRI', start: '14:00', end: '16:00' },
+				],
+			},
+			{
+				course: 'IS212',
+				meetingMode: 'ONLINE',
+				groupFormat: 'ONE_TO_ONE',
+				goals: ['PROJECT_DISCUSSION', 'CONCEPT_REVIEW'],
+				availability: [
+					{ day: 'TUE', start: '19:00', end: '21:00' },
+					{ day: 'SAT', start: '10:00', end: '12:00' },
+				],
+			},
+		],
 	};
 	students[3] = {
 		...students[3],
@@ -213,17 +239,19 @@ export function createSeedData() {
 		programme: 'Computer Science',
 		yearOfStudy: 2,
 		courses: ['IS442', 'IS212', 'IS113'],
-		preferences: {
-			course: 'IS442',
-			meetingMode: 'EITHER',
-			groupFormat: 'EITHER',
-			goals: ['EXAM_PREPARATION', 'PROBLEM_SOLVING'],
-			availability: [
-				{ day: 'WED', start: '19:00', end: '21:00' },
-				{ day: 'THU', start: '18:00', end: '20:00' },
-				{ day: 'FRI', start: '14:00', end: '16:00' },
-			],
-		},
+		preferences: [
+			{
+				course: 'IS442',
+				meetingMode: 'EITHER',
+				groupFormat: 'EITHER',
+				goals: ['EXAM_PREPARATION', 'PROBLEM_SOLVING'],
+				availability: [
+					{ day: 'WED', start: '19:00', end: '21:00' },
+					{ day: 'THU', start: '18:00', end: '20:00' },
+					{ day: 'FRI', start: '14:00', end: '16:00' },
+				],
+			},
+		],
 	};
 
 	// ---- Connections ------------------------------------------------------

@@ -33,7 +33,8 @@ let debounceTimer;
 const profileIncomplete = computed(
 	() =>
 		me.value !== null &&
-		(!me.value.preferences.course || me.value.preferences.goals.length === 0 || me.value.preferences.availability.length === 0),
+		(me.value.preferences.length === 0 ||
+			me.value.preferences.some((preference) => preference.goals.length === 0 || preference.availability.length === 0)),
 );
 
 async function search() {
@@ -76,7 +77,7 @@ onMounted(async () => {
 		loading.value = false;
 		return;
 	}
-	const defaultCourse = me.value.preferences.course ?? '';
+	const defaultCourse = me.value.preferences[0]?.course ?? '';
 	if (defaultCourse) filters.course = defaultCourse; // triggers the search through the watcher
 	else search();
 });
@@ -169,6 +170,7 @@ async function sendRequest(message) {
 					:key="match.student.id"
 					:match="match"
 					:rank="index + 1"
+					:course="filters.course"
 					@view="viewProfile"
 					@request="openRequest"
 				/>

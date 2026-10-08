@@ -56,6 +56,15 @@ public class StudyPreference extends BaseEntity {
     @Column(name = "study_goal", nullable = false)
     private Set<StudyGoal> studyGoals = new HashSet<>();
 
+    protected StudyPreference() {
+        // Required by JPA.
+    }
+
+    StudyPreference(Student student, Course course) {
+        this.student = student;
+        this.course = course;
+    }
+
     public Student getStudent() {
         return student;
     }
@@ -94,5 +103,17 @@ public class StudyPreference extends BaseEntity {
 
     public Set<StudyGoal> getStudyGoals() {
         return Collections.unmodifiableSet(studyGoals);
+    }
+
+    /** Replaces every editable field of this preference. Use {@link Student#saveStudyPreference} to call it. */
+    void update(StudyMode studyMode, GroupPreference groupPreference, Set<StudyGoal> studyGoals,
+            List<TimeSlot> availability) {
+        TimeSlot.requireValidAvailability(availability);
+        this.studyMode = studyMode;
+        this.groupPreference = groupPreference;
+        this.studyGoals.clear();
+        this.studyGoals.addAll(studyGoals);
+        this.availability.clear();
+        this.availability.addAll(availability);
     }
 }

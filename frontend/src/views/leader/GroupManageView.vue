@@ -14,7 +14,7 @@ import GroupForm from '../../components/groups/GroupForm.vue';
 import JoinRequestList from '../../components/groups/JoinRequestList.vue';
 import MemberList from '../../components/groups/MemberList.vue';
 
-const props = defineProps({ id: { type: Number, required: true } });
+const props = defineProps({ id: { type: String, required: true } });
 
 const lookups = useLookupsStore();
 const router = useRouter();

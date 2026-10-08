@@ -65,6 +65,28 @@ describe('mock API', () => {
 		expect((await call('get', '/students/3', { token })).data.contactNumber).toBeNull();
 	});
 
+	it('keeps one study preference per course and drops it when the course is removed', async () => {
+		const studentToken = await login('priya.nair@smu.edu.sg');
+		const { data: me } = await call('get', '/students/me', { token: studentToken });
+		const [first, second] = me.courses;
+		const preference = (course) => ({
+			course,
+			meetingMode: 'ONLINE',
+			groupFormat: 'EITHER',
+			goals: ['CONCEPT_REVIEW'],
+			availability: [{ day: 'MON', start: '10:00', end: '12:00' }],
+		});
+
+		const saved = await call('put', '/students/me/preferences', { token: studentToken, data: { preferences: [preference(first), preference(second)] } });
+		expect(saved.data.preferences.map((p) => p.course)).toEqual([first, second]);
+
+		const duplicate = await call('put', '/students/me/preferences', { token: studentToken, data: { preferences: [preference(first), preference(first)] } });
+		expect(duplicate.status).toBe(400);
+
+		const { data: updated } = await call('put', '/students/me/profile', { token: studentToken, data: { ...me, courses: [first] } });
+		expect(updated.preferences.map((p) => p.course)).toEqual([first]);
+	});
+
 	it('lets a leader accept a join request but not exceed the group size', async () => {
 		const { data: requests } = await call('get', '/groups/1/join-requests', { token });
 		expect(requests.length).toBeGreaterThan(0);

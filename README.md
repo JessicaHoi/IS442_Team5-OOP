@@ -4,26 +4,68 @@ Vue 3 + Bootstrap 5 single-page app for the Study Buddy Matcher System (IS442). 
 
 ## Quick start
 
-Requires Node 20.19+ (or 22.12+).
+You need **Java 21+** for the backend and **Node 20.19+ (or 22.12+)** for the frontend. Maven comes with the project (`mvnw`), so you don't need to install it.
+
+### Option A: frontend only (built-in mock API)
+
+The quickest way to see the UI. API calls are answered in the browser by the mock (see [Configuration](#configuration)), so no backend is needed.
 
 ```bash
 cd frontend
 npm install
-npm run dev        # http://localhost:5173, answers API calls from the built-in mock
-npm test           # unit tests (Vitest)
-npm run build      # production bundle into backend/src/main/resources/static
+npm run dev        # http://localhost:5173
 ```
 
-`npm run dev` uses the **mock API** (see below), so the whole UI works without the Spring Boot backend.
+### Option B: backend and frontend together
 
-**Demo accounts** (the login page has one-click buttons; the password for every account is `password`):
+**1. Start the backend** (terminal 1). Run it from the `backend` folder, because the local database and `.env` are found relative to it.
+
+```bash
+cd backend
+./mvnw spring-boot:run       # Windows: .\mvnw spring-boot:run
+```
+
+It starts on http://localhost:8080 with a local H2 database in `backend/data/`. On the first start it loads the demo data: 10 courses, 50 students, study groups and connections. To use the team's Supabase database instead, see [Backend database](#backend-database).
+
+**2. Point the frontend at the backend.** Create `frontend/.env.development.local` (gitignored) containing:
+
+```
+VITE_USE_MOCK=false
+```
+
+**3. Start the frontend** (terminal 2):
+
+```bash
+cd frontend
+npm install        # first time only
+npm run dev        # http://localhost:5173, proxies /api to http://localhost:8080
+```
+
+Delete `.env.development.local` (and restart `npm run dev`) to go back to the mock. Only some features have backend endpoints so far: sign-in, profile and preferences, and study groups. Pages that call missing endpoints show an error until those are built.
+
+### Demo accounts
+
+The password for every account is `password`. The login page has one-click buttons for these.
 
 | Role | Email |
 |---|---|
 | Student (also a group leader) | `aisha.rahman@smu.edu.sg` |
 | System administrator | `admin@smu.edu.sg` |
 
-Any other seeded student can sign in with `<first>.<last>@smu.edu.sg`, e.g. `wei.jie.tan@smu.edu.sg`. Mock data is kept in the browser's localStorage so a refresh does not wipe a live demo. Use **Reset demo data** on the login page to start over.
+Any other seeded student can sign in with `<first>.<last>@smu.edu.sg`, e.g. `wei.jie.tan@smu.edu.sg`. The backend and the mock use the same demo data.
+
+- **Mock:** data is kept in the browser's localStorage, so a refresh doesn't wipe a live demo. Use **Reset demo data** on the login page to start over.
+- **Backend:** stop it, delete `backend/data/`, and start it again to reload the demo data.
+
+### Tests and build
+
+Run each line from the repository root.
+
+```bash
+cd backend && ./mvnw test      # backend tests
+cd frontend && npm test        # frontend unit tests (Vitest)
+cd frontend && npm run build   # production bundle into backend/src/main/resources/static
+```
 
 ## Configuration
 
@@ -37,7 +79,7 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 | `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:8080` |
 | `BUILD_OUT_DIR` | Where `npm run build` writes the bundle | `../backend/src/main/resources/static` |
 
-To use the real backend during development, set `VITE_USE_MOCK=false` in `.env.development` (or a `.env.development.local` file) and start the Spring Boot app on port 8080.
+To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 8080 (see [Quick start](#option-b-backend-and-frontend-together)).
 
 ## Monolith packaging
 
@@ -89,6 +131,26 @@ The local H2 database updates itself on every start. Supabase needs a deliberate
 - Other tables have foreign keys that reference primary keys such as `course.course_code`. Changing a primary key means updating those tables too.
 - Apply schema changes to Supabase after the PR is merged, not from a feature branch, and tell the team. Put any manual SQL in the PR description, so there's a record of how the schema reached its current state.
 
+**Profile and study group change.** This change adds the `study_group_leader` table and the `course.school`, `membership_request.message`, `study_group.status` and `study_group.created_at` columns. `update` creates all of them on an empty schema. If `study_group` already has rows, add its two required columns by hand first:
+
+```sql
+alter table study_group add column status varchar(255) not null default 'OPEN' check (status in ('OPEN','CLOSED'));
+alter table study_group add column created_at timestamp(6) with time zone not null default now();
+```
+
+Passwords are now stored as BCrypt hashes. Accounts that were inserted with a plain-text password can't sign in, so recreate them or reseed.
+
+## Backend
+
+Spring Boot, layered by feature (`student/`, `group/`, `course/`, `auth/`, ...). Each feature has a controller (HTTP and validation only), a service (transactions and orchestration), repositories, and request/response records, so entities never leave the service layer.
+
+- **Rich domain model.** Business rules live on the entities. For example, `StudyGroup` refuses a join request when the group is closed or full, and refuses a maximum size below the member count. `Student` keeps one `StudyPreference` per course and drops a preference when its course is removed.
+- **Study group leader.** `StudyGroupLeader extends Student`, as in the class diagram. It holds the leader operations (`createGroup`, `updateGroup`, `closeGroup`, `viewJoinRequests`, `acceptMember`, `rejectMember`, `removeMember`), and each one first checks that this leader leads the group. A student is promoted when they create their first group. JPA can't change an entity's class, so the promotion inserts the student's row into `study_group_leader` (JOINED inheritance), and from then on Hibernate loads that student as a `StudyGroupLeader`.
+- **Auth.** `POST /api/auth/login` checks the BCrypt hash and returns an opaque bearer token, kept in memory (a restart signs everyone out). `AuthInterceptor` checks the token on every `/api/**` call. `@RequireRole(Role.STUDENT)` on a controller restricts it to one role, and `@CurrentUser AuthenticatedUser` injects the caller. Hash passwords with the `PasswordEncoder` bean whenever an account is created.
+- **Errors.** Services throw `ValidationException` (400), `AuthenticationException` (401), `PermissionDeniedException` (403), `ResourceNotFoundException` (404) or `BusinessRuleException` (409). `GlobalExceptionHandler` turns them into `{ "message": ... }`.
+- **Configuration.** The `studybuddy.*` keys in `application.yaml` hold the token lifetime, the allowed group size range and the demo-data settings.
+- **Demo data.** On an empty local database, `DemoDataSeeder` loads `seed/demo-data.json`: the same 10 courses, 50 students (17 with two course preferences), groups and connections as the front-end mock. Every password is `password`. It never runs against Supabase unless `SUPABASE_SEED=true`. To reseed locally, stop the app and delete `backend/data/`.
+
 ## Architecture
 
 ```
@@ -120,16 +182,18 @@ Design principles applied:
 | Axios | Interceptors for the auth header and error normalisation. A custom adapter makes the mock trivial. |
 | Vite + Sass | Fast dev server, production bundling, Sass for Bootstrap theming. |
 | Vitest | Same toolchain as Vite, no extra configuration. |
+| Spring Security Crypto (backend) | BCrypt password hashing only. The full Spring Security filter chain would be more than a token check needs. |
 
 ## Assumptions
 
-- Accounts have two roles, `STUDENT` and `ADMIN`. A **study group leader** is any student who created a group. Leader tools appear on the groups that student leads.
+- Accounts have two roles, `STUDENT` and `ADMIN`. A student becomes a **study group leader** (a `StudyGroupLeader`, still with the `STUDENT` role) when they create their first group. Leader tools appear on the groups that student leads.
 - Admins create accounts, so there is no self-registration page. A new student completes their profile on first login.
 - Students can browse study groups and request to join. The brief implies this, because leaders view and answer join requests.
 - The brief lists "preferred study mode" twice. The UI calls them **Meeting mode** (in-person / online / either) and **Group format** (one-to-one / small group / either).
+- A student keeps **one study preference per course** they need a buddy for (the class diagram's `ArrayList<StudyPreference>`). Matching for a course uses that course's preference. Removing a course from the profile removes its preference.
 - Searching by course or goal and the course filter share one control: the **Course** search field acts as the course filter.
 - The backend issues its own login token. Supabase is only the database.
-- Populating 10+ courses and 50+ student profiles in Supabase is a backend task. The mock seeds 10 courses and 50 students for the demo.
+- The backend and the mock load the same demo data: 10 courses and 50 students.
 
 ## API contract
 
@@ -145,10 +209,11 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 |---|---|---|
 | Auth | `POST /auth/login` | Body `{email, password}` returns `{token, user:{id,name,email,role}}`. `403` for suspended accounts. |
 | | `GET /auth/me` | Returns `{id,name,email,role}`. |
+| | `POST /auth/logout` | Revokes the token. `204`. |
 | Courses | `GET /courses` | Returns `[{code, name, school}]`. |
 | Student | `GET /students/me` | Own profile, see shape below. |
-| | `PUT /students/me/profile` | Body `{name, school, programme, yearOfStudy, contactNumber, courses:[code]}`. |
-| | `PUT /students/me/preferences` | Body `{course, meetingMode, groupFormat, goals:[..], availability:[slot]}`. |
+| | `PUT /students/me/profile` | Body `{name, school, programme, yearOfStudy, contactNumber, courses:[code]}`. Removes preferences for courses no longer taken. |
+| | `PUT /students/me/preferences` | Body `{preferences:[{course, meetingMode, groupFormat, goals:[..], availability:[slot]}]}`. Replaces the full list. At most one per course, and only for courses the student takes. |
 | | `GET /students/{id}` | Public profile (contact hidden unless connected). |
 | Matching | `GET /matches` | Query `course`, `goal`, `day`, `studyMode`, `groupFormat`, all optional. Sorted by `score` descending. |
 | Connections | `POST /connections` | Body `{toStudentId, message}` returns `201`. `409` if a pending or active connection already exists. |
@@ -187,6 +252,8 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 ### Shapes
 
 ```jsonc
+// Ids are opaque strings: UUIDs from the backend, small numbers in the mock.
+
 // Availability slot (24-hour "HH:mm")
 { "day": "WED", "start": "19:00", "end": "21:00" }
 
@@ -198,10 +265,10 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
   "contactNumber": "+65 9123 4567",                          // null when hidden
   "contactVisible": true,
   "connectionStatus": "NONE", "connectionId": null,
-  "preferences": {
-    "course": "IS442", "meetingMode": "IN_PERSON", "groupFormat": "SMALL_GROUP",
-    "goals": ["EXAM_PREPARATION"], "availability": [ /* slots */ ]
-  }
+  "preferences": [                                           // one per course, sorted by course code
+    { "course": "IS442", "meetingMode": "IN_PERSON", "groupFormat": "SMALL_GROUP",
+      "goals": ["EXAM_PREPARATION"], "availability": [ /* slots */ ] }
+  ]
 }
 
 // Match (GET /matches)
@@ -250,10 +317,13 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 
 The mock engine (`src/api/mock/matching.js`) is a stand-in for the real engine and follows Appendix A of the brief.
 
+- Scores use each student's preference for the searched course, or their first preference when no course is selected.
 - Each criterion scores 0 to 1: course match, hours of weekly overlap (3 hours or more scores 1), meeting-mode and group-format compatibility (identical 1, either side flexible 0.75, conflicting 0), and shared goals (overlap over union).
 - The overall score is the weighted average of the enabled criteria, as a whole number out of 100.
 - **Availability-First** and **Course-First** first group candidates into quarter-point tiers of that criterion, then sort by overall score inside each tier.
 
 ## Testing
 
-`npm test` runs unit tests for the availability utilities, the mock matching engine and the mock API. The API tests cover the privacy rule for contact numbers, role protection, join-request rules and seeded data size.
+`npm test` runs unit tests for the availability and preference utilities, the mock matching engine and the mock API. The API tests cover the privacy rule for contact numbers, role protection, per-course preferences, join-request rules and seeded data size.
+
+`./mvnw test` (in `backend/`) runs the backend tests. `StudyGroupLeaderTest` and `StudentTest` test the domain rules without Spring. `StudentProfileApiTest` and `StudyGroupApiTest` call the real API through MockMvc on an in-memory database (the `test` profile). `DemoDataSeederTest` checks the demo data size.

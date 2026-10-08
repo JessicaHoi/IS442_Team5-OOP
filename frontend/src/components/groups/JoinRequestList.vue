@@ -6,7 +6,7 @@ import { programmeLine, timeAgo } from '../../utils/format';
 defineProps({
 	requests: { type: Array, required: true },
 	/** Id of the request currently being processed. */
-	busyId: { type: Number, default: null },
+	busyId: { type: [String, Number], default: null },
 });
 defineEmits(['accept', 'reject']);
 </script>

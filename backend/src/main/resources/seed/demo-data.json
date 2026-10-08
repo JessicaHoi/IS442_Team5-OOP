@@ -1,0 +1,2825 @@
+{
+	"courses": [
+		{
+			"code": "IS112",
+			"name": "Data Management",
+			"school": "School of Computing and Information Systems"
+		},
+		{
+			"code": "IS113",
+			"name": "Web Application Development I",
+			"school": "School of Computing and Information Systems"
+		},
+		{
+			"code": "IS210",
+			"name": "Business Process Analytics",
+			"school": "School of Computing and Information Systems"
+		},
+		{
+			"code": "IS212",
+			"name": "Software Project Management",
+			"school": "School of Computing and Information Systems"
+		},
+		{
+			"code": "IS216",
+			"name": "Web Application Development II",
+			"school": "School of Computing and Information Systems"
+		},
+		{
+			"code": "IS442",
+			"name": "Object-Oriented Application Development",
+			"school": "School of Computing and Information Systems"
+		},
+		{
+			"code": "STAT101",
+			"name": "Introductory Statistics",
+			"school": "School of Economics"
+		},
+		{
+			"code": "ACCT101",
+			"name": "Financial Accounting",
+			"school": "School of Accountancy"
+		},
+		{
+			"code": "ECON101",
+			"name": "Principles of Microeconomics",
+			"school": "School of Economics"
+		},
+		{
+			"code": "MKTG101",
+			"name": "Marketing Fundamentals",
+			"school": "Lee Kong Chian School of Business"
+		}
+	],
+	"administrators": [
+		{
+			"email": "admin@smu.edu.sg"
+		}
+	],
+	"students": [
+		{
+			"key": "s2",
+			"name": "Aisha Rahman",
+			"email": "aisha.rahman@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 9123 4567",
+			"courses": [
+				"IS442",
+				"IS212",
+				"IS216",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "16:00"
+						}
+					]
+				},
+				{
+					"course": "IS212",
+					"meetingMode": "ONLINE",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"PROJECT_DISCUSSION",
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s3",
+			"name": "Wei Jie Tan",
+			"email": "wei.jie.tan@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 9572 5557",
+			"courses": [
+				"IS442",
+				"IS212",
+				"IS113"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "EITHER",
+					"groupFormat": "EITHER",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "THU",
+							"start": "18:00",
+							"end": "20:00"
+						},
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s4",
+			"name": "Priya Nair",
+			"email": "priya.nair@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 8613 8106",
+			"courses": [
+				"IS442",
+				"IS112",
+				"IS212",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "SAT",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "19:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s5",
+			"name": "Marcus Lim",
+			"email": "marcus.lim@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 8767 4519",
+			"courses": [
+				"IS442",
+				"IS112",
+				"IS212"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROJECT_DISCUSSION",
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "MON",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "WED",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s6",
+			"name": "Nurul Huda",
+			"email": "nurul.huda@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8556 5983",
+			"courses": [
+				"IS442",
+				"IS216",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "MON",
+							"start": "10:00",
+							"end": "11:00"
+						}
+					]
+				},
+				{
+					"course": "IS216",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "MON",
+							"start": "10:00",
+							"end": "11:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s7",
+			"name": "Jun Hao Lee",
+			"email": "jun.hao.lee@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 9978 2121",
+			"courses": [
+				"IS442",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "SAT",
+							"start": "19:00",
+							"end": "21:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s8",
+			"name": "Sarah Chen",
+			"email": "sarah.chen@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 9013 9664",
+			"courses": [
+				"IS442",
+				"STAT101",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "ONLINE",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "THU",
+							"start": "14:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s9",
+			"name": "Daniel Ong",
+			"email": "daniel.ong@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 8179 1316",
+			"courses": [
+				"IS442",
+				"IS212",
+				"IS216",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "17:00"
+						},
+						{
+							"day": "MON",
+							"start": "19:00",
+							"end": "22:00"
+						}
+					]
+				},
+				{
+					"course": "IS212",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "17:00"
+						},
+						{
+							"day": "MON",
+							"start": "19:00",
+							"end": "22:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s10",
+			"name": "Kavya Iyer",
+			"email": "kavya.iyer@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 9973 8421",
+			"courses": [
+				"IS442",
+				"STAT101",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "ONLINE",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "MON",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "TUE",
+							"start": "16:00",
+							"end": "19:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s11",
+			"name": "Ethan Goh",
+			"email": "ethan.goh@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9333 0047",
+			"courses": [
+				"IS442",
+				"IS212",
+				"IS112",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "IS212",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING",
+						"CONCEPT_REVIEW",
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "FRI",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "WED",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "TUE",
+							"start": "19:00",
+							"end": "22:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s12",
+			"name": "Mei Ling Wong",
+			"email": "mei.ling.wong@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 8775 5051",
+			"courses": [
+				"IS442",
+				"IS216",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "EITHER",
+					"groupFormat": "EITHER",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				},
+				{
+					"course": "IS442",
+					"meetingMode": "EITHER",
+					"groupFormat": "EITHER",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s13",
+			"name": "Rizwan Ahmad",
+			"email": "rizwan.ahmad@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computing and Law",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9266 8881",
+			"courses": [
+				"IS442",
+				"IS212",
+				"STAT101",
+				"IS216"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "ONLINE",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "14:00",
+							"end": "17:00"
+						},
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "MON",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "SAT",
+							"start": "14:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s14",
+			"name": "Chloe Tan",
+			"email": "chloe.tan@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 8757 7918",
+			"courses": [
+				"IS112",
+				"IS442",
+				"IS216",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "STAT101",
+					"meetingMode": "ONLINE",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "FRI",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "TUE",
+							"start": "13:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s15",
+			"name": "Arjun Menon",
+			"email": "arjun.menon@smu.edu.sg",
+			"school": "School of Accountancy",
+			"programme": "Accountancy",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 9920 6189",
+			"courses": [
+				"STAT101",
+				"MKTG101",
+				"ECON101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "ACCT101",
+					"meetingMode": "ONLINE",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "11:00"
+						},
+						{
+							"day": "MON",
+							"start": "10:00",
+							"end": "13:00"
+						},
+						{
+							"day": "WED",
+							"start": "14:00",
+							"end": "15:00"
+						}
+					]
+				},
+				{
+					"course": "STAT101",
+					"meetingMode": "ONLINE",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "11:00"
+						},
+						{
+							"day": "MON",
+							"start": "10:00",
+							"end": "13:00"
+						},
+						{
+							"day": "WED",
+							"start": "14:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s16",
+			"name": "Hui Min Koh",
+			"email": "hui.min.koh@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 9450 0941",
+			"courses": [
+				"IS442",
+				"IS113"
+			],
+			"preferences": [
+				{
+					"course": "IS113",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "19:00",
+							"end": "22:00"
+						},
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "MON",
+							"start": "10:00",
+							"end": "11:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s17",
+			"name": "Isaac Teo",
+			"email": "isaac.teo@smu.edu.sg",
+			"school": "School of Accountancy",
+			"programme": "Accountancy",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9200 5974",
+			"courses": [
+				"ACCT101",
+				"MKTG101",
+				"STAT101",
+				"ECON101"
+			],
+			"preferences": [
+				{
+					"course": "ACCT101",
+					"meetingMode": "ONLINE",
+					"groupFormat": "EITHER",
+					"goals": [
+						"EXAM_PREPARATION",
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s18",
+			"name": "Farah Ismail",
+			"email": "farah.ismail@smu.edu.sg",
+			"school": "School of Social Sciences",
+			"programme": "Psychology",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8134 6823",
+			"courses": [
+				"STAT101",
+				"ECON101",
+				"MKTG101"
+			],
+			"preferences": [
+				{
+					"course": "STAT101",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING",
+						"EXAM_PREPARATION",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "WED",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "SAT",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "MON",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				},
+				{
+					"course": "ECON101",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING",
+						"EXAM_PREPARATION",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "WED",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "SAT",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "MON",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s19",
+			"name": "Brandon Ng",
+			"email": "brandon.ng@smu.edu.sg",
+			"school": "School of Accountancy",
+			"programme": "Accountancy",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 8146 6911",
+			"courses": [
+				"STAT101",
+				"ECON101",
+				"MKTG101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "MKTG101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "FRI",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "SAT",
+							"start": "14:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s20",
+			"name": "Yuki Tanaka",
+			"email": "yuki.tanaka@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Software Engineering",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 9467 8999",
+			"courses": [
+				"IS112",
+				"STAT101",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS112",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "MON",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s21",
+			"name": "Sophia Lau",
+			"email": "sophia.lau@smu.edu.sg",
+			"school": "Lee Kong Chian School of Business",
+			"programme": "Business Management",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 9486 5193",
+			"courses": [
+				"IS210",
+				"MKTG101",
+				"STAT101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "MKTG101",
+					"meetingMode": "ONLINE",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						}
+					]
+				},
+				{
+					"course": "IS210",
+					"meetingMode": "ONLINE",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s22",
+			"name": "Ravi Kumar",
+			"email": "ravi.kumar@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8994 3265",
+			"courses": [
+				"IS442",
+				"IS216"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "14:00"
+						},
+						{
+							"day": "THU",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s23",
+			"name": "Jia Hui Chua",
+			"email": "jia.hui.chua@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 9551 2056",
+			"courses": [
+				"IS442",
+				"STAT101",
+				"IS216"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION",
+						"CONCEPT_REVIEW",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "11:00"
+						},
+						{
+							"day": "WED",
+							"start": "14:00",
+							"end": "17:00"
+						},
+						{
+							"day": "THU",
+							"start": "10:00",
+							"end": "13:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s24",
+			"name": "Nathan Yeo",
+			"email": "nathan.yeo@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9846 5212",
+			"courses": [
+				"IS442",
+				"IS216",
+				"IS212",
+				"IS113"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "ONLINE",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "17:00"
+						},
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "19:00"
+						},
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "13:00"
+						}
+					]
+				},
+				{
+					"course": "IS216",
+					"meetingMode": "ONLINE",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "17:00"
+						},
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "19:00"
+						},
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "13:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s25",
+			"name": "Amirah Yusof",
+			"email": "amirah.yusof@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 9799 2883",
+			"courses": [
+				"IS212",
+				"STAT101",
+				"IS442",
+				"IS216"
+			],
+			"preferences": [
+				{
+					"course": "IS212",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "13:00",
+							"end": "14:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s26",
+			"name": "Zhi Wei Sim",
+			"email": "zhi.wei.sim@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 8602 4718",
+			"courses": [
+				"IS210",
+				"IS112",
+				"IS212",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "IS210",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "WED",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s27",
+			"name": "Grace Ho",
+			"email": "grace.ho@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 9251 3391",
+			"courses": [
+				"IS112",
+				"IS442",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "STAT101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						}
+					]
+				},
+				{
+					"course": "IS112",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s28",
+			"name": "Hafiz Salleh",
+			"email": "hafiz.salleh@smu.edu.sg",
+			"school": "School of Economics",
+			"programme": "Economics",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 8364 9898",
+			"courses": [
+				"MKTG101",
+				"ECON101",
+				"STAT101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "STAT101",
+					"meetingMode": "EITHER",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "THU",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "WED",
+							"start": "14:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s29",
+			"name": "Tiffany Ang",
+			"email": "tiffany.ang@smu.edu.sg",
+			"school": "School of Economics",
+			"programme": "Economics",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 9561 5260",
+			"courses": [
+				"MKTG101",
+				"STAT101",
+				"ECON101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "ECON101",
+					"meetingMode": "ONLINE",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "MON",
+							"start": "10:00",
+							"end": "11:00"
+						},
+						{
+							"day": "SAT",
+							"start": "14:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s30",
+			"name": "Vikram Singh",
+			"email": "vikram.singh@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Software Engineering",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 8299 6052",
+			"courses": [
+				"IS442",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "STAT101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION",
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				},
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION",
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s31",
+			"name": "Eunice Lee",
+			"email": "eunice.lee@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Information Systems",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 8449 0253",
+			"courses": [
+				"IS216",
+				"IS112",
+				"IS212",
+				"IS442"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION",
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "FRI",
+							"start": "10:00",
+							"end": "13:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s32",
+			"name": "Darren Chong",
+			"email": "darren.chong@smu.edu.sg",
+			"school": "School of Economics",
+			"programme": "Economics",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 8334 0531",
+			"courses": [
+				"ACCT101",
+				"MKTG101",
+				"STAT101",
+				"ECON101"
+			],
+			"preferences": [
+				{
+					"course": "ACCT101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"EXAM_PREPARATION",
+						"CONCEPT_REVIEW",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "TUE",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s33",
+			"name": "Siti Aminah",
+			"email": "siti.aminah@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computing and Law",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8732 8024",
+			"courses": [
+				"IS442",
+				"IS216",
+				"IS112"
+			],
+			"preferences": [
+				{
+					"course": "IS112",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "THU",
+							"start": "19:00",
+							"end": "22:00"
+						}
+					]
+				},
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "THU",
+							"start": "19:00",
+							"end": "22:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s34",
+			"name": "Ryan Phua",
+			"email": "ryan.phua@smu.edu.sg",
+			"school": "Lee Kong Chian School of Business",
+			"programme": "Marketing",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 8570 9503",
+			"courses": [
+				"STAT101",
+				"ECON101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "ACCT101",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "THU",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "MON",
+							"start": "16:00",
+							"end": "19:00"
+						},
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s35",
+			"name": "Lakshmi Pillai",
+			"email": "lakshmi.pillai@smu.edu.sg",
+			"school": "School of Social Sciences",
+			"programme": "Psychology",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8428 2502",
+			"courses": [
+				"MKTG101",
+				"STAT101",
+				"ECON101"
+			],
+			"preferences": [
+				{
+					"course": "STAT101",
+					"meetingMode": "EITHER",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"PROJECT_DISCUSSION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "11:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s36",
+			"name": "Kelvin Toh",
+			"email": "kelvin.toh@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Software Engineering",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 9669 3235",
+			"courses": [
+				"IS442",
+				"IS212",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "ONLINE",
+					"groupFormat": "EITHER",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "FRI",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				},
+				{
+					"course": "IS212",
+					"meetingMode": "ONLINE",
+					"groupFormat": "EITHER",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "FRI",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s37",
+			"name": "Natalie Foo",
+			"email": "natalie.foo@smu.edu.sg",
+			"school": "School of Economics",
+			"programme": "Economics",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 8124 6498",
+			"courses": [
+				"MKTG101",
+				"ACCT101",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "ACCT101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "MON",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "WED",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "SAT",
+							"start": "19:00",
+							"end": "21:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s38",
+			"name": "Irfan Hakim",
+			"email": "irfan.hakim@smu.edu.sg",
+			"school": "School of Economics",
+			"programme": "Economics",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9091 6164",
+			"courses": [
+				"STAT101",
+				"ECON101",
+				"ACCT101",
+				"MKTG101"
+			],
+			"preferences": [
+				{
+					"course": "ECON101",
+					"meetingMode": "EITHER",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROBLEM_SOLVING",
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "19:00"
+						},
+						{
+							"day": "SAT",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "THU",
+							"start": "14:00",
+							"end": "17:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s39",
+			"name": "Cheryl Seah",
+			"email": "cheryl.seah@smu.edu.sg",
+			"school": "School of Economics",
+			"programme": "Economics",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9339 7417",
+			"courses": [
+				"ACCT101",
+				"STAT101",
+				"ECON101"
+			],
+			"preferences": [
+				{
+					"course": "ECON101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				},
+				{
+					"course": "ACCT101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROBLEM_SOLVING",
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s40",
+			"name": "Benedict Lim",
+			"email": "benedict.lim@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9690 6946",
+			"courses": [
+				"IS113",
+				"IS442",
+				"IS216",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"PROJECT_DISCUSSION",
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "WED",
+							"start": "10:00",
+							"end": "13:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s41",
+			"name": "Anjali Sharma",
+			"email": "anjali.sharma@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 3,
+			"contactNumber": "+65 8760 0125",
+			"courses": [
+				"IS442",
+				"IS216",
+				"IS113"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "MON",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s42",
+			"name": "Jonathan Wee",
+			"email": "jonathan.wee@smu.edu.sg",
+			"school": "Lee Kong Chian School of Business",
+			"programme": "Marketing",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8252 6740",
+			"courses": [
+				"IS210",
+				"STAT101",
+				"ECON101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "ACCT101",
+					"meetingMode": "ONLINE",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROJECT_DISCUSSION",
+						"PROBLEM_SOLVING",
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "17:00"
+						}
+					]
+				},
+				{
+					"course": "IS210",
+					"meetingMode": "ONLINE",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROJECT_DISCUSSION",
+						"PROBLEM_SOLVING",
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "TUE",
+							"start": "14:00",
+							"end": "17:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s43",
+			"name": "Sabrina Tay",
+			"email": "sabrina.tay@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Software Engineering",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 9885 5319",
+			"courses": [
+				"IS442",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROJECT_DISCUSSION",
+						"CONCEPT_REVIEW",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "MON",
+							"start": "19:00",
+							"end": "21:00"
+						},
+						{
+							"day": "WED",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "FRI",
+							"start": "19:00",
+							"end": "20:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s44",
+			"name": "Haziq Rosli",
+			"email": "haziq.rosli@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 9827 8657",
+			"courses": [
+				"IS442",
+				"IS210"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROJECT_DISCUSSION"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "THU",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "11:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s45",
+			"name": "Olivia Kwek",
+			"email": "olivia.kwek@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Software Engineering",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8121 2319",
+			"courses": [
+				"IS442",
+				"IS212",
+				"IS112"
+			],
+			"preferences": [
+				{
+					"course": "IS112",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "THU",
+							"start": "13:00",
+							"end": "14:00"
+						}
+					]
+				},
+				{
+					"course": "IS442",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "THU",
+							"start": "13:00",
+							"end": "14:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s46",
+			"name": "Shawn Ler",
+			"email": "shawn.ler@smu.edu.sg",
+			"school": "Lee Kong Chian School of Business",
+			"programme": "Business Management",
+			"yearOfStudy": 4,
+			"contactNumber": "+65 9260 5920",
+			"courses": [
+				"MKTG101",
+				"ACCT101",
+				"STAT101"
+			],
+			"preferences": [
+				{
+					"course": "STAT101",
+					"meetingMode": "EITHER",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "MON",
+							"start": "19:00",
+							"end": "22:00"
+						},
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "17:00"
+						},
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "18:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s47",
+			"name": "Deepa Krishnan",
+			"email": "deepa.krishnan@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computer Science",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 8368 4354",
+			"courses": [
+				"IS442",
+				"IS216"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "EITHER",
+					"goals": [
+						"PROBLEM_SOLVING",
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "FRI",
+							"start": "14:00",
+							"end": "15:00"
+						},
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "MON",
+							"start": "16:00",
+							"end": "18:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s48",
+			"name": "Timothy Low",
+			"email": "timothy.low@smu.edu.sg",
+			"school": "Lee Kong Chian School of Business",
+			"programme": "Business Management",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 8322 7944",
+			"courses": [
+				"MKTG101",
+				"STAT101",
+				"IS210",
+				"ECON101",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "IS210",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "THU",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "WED",
+							"start": "13:00",
+							"end": "16:00"
+						}
+					]
+				},
+				{
+					"course": "MKTG101",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "16:00",
+							"end": "17:00"
+						},
+						{
+							"day": "TUE",
+							"start": "10:00",
+							"end": "12:00"
+						},
+						{
+							"day": "THU",
+							"start": "19:00",
+							"end": "20:00"
+						},
+						{
+							"day": "WED",
+							"start": "13:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s49",
+			"name": "Rachel Soh",
+			"email": "rachel.soh@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Software Engineering",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 9162 5382",
+			"courses": [
+				"IS113",
+				"IS442",
+				"IS212"
+			],
+			"preferences": [
+				{
+					"course": "IS442",
+					"meetingMode": "IN_PERSON",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"EXAM_PREPARATION",
+						"CONCEPT_REVIEW"
+					],
+					"availability": [
+						{
+							"day": "WED",
+							"start": "13:00",
+							"end": "16:00"
+						},
+						{
+							"day": "SAT",
+							"start": "19:00",
+							"end": "21:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s50",
+			"name": "Mohammed Faiz",
+			"email": "mohammed.faiz@smu.edu.sg",
+			"school": "School of Computing and Information Systems",
+			"programme": "Computing and Law",
+			"yearOfStudy": 2,
+			"contactNumber": "+65 9357 6969",
+			"courses": [
+				"IS212",
+				"IS442",
+				"IS210",
+				"IS216"
+			],
+			"preferences": [
+				{
+					"course": "IS216",
+					"meetingMode": "EITHER",
+					"groupFormat": "SMALL_GROUP",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROJECT_DISCUSSION",
+						"PROBLEM_SOLVING"
+					],
+					"availability": [
+						{
+							"day": "SAT",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "THU",
+							"start": "14:00",
+							"end": "16:00"
+						},
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "16:00"
+						}
+					]
+				}
+			]
+		},
+		{
+			"key": "s51",
+			"name": "Xin Yi Lim",
+			"email": "xin.yi.lim@smu.edu.sg",
+			"school": "Lee Kong Chian School of Business",
+			"programme": "Marketing",
+			"yearOfStudy": 1,
+			"contactNumber": "+65 9219 9381",
+			"courses": [
+				"ECON101",
+				"MKTG101",
+				"IS210",
+				"ACCT101"
+			],
+			"preferences": [
+				{
+					"course": "IS210",
+					"meetingMode": "EITHER",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROJECT_DISCUSSION",
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "10:00",
+							"end": "13:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "15:00"
+						}
+					]
+				},
+				{
+					"course": "ECON101",
+					"meetingMode": "EITHER",
+					"groupFormat": "ONE_TO_ONE",
+					"goals": [
+						"CONCEPT_REVIEW",
+						"PROJECT_DISCUSSION",
+						"EXAM_PREPARATION"
+					],
+					"availability": [
+						{
+							"day": "THU",
+							"start": "10:00",
+							"end": "13:00"
+						},
+						{
+							"day": "MON",
+							"start": "13:00",
+							"end": "15:00"
+						},
+						{
+							"day": "FRI",
+							"start": "13:00",
+							"end": "15:00"
+						}
+					]
+				}
+			]
+		}
+	],
+	"connections": [
+		{
+			"fromKey": "s2",
+			"toKey": "s4",
+			"status": "ACCEPTED",
+			"message": "Hi! Want to revise IS442 together?"
+		},
+		{
+			"fromKey": "s6",
+			"toKey": "s2",
+			"status": "PENDING",
+			"message": "Hi Aisha, I am also preparing for the IS442 exam. Free on Wednesdays?"
+		},
+		{
+			"fromKey": "s8",
+			"toKey": "s2",
+			"status": "PENDING",
+			"message": "Looking for someone to go through past-year papers with."
+		},
+		{
+			"fromKey": "s2",
+			"toKey": "s7",
+			"status": "PENDING",
+			"message": "Hello! Would you like to be study buddies for IS442?"
+		},
+		{
+			"fromKey": "s12",
+			"toKey": "s13",
+			"status": "ACCEPTED",
+			"message": ""
+		},
+		{
+			"fromKey": "s14",
+			"toKey": "s15",
+			"status": "ACCEPTED",
+			"message": ""
+		},
+		{
+			"fromKey": "s16",
+			"toKey": "s17",
+			"status": "ACCEPTED",
+			"message": ""
+		},
+		{
+			"fromKey": "s18",
+			"toKey": "s19",
+			"status": "ACCEPTED",
+			"message": ""
+		},
+		{
+			"fromKey": "s20",
+			"toKey": "s21",
+			"status": "ACCEPTED",
+			"message": ""
+		},
+		{
+			"fromKey": "s22",
+			"toKey": "s23",
+			"status": "ACCEPTED",
+			"message": ""
+		},
+		{
+			"fromKey": "s24",
+			"toKey": "s25",
+			"status": "PENDING",
+			"message": ""
+		},
+		{
+			"fromKey": "s26",
+			"toKey": "s27",
+			"status": "PENDING",
+			"message": ""
+		}
+	],
+	"groups": [
+		{
+			"name": "IS442 Exam Crew",
+			"description": "Weekly past-year paper drills and OOP design discussions before the final exam.",
+			"courseCode": "IS442",
+			"leaderKey": "s2",
+			"memberKeys": [
+				"s4",
+				"s5"
+			],
+			"goals": [
+				"EXAM_PREPARATION",
+				"PROBLEM_SOLVING"
+			],
+			"meetingMode": "IN_PERSON",
+			"availability": [
+				{
+					"day": "WED",
+					"start": "19:00",
+					"end": "21:00"
+				}
+			],
+			"maxSize": 5,
+			"status": "OPEN",
+			"joinRequests": [
+				{
+					"studentKey": "s3",
+					"message": "Hi, I would love to join your group!"
+				},
+				{
+					"studentKey": "s9",
+					"message": "Hi, I would love to join your group!"
+				}
+			]
+		},
+		{
+			"name": "Web Dev Study Circle",
+			"description": "Pair up on project milestones and review each other’s Vue and Spring Boot code.",
+			"courseCode": "IS216",
+			"leaderKey": "s6",
+			"memberKeys": [
+				"s2",
+				"s9",
+				"s12"
+			],
+			"goals": [
+				"PROJECT_DISCUSSION",
+				"CONCEPT_REVIEW"
+			],
+			"meetingMode": "ONLINE",
+			"availability": [
+				{
+					"day": "TUE",
+					"start": "19:00",
+					"end": "21:00"
+				},
+				{
+					"day": "SAT",
+					"start": "14:00",
+					"end": "16:00"
+				}
+			],
+			"maxSize": 6,
+			"status": "OPEN",
+			"joinRequests": []
+		},
+		{
+			"name": "SQL Drills",
+			"description": "Short weekly sessions solving query and normalisation problems together.",
+			"courseCode": "IS112",
+			"leaderKey": "s4",
+			"memberKeys": [
+				"s5",
+				"s11"
+			],
+			"goals": [
+				"PROBLEM_SOLVING"
+			],
+			"meetingMode": "EITHER",
+			"availability": [
+				{
+					"day": "THU",
+					"start": "16:00",
+					"end": "18:00"
+				}
+			],
+			"maxSize": 8,
+			"status": "OPEN",
+			"joinRequests": []
+		},
+		{
+			"name": "Micro Mondays",
+			"description": "Concept review of the week’s microeconomics lectures over coffee.",
+			"courseCode": "ECON101",
+			"leaderKey": "s15",
+			"memberKeys": [
+				"s17",
+				"s18"
+			],
+			"goals": [
+				"CONCEPT_REVIEW"
+			],
+			"meetingMode": "IN_PERSON",
+			"availability": [
+				{
+					"day": "MON",
+					"start": "13:00",
+					"end": "15:00"
+				}
+			],
+			"maxSize": 4,
+			"status": "OPEN",
+			"joinRequests": []
+		},
+		{
+			"name": "Stats Survivors",
+			"description": "A tight group working through problem sets before each quiz.",
+			"courseCode": "STAT101",
+			"leaderKey": "s6",
+			"memberKeys": [
+				"s7",
+				"s8"
+			],
+			"goals": [
+				"PROBLEM_SOLVING",
+				"EXAM_PREPARATION"
+			],
+			"meetingMode": "EITHER",
+			"availability": [
+				{
+					"day": "FRI",
+					"start": "10:00",
+					"end": "12:00"
+				}
+			],
+			"maxSize": 3,
+			"status": "OPEN",
+			"joinRequests": []
+		},
+		{
+			"name": "Accounting Night Owls",
+			"description": "Late-night revision for the mid-term (now finished).",
+			"courseCode": "ACCT101",
+			"leaderKey": "s15",
+			"memberKeys": [
+				"s17"
+			],
+			"goals": [
+				"EXAM_PREPARATION"
+			],
+			"meetingMode": "ONLINE",
+			"availability": [
+				{
+					"day": "SUN",
+					"start": "19:00",
+					"end": "22:00"
+				}
+			],
+			"maxSize": 5,
+			"status": "CLOSED",
+			"joinRequests": []
+		}
+	]
+}
