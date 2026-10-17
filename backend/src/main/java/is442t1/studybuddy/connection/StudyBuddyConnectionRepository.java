@@ -1,6 +1,7 @@
 package is442t1.studybuddy.connection;
 
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,13 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StudyBuddyConnectionRepository extends JpaRepository<StudyBuddyConnection, UUID> {
+
+    @Query("""
+            select c from StudyBuddyConnection c
+            where c.status = is442t1.studybuddy.model.enums.ConnectionStatus.ACTIVE
+              and (c.requester.id = :studentId or c.recipient.id = :studentId)
+            """)
+    List<StudyBuddyConnection> findActiveForStudent(@Param("studentId") UUID studentId);
 
     @Query("""
             select c from StudyBuddyConnection c

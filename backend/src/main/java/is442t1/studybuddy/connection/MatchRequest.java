@@ -40,6 +40,8 @@ public class MatchRequest extends BaseEntity {
     @Column(nullable = false, updatable = false)
     private Instant requestDate;
 
+    private Instant respondedAt;
+
     public Student getSender() {
         return sender;
     }
@@ -74,5 +76,13 @@ public class MatchRequest extends BaseEntity {
 
     public Instant getRequestDate() {
         return requestDate;
+    }
+
+    public Instant getRespondedAt() {
+        return respondedAt;
+    }
+
+    public void setRespondedAt(Instant respondedAt) {
+        this.respondedAt = respondedAt;
     }
 }

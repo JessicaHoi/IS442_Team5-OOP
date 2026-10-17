@@ -8,8 +8,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import is442t1.studybuddy.model.enums.RequestStatus;
+
 @Repository
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
+
+    List<MatchRequest> findByReceiver_IdAndStatus(UUID receiverId, RequestStatus status);
+
+    List<MatchRequest> findBySender_IdAndStatus(UUID senderId, RequestStatus status);
 
     @Query("""
             select r from MatchRequest r

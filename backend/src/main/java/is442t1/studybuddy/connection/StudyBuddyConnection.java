@@ -64,4 +64,5 @@ public class StudyBuddyConnection extends BaseEntity {
     public Instant getStartDate() {
         return startDate;
     }
+
 }

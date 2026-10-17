@@ -24,3 +24,4 @@ spring:
 studybuddy:
   seed:
     enabled: ${SUPABASE_SEED:false}
+    add-students-to-existing: false

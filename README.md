@@ -14,7 +14,7 @@ There are three ways to run the app:
 | [B. Supabase](#option-b-supabase-database) | The team's shared Supabase database | Yes | Testing against real, shared data |
 | [C. Local database](#option-c-local-database-h2) | An H2 file on your machine | Yes | Backend work without touching shared data |
 
-All three load the same demo accounts (see [Demo accounts](#demo-accounts)). Only some features have backend endpoints so far: sign-in, profile and preferences, and study groups. In B and C, pages that call missing endpoints show an error until those are built.
+All three load the same demo accounts (see [Demo accounts](#demo-accounts)). The backend supports sign-in, profiles and preferences, study-buddy matching and connection management, and study groups. In B and C, pages that call other missing endpoints show an error until those are built.
 
 ### Option A: mock data (frontend only)
 
@@ -70,6 +70,7 @@ Stop the backend when you're done. The free Supabase tier only allows a few conn
 ### Option C: local database (H2)
 
 The same as option B, but the data lives in an H2 file in `backend/data/` on your machine. It needs no credentials or setup, and the demo data loads automatically the first time it starts.
+If the local database already contains accounts, startup adds any missing demo student profiles without replacing existing accounts. The demo students can sign in with the shared demo password `password`.
 
 ```bash
 # terminal 1
@@ -257,11 +258,11 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `PUT /students/me/profile` | Body `{name, school, programme, yearOfStudy, contactNumber, courses:[code]}`. Removes preferences for courses no longer taken. |
 | | `PUT /students/me/preferences` | Body `{preferences:[{course, meetingMode, groupFormat, goals:[..], availability:[slot]}]}`. Replaces the full list. At most one per course, and only for courses the student takes. |
 | | `GET /students/{id}` | Public profile (contact hidden unless connected). |
-| Matching | `GET /matches` | Query `course`, `goal`, `day`, `studyMode`, `groupFormat`, all optional. Sorted by `score` descending. |
-| Connections | `POST /connections` | Body `{toStudentId, message}` returns `201`. `409` if a pending or active connection already exists. |
-| | `GET /connections?view=incoming\|sent\|active` | Returns connection views. |
-| | `POST /connections/{id}/accept` and `/decline` | Recipient only. |
-| | `DELETE /connections/{id}` | Ends an active connection. `204`. |
+| Matching | `GET /matches` | Query `course`, `goal`, `day`, `studyMode`, `groupFormat`, all optional. Sorted by weighted compatibility score; phone numbers remain hidden until the connection is accepted. |
+| Connections | `POST /connections` | Body `{toStudentId, message?}` returns `201`. Message is optional (max 300 characters); `409` if a pending or active connection already exists. |
+| | `GET /connections?view=incoming\|sent\|active` | Lists pending requests or active connections. |
+| | `POST /connections/{id}/accept` and `/decline` | Recipient only. Accepting creates an active connection and reveals contact details to both students. |
+| | `DELETE /connections/{id}` | Either student can end an active connection. `204`; contact details are hidden again. |
 | Groups | `GET /groups?course=` | Open groups only. |
 | | `GET /groups/mine` | Groups the caller leads or belongs to, any status. |
 | | `POST /groups` | Caller becomes leader and first member. `201`. |
