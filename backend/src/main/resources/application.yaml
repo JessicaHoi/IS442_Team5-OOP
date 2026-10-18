@@ -37,8 +37,9 @@ studybuddy:
     min-size: 2
     max-size: 20
   seed:
-    # Load the demo data (10 courses, 50 students, groups) into an empty database at startup.
+    # Load demo data into an empty database and add missing demo students to an existing local database.
     enabled: true
+    add-students-to-existing: true
     location: classpath:seed/demo-data.json
     # Password for every demo account (local demo data only).
     demo-password: password

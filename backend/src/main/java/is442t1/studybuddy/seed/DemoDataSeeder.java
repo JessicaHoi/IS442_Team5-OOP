@@ -80,7 +80,11 @@ public class DemoDataSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) throws IOException {
         if (userRepository.count() > 0) {
-            LOG.info("Database already has accounts; skipping demo data.");
+            if (properties.addStudentsToExisting()) {
+                addMissingDemoStudents(readSeedData());
+            } else {
+                LOG.info("Database already has accounts; skipping demo data.");
+            }
             return;
         }
         SeedData data = readSeedData();
@@ -96,6 +100,29 @@ public class DemoDataSeeder implements ApplicationRunner {
                 courses.size(), students.size(), data.groups().size());
     }
 
+    /** Adds demo students for local testing without changing existing accounts or shared database content. */
+    private void addMissingDemoStudents(SeedData data) {
+        var missingStudents = data.students().stream()
+                .filter(seed -> userRepository.findByEmailIgnoreCase(seed.email()).isEmpty())
+                .toList();
+        if (missingStudents.isEmpty()) {
+            LOG.info("All demo student accounts are already present.");
+            return;
+        }
+
+        Map<String, Course> courses = seedCourses(data);
+        String passwordHash = passwordEncoder.encode(properties.demoPassword());
+        Set<String> leaderKeys = data.groups().stream().map(SeedData.GroupSeed::leaderKey).collect(Collectors.toSet());
+        int added = 0;
+        for (SeedData.StudentSeed seed : missingStudents) {
+            Student student = leaderKeys.contains(seed.key()) ? new StudyGroupLeader() : new Student();
+            populateStudent(student, seed, courses, passwordHash);
+            studentRepository.save(student);
+            added++;
+        }
+        LOG.info("Added {} missing demo students to the existing local database.", added);
+    }
+
     private SeedData readSeedData() throws IOException {
         try (InputStream input = resourceLoader.getResource(properties.location()).getInputStream()) {
             return objectMapper.readValue(input, SeedData.class);
@@ -105,6 +132,10 @@ public class DemoDataSeeder implements ApplicationRunner {
     private Map<String, Course> seedCourses(SeedData data) {
         return data.courses().stream()
                 .map(seed -> {
+                    Course existing = courseRepository.findById(seed.code()).orElse(null);
+                    if (existing != null) {
+                        return existing;
+                    }
                     Course course = new Course();
                     course.setCourseCode(seed.code());
                     course.setCourseName(seed.name());
@@ -129,22 +160,27 @@ public class DemoDataSeeder implements ApplicationRunner {
         Map<String, Student> students = new HashMap<>();
         for (SeedData.StudentSeed seed : data.students()) {
             Student student = leaderKeys.contains(seed.key()) ? new StudyGroupLeader() : new Student();
-            student.setEmail(seed.email());
-            student.setPassword(passwordHash);
-            student.setName(seed.name());
-            student.setSchool(seed.school());
-            student.setProgram(seed.programme());
-            student.setYearOfStudy(seed.yearOfStudy());
-            student.setContactNum(seed.contactNumber());
-            student.replaceCoursesTaken(seed.courses().stream().map(courses::get).toList());
-            for (StudyPreferenceDto preference : seed.preferences()) {
-                student.saveStudyPreference(courses.get(preference.course()), preference.meetingMode(),
-                        preference.groupFormat(), preference.goals(),
-                        TimeSlotDto.toTimeSlots(preference.availability()));
-            }
+            populateStudent(student, seed, courses, passwordHash);
             students.put(seed.key(), studentRepository.save(student));
         }
         return students;
+    }
+
+    private static void populateStudent(Student student, SeedData.StudentSeed seed, Map<String, Course> courses,
+            String passwordHash) {
+        student.setEmail(seed.email());
+        student.setPassword(passwordHash);
+        student.setName(seed.name());
+        student.setSchool(seed.school());
+        student.setProgram(seed.programme());
+        student.setYearOfStudy(seed.yearOfStudy());
+        student.setContactNum(seed.contactNumber());
+        student.replaceCoursesTaken(seed.courses().stream().map(courses::get).toList());
+        for (StudyPreferenceDto preference : seed.preferences()) {
+            student.saveStudyPreference(courses.get(preference.course()), preference.meetingMode(),
+                    preference.groupFormat(), preference.goals(),
+                    TimeSlotDto.toTimeSlots(preference.availability()));
+        }
     }
 
     /** Accepted connections get both the original request and the active connection. */
