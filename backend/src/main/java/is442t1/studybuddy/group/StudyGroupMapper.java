@@ -2,6 +2,7 @@ package is442t1.studybuddy.group;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import org.springframework.stereotype.Component;
@@ -38,7 +39,8 @@ public class StudyGroupMapper {
                 group.getDescription(),
                 group.getCourse().getCourseCode(),
                 group.getCourse().getCourseName(),
-                group.getStudyGoals(),
+                // A copy: the response is written after the transaction, when lazy collections are closed.
+                new TreeSet<>(group.getStudyGoals()),
                 group.getStudyMode(),
                 TimeSlotDto.fromTimeSlots(group.getAvailability()),
                 group.getMaxSize(),

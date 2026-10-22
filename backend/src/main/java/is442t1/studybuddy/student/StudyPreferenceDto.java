@@ -2,6 +2,7 @@ package is442t1.studybuddy.student;
 
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -35,12 +36,13 @@ public record StudyPreferenceDto(
         List<@Valid TimeSlotDto> availability
 ) {
 
+    /** Copies every collection: the response is written after the transaction, when lazy entity collections are closed. */
     public static StudyPreferenceDto from(StudyPreference preference) {
         return new StudyPreferenceDto(
                 preference.getCourse().getCourseCode(),
                 preference.getStudyMode(),
                 preference.getGroupPreference(),
-                preference.getStudyGoals(),
+                new TreeSet<>(preference.getStudyGoals()),
                 TimeSlotDto.fromTimeSlots(preference.getAvailability()));
     }
 }
