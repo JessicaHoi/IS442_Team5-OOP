@@ -81,7 +81,7 @@ class MatchingApiTest extends ApiTestSupport {
     }
 
     @Test
-    void requiresStudentRoleAndRejectsAnInvalidAvailabilityDay() throws Exception {
+    void requiresStudentRoleAndRejectsInvalidFilters() throws Exception {
         String studentToken = login(createStudent("Dee Koh", "IS442"));
         String adminToken = login(createAdministrator());
 
@@ -90,6 +90,9 @@ class MatchingApiTest extends ApiTestSupport {
         mockMvc.perform(as(studentToken, get("/api/matches").param("day", "MONDAY")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Choose a valid day for the availability filter."));
+        mockMvc.perform(as(studentToken, get("/api/matches").param("goal", "NOPE")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("The value of 'goal' is not valid."));
     }
 
     private void savePreference(String token, String body) throws Exception {
