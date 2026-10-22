@@ -21,7 +21,7 @@ import is442t1.studybuddy.student.Student;
 @Table(name = "study_group_leader")
 public class StudyGroupLeader extends Student {
 
-    private static final String NOT_LEADER = "Only the group leader can do that.";
+    static final String NOT_LEADER = "Only the group leader can do that.";
 
     @OneToMany(mappedBy = "leader")
     private List<StudyGroup> ledGroups = new ArrayList<>();

@@ -74,10 +74,15 @@ public class StudyGroupService {
         return mapper.toDetail(group, studentId);
     }
 
+    /** Checks leadership before the new values, so a non-leader gets 403 whatever they send. */
     public StudyGroupResponse updateGroup(UUID studentId, UUID groupId, StudyGroupRequest request) {
-        requireAllowedSize(request.maxSize());
         StudyGroup group = requireGroup(groupId);
-        requireLeader(studentId).updateGroup(group, request.toDetails());
+        StudyGroupLeader leader = requireLeader(studentId);
+        if (!leader.leads(group)) {
+            throw new PermissionDeniedException(StudyGroupLeader.NOT_LEADER);
+        }
+        requireAllowedSize(request.maxSize());
+        leader.updateGroup(group, request.toDetails());
         return mapper.toDetail(group, studentId);
     }
 
@@ -95,7 +100,7 @@ public class StudyGroupService {
     /** The caller as a leader. A student who has never created a group cannot manage one. */
     StudyGroupLeader requireLeader(UUID studentId) {
         return leaderRepository.findById(studentId)
-                .orElseThrow(() -> new PermissionDeniedException("Only the group leader can do that."));
+                .orElseThrow(() -> new PermissionDeniedException(StudyGroupLeader.NOT_LEADER));
     }
 
     private StudyGroupLeader findOrPromoteLeader(UUID studentId) {
