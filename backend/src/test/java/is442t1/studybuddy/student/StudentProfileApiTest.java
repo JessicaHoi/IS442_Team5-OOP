@@ -1,5 +1,6 @@
 package is442t1.studybuddy.student;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
@@ -8,11 +9,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import is442t1.studybuddy.ApiTestSupport;
 
 class StudentProfileApiTest extends ApiTestSupport {
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     private static final String IS442_PREFERENCE = """
             {"course":"IS442","meetingMode":"IN_PERSON","groupFormat":"SMALL_GROUP",
@@ -98,6 +106,28 @@ class StudentProfileApiTest extends ApiTestSupport {
                         .content("{\"preferences\":[" + IS442_PREFERENCE + "," + IS442_PREFERENCE + "]}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Each course can only have one study preference."));
+    }
+
+    @Test
+    void loadsPreferencesInCourseCodeOrder() throws Exception {
+        String email = createStudent("Gwen Tan", "IS442", "IS212");
+
+        mockMvc.perform(as(login(email), put("/api/students/me/preferences"))
+                        .content("{\"preferences\":[" + IS442_PREFERENCE + "," + IS212_PREFERENCE + "]}"))
+                .andExpect(status().isOk());
+
+        List<String> loadedOrder = transactionTemplate.execute(transaction -> studentRepository.findById(idOf(email))
+                .orElseThrow().getStudyPreferences().stream()
+                .map(preference -> preference.getCourse().getCourseCode())
+                .toList());
+        assertThat(loadedOrder).containsExactly("IS212", "IS442");
+    }
+
+    @Test
+    void malformedStudentIdIsNotFound() throws Exception {
+        mockMvc.perform(as(login(createStudent("Hal Lee", "IS442")), get("/api/students/not-a-uuid")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("The requested resource does not exist."));
     }
 
     @Test
