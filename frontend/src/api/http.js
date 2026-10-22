@@ -53,8 +53,9 @@ http.interceptors.response.use(
 			data?.error ||
 			(error.request && !error.response ? 'Cannot reach the server. Please try again.' : error.message);
 
-		const isLogin = error.config?.url?.endsWith('/auth/login');
-		if (status === 401 && !isLogin) handlers.onUnauthorized();
+		// A 401 from signing in or out is expected and must not trigger the "session expired" redirect.
+		const isSignInOrOut = /\/auth\/(login|logout)$/.test(error.config?.url ?? '');
+		if (status === 401 && !isSignInOrOut) handlers.onUnauthorized();
 		return Promise.reject(new ApiError(message, status));
 	},
 );
