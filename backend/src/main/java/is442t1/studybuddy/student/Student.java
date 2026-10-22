@@ -16,6 +16,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 
 import is442t1.studybuddy.course.Course;
@@ -45,7 +46,9 @@ public class Student extends User {
             inverseJoinColumns = @JoinColumn(name = "course_code"))
     private Set<Course> coursesTaken = new HashSet<>();
 
+    /** Loaded in course-code order, so "the first preference" is the same on every database. */
     @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("course.courseCode")
     private List<StudyPreference> studyPreferences = new ArrayList<>();
 
     @Override

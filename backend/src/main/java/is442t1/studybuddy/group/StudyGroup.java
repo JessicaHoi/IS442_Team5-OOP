@@ -27,6 +27,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 import is442t1.studybuddy.common.exception.BusinessRuleException;
+import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.course.Course;
 import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.TimeSlot;
@@ -252,9 +253,10 @@ public class StudyGroup extends BaseEntity {
         }
     }
 
+    /** A request for another group does not exist as far as this group is concerned (404, not 500). */
     private void requireOwnRequest(MembershipRequest request) {
         if (request.getStudyGroup() != this) {
-            throw new IllegalArgumentException("The request belongs to a different group.");
+            throw new ResourceNotFoundException("Join request not found.");
         }
     }
 }

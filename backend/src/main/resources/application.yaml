@@ -17,10 +17,15 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+    # Entities are only read inside service transactions; a lazy load anywhere else fails fast instead of
+    # quietly running extra queries.
+    open-in-view: false
     show-sql: true
     properties:
       hibernate:
         format_sql: true
+        # Load lazy collections and associations for up to 50 parents in one query (avoids N+1 queries).
+        default_batch_fetch_size: 50
 
   # --- H2 browser console ---
   h2:

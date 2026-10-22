@@ -112,6 +112,9 @@ class StudyGroupApiTest extends ApiTestSupport {
         mockMvc.perform(as(otherToken, get("/api/groups/" + groupId + "/join-requests"))).andExpect(status().isForbidden());
         mockMvc.perform(as(otherToken, put("/api/groups/" + groupId)).content(groupJson(null, "Hijack", 5)))
                 .andExpect(status().isForbidden());
+        // Leadership is checked before the values, so an invalid size does not turn 403 into 400.
+        mockMvc.perform(as(otherToken, put("/api/groups/" + groupId)).content(groupJson(null, "Hijack", 99)))
+                .andExpect(status().isForbidden());
         mockMvc.perform(as(otherToken, post("/api/groups/" + groupId + "/close"))).andExpect(status().isForbidden());
         mockMvc.perform(as(otherToken, delete("/api/groups/" + groupId + "/members/" + idOf(leaderEmail))))
                 .andExpect(status().isForbidden());

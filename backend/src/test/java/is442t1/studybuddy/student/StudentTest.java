@@ -66,6 +66,15 @@ class StudentTest {
                 .hasMessageContaining("overlap");
     }
 
+    @Test
+    void storesEmailTrimmedAndInLowerCase() {
+        Student student = new Student();
+
+        student.setEmail("  Aisha.Rahman@SMU.edu.sg ");
+
+        assertThat(student.getEmail()).isEqualTo("aisha.rahman@smu.edu.sg");
+    }
+
     private static Student studentTaking(Course... courses) {
         Student student = new Student();
         student.replaceCoursesTaken(List.of(courses));

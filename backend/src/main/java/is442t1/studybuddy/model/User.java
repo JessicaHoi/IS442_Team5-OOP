@@ -1,5 +1,7 @@
 package is442t1.studybuddy.model;
 
+import java.util.Locale;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Table;
 import jakarta.persistence.Entity;
@@ -24,8 +26,9 @@ public abstract class User extends BaseEntity {
         return email;
     }
 
+    /** Stored trimmed and in lower case, so the unique constraint ignores case like login does. */
     public void setEmail(String email) {
-        this.email = email;
+        this.email = email == null ? null : email.trim().toLowerCase(Locale.ROOT);
     }
 
     public String getPassword() {

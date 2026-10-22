@@ -39,10 +39,23 @@ export const useAuthStore = defineStore('auth', () => {
 		writeSession({ token: token.value, user: user.value });
 	}
 
+	/** Forget the session in this browser only (used when the server already rejected the token). */
 	function logout() {
 		token.value = null;
 		user.value = null;
 		writeSession(null);
+	}
+
+	/** Sign out: forget the session at once, then revoke the token on the server. */
+	async function signOut() {
+		const current = token.value;
+		logout();
+		if (!current) return;
+		try {
+			await authApi.logout(current);
+		} catch {
+			// The token expires on its own; the user is signed out here either way.
+		}
 	}
 
 	/** Keep the navbar name in sync after the student edits their profile. */
@@ -52,5 +65,5 @@ export const useAuthStore = defineStore('auth', () => {
 		writeSession({ token: token.value, user: user.value });
 	}
 
-	return { token, user, isAuthenticated, isAdmin, homePath, login, logout, setDisplayName };
+	return { token, user, isAuthenticated, isAdmin, homePath, login, logout, signOut, setDisplayName };
 });

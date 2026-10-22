@@ -3,7 +3,7 @@ import { route } from '../router';
 import { nextId } from '../db';
 import { toGroupDetail, toGroupSummary, toStudentRef } from '../serializers';
 import { validateSlots } from '../../../utils/availability';
-import { GROUP_FORMATS, MAX_GROUP_SIZE, MEETING_MODES, MIN_GROUP_SIZE, STUDY_GOALS } from '../../../utils/constants';
+import { MAX_GROUP_SIZE, MEETING_MODES, MIN_GROUP_SIZE, STUDY_GOALS } from '../../../utils/constants';
 
 const isOneOf = (options, value) => options.some((option) => option.value === value);
 

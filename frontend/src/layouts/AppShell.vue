@@ -33,7 +33,7 @@ watch(
 );
 
 function signOut() {
-	auth.logout();
+	auth.signOut();
 	router.push({ name: 'login' });
 }
 </script>

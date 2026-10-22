@@ -8,6 +8,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.server.ResponseStatusException;
@@ -47,9 +48,13 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.BAD_REQUEST, "The request body is malformed or has an unknown value.");
     }
 
+    /** A malformed id in the path points at nothing (404); a bad query value is a client mistake (400). */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ErrorResponse> handleBadPathValue(MethodArgumentTypeMismatchException exception) {
-        return respond(HttpStatus.NOT_FOUND, "The requested resource does not exist.");
+    public ResponseEntity<ErrorResponse> handleBadArgument(MethodArgumentTypeMismatchException exception) {
+        if (exception.getParameter().hasParameterAnnotation(PathVariable.class)) {
+            return respond(HttpStatus.NOT_FOUND, "The requested resource does not exist.");
+        }
+        return respond(HttpStatus.BAD_REQUEST, "The value of '" + exception.getName() + "' is not valid.");
     }
 
     @ExceptionHandler(ResponseStatusException.class)

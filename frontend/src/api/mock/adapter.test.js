@@ -39,6 +39,10 @@ describe('mock API', () => {
 		expect((await call('get', '/students/me')).status).toBe(401);
 	});
 
+	it('signs out with 204', async () => {
+		expect((await call('post', '/auth/logout', { token })).status).toBe(204);
+	});
+
 	it('ranks IS442 candidates by score, best first, and the seeded demo pair is on top', async () => {
 		const { data } = await call('get', '/matches', { token, params: { course: 'IS442' } });
 		expect(data.length).toBeGreaterThanOrEqual(8);

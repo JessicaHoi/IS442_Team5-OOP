@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.PermissionDeniedException;
+import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.course.Course;
 import is442t1.studybuddy.model.TimeSlot;
 import is442t1.studybuddy.model.enums.GroupStatus;
@@ -141,6 +142,16 @@ class StudyGroupLeaderTest {
                 .hasMessageContaining("leader cannot be removed");
         assertThatThrownBy(() -> leader.removeMember(group, student("Stranger")))
                 .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void aGroupDoesNotAnswerAnotherGroupsRequest() {
+        StudyGroup otherGroup = leader.createGroup(new Course(), details(3));
+        MembershipRequest otherRequest = otherGroup.requestToJoin(student("Ben"), "");
+
+        assertThatThrownBy(() -> group.acceptRequest(otherRequest)).isInstanceOf(ResourceNotFoundException.class);
+        assertThatThrownBy(() -> group.rejectRequest(otherRequest)).isInstanceOf(ResourceNotFoundException.class);
+        assertThat(otherRequest.isPending()).isTrue();
     }
 
     private static GroupDetails details(int maxSize) {

@@ -1,4 +1,4 @@
-import { HttpError } from '../errors';
+import { HttpError, noContent } from '../errors';
 import { route } from '../router';
 import { saveDb } from '../db';
 
@@ -21,5 +21,8 @@ route(
 );
 
 route('GET', '/auth/me', ({ user }) => toSessionUser(user));
+
+// Mock tokens are derived from the user id, so there is nothing to revoke.
+route('POST', '/auth/logout', () => noContent());
 
 route('GET', '/courses', ({ db }) => db.courses);

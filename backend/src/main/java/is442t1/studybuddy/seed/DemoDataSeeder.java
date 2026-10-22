@@ -2,6 +2,7 @@ package is442t1.studybuddy.seed;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +33,8 @@ import is442t1.studybuddy.group.GroupDetails;
 import is442t1.studybuddy.group.StudyGroup;
 import is442t1.studybuddy.group.StudyGroupLeader;
 import is442t1.studybuddy.group.StudyGroupRepository;
+import is442t1.studybuddy.matching.MatchingConfiguration;
+import is442t1.studybuddy.matching.MatchingConfigurationRepository;
 import is442t1.studybuddy.model.UserRepository;
 import is442t1.studybuddy.model.enums.GroupStatus;
 import is442t1.studybuddy.model.enums.RequestStatus;
@@ -40,8 +43,9 @@ import is442t1.studybuddy.student.StudentRepository;
 import is442t1.studybuddy.student.StudyPreferenceDto;
 
 /**
- * Loads the demo data (10 courses, 50 students, groups, connections) when the
- * database has no accounts yet. Turned off with {@code studybuddy.seed.enabled=false}.
+ * Loads the demo data (10 courses, 50 students, groups, connections and the
+ * default matching configuration) when the database has no accounts yet.
+ * Turned off with {@code studybuddy.seed.enabled=false}.
  */
 @Component
 @ConditionalOnProperty(prefix = "studybuddy.seed", name = "enabled", havingValue = "true")
@@ -59,11 +63,13 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final StudyGroupRepository groupRepository;
     private final MatchRequestRepository matchRequestRepository;
     private final StudyBuddyConnectionRepository connectionRepository;
+    private final MatchingConfigurationRepository matchingConfigurationRepository;
 
     public DemoDataSeeder(SeedProperties properties, ResourceLoader resourceLoader, ObjectMapper objectMapper,
             PasswordEncoder passwordEncoder, UserRepository userRepository, CourseRepository courseRepository,
             StudentRepository studentRepository, StudyGroupRepository groupRepository,
-            MatchRequestRepository matchRequestRepository, StudyBuddyConnectionRepository connectionRepository) {
+            MatchRequestRepository matchRequestRepository, StudyBuddyConnectionRepository connectionRepository,
+            MatchingConfigurationRepository matchingConfigurationRepository) {
         this.properties = properties;
         this.resourceLoader = resourceLoader;
         this.objectMapper = objectMapper;
@@ -74,6 +80,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.groupRepository = groupRepository;
         this.matchRequestRepository = matchRequestRepository;
         this.connectionRepository = connectionRepository;
+        this.matchingConfigurationRepository = matchingConfigurationRepository;
     }
 
     @Override
@@ -96,12 +103,14 @@ public class DemoDataSeeder implements ApplicationRunner {
         Map<String, Student> students = seedStudents(data, courses, passwordHash);
         seedConnections(data, students);
         seedGroups(data, courses, students);
+        seedMatchingConfiguration();
         LOG.info("Loaded demo data: {} courses, {} students, {} groups.",
                 courses.size(), students.size(), data.groups().size());
     }
 
     /** Adds demo students for local testing without changing existing accounts or shared database content. */
     private void addMissingDemoStudents(SeedData data) {
+        seedMatchingConfiguration();
         var missingStudents = data.students().stream()
                 .filter(seed -> userRepository.findByEmailIgnoreCase(seed.email()).isEmpty())
                 .toList();
@@ -121,6 +130,14 @@ public class DemoDataSeeder implements ApplicationRunner {
             added++;
         }
         LOG.info("Added {} missing demo students to the existing local database.", added);
+    }
+
+    /** The matching engine needs exactly one configuration; create the default one if there is none. */
+    private void seedMatchingConfiguration() {
+        if (matchingConfigurationRepository.count() == 0) {
+            matchingConfigurationRepository.save(MatchingConfiguration.defaults());
+            LOG.info("Created the default matching configuration.");
+        }
     }
 
     private SeedData readSeedData() throws IOException {
@@ -193,6 +210,9 @@ public class DemoDataSeeder implements ApplicationRunner {
             request.setReceiver(receiver);
             request.setMessage(seed.message());
             request.setStatus(seed.status());
+            if (seed.status() != RequestStatus.PENDING) {
+                request.setRespondedAt(Instant.now());
+            }
             matchRequestRepository.save(request);
 
             if (seed.status() == RequestStatus.ACCEPTED) {
