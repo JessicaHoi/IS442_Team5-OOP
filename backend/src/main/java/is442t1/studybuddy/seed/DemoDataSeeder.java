@@ -2,6 +2,7 @@ package is442t1.studybuddy.seed;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -209,6 +210,9 @@ public class DemoDataSeeder implements ApplicationRunner {
             request.setReceiver(receiver);
             request.setMessage(seed.message());
             request.setStatus(seed.status());
+            if (seed.status() != RequestStatus.PENDING) {
+                request.setRespondedAt(Instant.now());
+            }
             matchRequestRepository.save(request);
 
             if (seed.status() == RequestStatus.ACCEPTED) {

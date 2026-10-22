@@ -7,10 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import is442t1.studybuddy.connection.MatchRequestRepository;
 import is442t1.studybuddy.course.CourseRepository;
 import is442t1.studybuddy.group.StudyGroupLeaderRepository;
 import is442t1.studybuddy.group.StudyGroupRepository;
 import is442t1.studybuddy.matching.MatchingConfigurationRepository;
+import is442t1.studybuddy.model.enums.RequestStatus;
 import is442t1.studybuddy.student.StudentRepository;
 
 @SpringBootTest(properties = {
@@ -35,6 +37,9 @@ class DemoDataSeederTest {
     @Autowired
     private MatchingConfigurationRepository matchingConfigurationRepository;
 
+    @Autowired
+    private MatchRequestRepository matchRequestRepository;
+
     @Test
     void loadsAtLeastTenCoursesAndFiftyStudents() {
         assertThat(courseRepository.count()).isGreaterThanOrEqualTo(10);
@@ -43,5 +48,13 @@ class DemoDataSeederTest {
         assertThat(leaderRepository.count()).isPositive();
         assertThat(studentRepository.findByEmail("aisha.rahman@smu.edu.sg")).isPresent();
         assertThat(matchingConfigurationRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void answeredDemoRequestsHaveAResponseTime() {
+        assertThat(matchRequestRepository.findAll())
+                .filteredOn(request -> request.getStatus() != RequestStatus.PENDING)
+                .isNotEmpty()
+                .allSatisfy(request -> assertThat(request.getRespondedAt()).isNotNull());
     }
 }
