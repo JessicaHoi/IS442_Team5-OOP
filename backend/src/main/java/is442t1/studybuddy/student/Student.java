@@ -137,6 +137,15 @@ public class Student extends User {
                 .filter(preference -> preference.getCourse().getCourseCode().equals(courseCode))
                 .findFirst();
     }
+    /**
+     * The weekly availability this student gave for one course, or an empty
+     * list if they have not set a study preference for it.
+     */
+    public List<TimeSlot> availabilityFor(String courseCode) {
+        return findPreferenceFor(courseCode)
+                .map(StudyPreference::getAvailability)
+                .orElse(List.of());
+    }
 
     /**
      * Creates or updates the study preference for one course. The existing

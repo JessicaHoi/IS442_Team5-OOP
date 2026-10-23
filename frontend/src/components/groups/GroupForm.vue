@@ -122,7 +122,7 @@ function onSubmit() {
 				<div v-if="errors.availability" class="invalid-feedback d-block">{{ errors.availability }}</div>
 			</div>
 		</fieldset>
-
+		<slot name="after-availability" />
 		<button v-if="!readonly" type="submit" class="btn btn-primary" :disabled="saving">
 			<span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>{{ submitLabel }}
 		</button>
