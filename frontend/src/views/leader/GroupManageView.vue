@@ -11,6 +11,7 @@ import StatusBadge from '../../components/ui/StatusBadge.vue';
 import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 import GroupForm from '../../components/groups/GroupForm.vue';
+import GroupBestTimes from '../../components/groups/GroupBestTimes.vue';
 import JoinRequestList from '../../components/groups/JoinRequestList.vue';
 import MemberList from '../../components/groups/MemberList.vue';
 
@@ -158,7 +159,11 @@ async function closeGroup() {
 				/>
 				<MemberList v-else-if="activeTab === 'members'" :members="group.members" :readonly="group.status === 'CLOSED'" @remove="removeMember" />
 				<div v-else-if="activeTab === 'details'" class="py-3">
-					<GroupForm :group="group" :saving="saving" :readonly="group.status === 'CLOSED'" submit-label="Save changes" @submit="saveDetails" />
+					<GroupForm :group="group" :saving="saving" :readonly="group.status === 'CLOSED'" submit-label="Save changes" @submit="saveDetails">
+						<template #after-availability>
+							<GroupBestTimes v-if="group.status === 'OPEN'" class="mb-4" :group-id="id" :member-count="group.memberCount" />
+						</template>
+					</GroupForm>
 				</div>
 			</div>
 		</template>

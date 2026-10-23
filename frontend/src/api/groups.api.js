@@ -7,6 +7,7 @@ export const groupsApi = {
 	create: (group) => unwrap(http.post('/groups', group)),
 	update: (id, group) => unwrap(http.put(`/groups/${id}`, group)),
 	close: (id) => unwrap(http.post(`/groups/${id}/close`)),
+	bestTimes: (id) => unwrap(http.get(`/groups/${id}/best-times`)),
 
 	requestToJoin: (id, message) => unwrap(http.post(`/groups/${id}/join-requests`, { message })),
 	joinRequests: (id) => unwrap(http.get(`/groups/${id}/join-requests`)),

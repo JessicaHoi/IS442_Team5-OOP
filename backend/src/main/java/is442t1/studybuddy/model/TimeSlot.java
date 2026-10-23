@@ -1,8 +1,9 @@
 package is442t1.studybuddy.model;
-
+import java.time.Duration;
 import java.time.DayOfWeek;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
@@ -28,6 +29,19 @@ public record TimeSlot(
     /** True when both slots are on the same day and share at least one minute. */
     public boolean overlaps(TimeSlot other) {
         return day == other.day && startTime.isBefore(other.endTime) && other.startTime.isBefore(endTime);
+    }
+    /** For Timeslot indication */
+    public Optional<TimeSlot> intersect(TimeSlot other) {
+        if (day != other.day) {
+            return Optional.empty();
+        }
+        LocalTime start = startTime.isAfter(other.startTime) ? startTime : other.startTime;
+        LocalTime end = endTime.isBefore(other.endTime) ? endTime : other.endTime;
+        return start.isBefore(end) ? Optional.of(new TimeSlot(day, start, end)) : Optional.empty();
+    }
+
+    public Duration duration() {
+        return Duration.between(startTime, endTime);
     }
 
     /**
