@@ -2,7 +2,6 @@ package is442t1.studybuddy.matching;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -15,6 +14,7 @@ import is442t1.studybuddy.common.exception.ValidationException;
 import is442t1.studybuddy.connection.BuddyState;
 import is442t1.studybuddy.connection.BuddyStateService;
 import is442t1.studybuddy.course.Course;
+import is442t1.studybuddy.matching.strategy.RankingStrategyResolver;
 import is442t1.studybuddy.model.TimeSlot;
 import is442t1.studybuddy.model.enums.GroupPreference;
 import is442t1.studybuddy.model.enums.StudyGoal;
@@ -25,26 +25,29 @@ import is442t1.studybuddy.student.StudentProfileResponse;
 import is442t1.studybuddy.student.StudentRepository;
 import is442t1.studybuddy.student.StudyPreference;
 
-/** Searches students and ranks them using the same weighted criteria as the mock API. */
+/**
+ * Searches students, scores them with the administrator's criterion weights and
+ * orders them with the configured ranking strategy (same rules as the mock API).
+ */
 @Service
 public class MatchingService {
 
     private static final int FULL_AVAILABILITY_MINUTES = 180;
-    private static final int COURSE_WEIGHT = 30;
-    private static final int AVAILABILITY_WEIGHT = 25;
-    private static final int STUDY_MODE_WEIGHT = 15;
-    private static final int STUDY_GOAL_WEIGHT = 20;
-    private static final int GROUP_SIZE_WEIGHT = 10;
 
     private final StudentRepository studentRepository;
     private final StudentProfileMapper profileMapper;
     private final BuddyStateService buddyStateService;
+    private final MatchingConfigService configService;
+    private final RankingStrategyResolver strategyResolver;
 
     public MatchingService(StudentRepository studentRepository, StudentProfileMapper profileMapper,
-            BuddyStateService buddyStateService) {
+            BuddyStateService buddyStateService, MatchingConfigService configService,
+            RankingStrategyResolver strategyResolver) {
         this.studentRepository = studentRepository;
         this.profileMapper = profileMapper;
         this.buddyStateService = buddyStateService;
+        this.configService = configService;
+        this.strategyResolver = strategyResolver;
     }
 
     @Transactional(readOnly = true)
@@ -57,28 +60,23 @@ public class MatchingService {
         String targetCourse = course != null && !course.isBlank()
                 ? course
                 : viewerPreference == null ? null : viewerPreference.getCourse().getCourseCode();
+        MatchingRules rules = configService.currentRules();
 
         return studentRepository.findAll().stream()
                 .filter(candidate -> !candidate.hasId(viewerId))
                 .filter(candidate -> matchesFilters(candidate, course, goal, day, studyMode, groupFormat))
-                .map(candidate -> toResult(viewer, viewerPreference, candidate, targetCourse))
-                .sorted(Comparator.comparingInt(MatchResult::score).reversed()
-                        .thenComparing(result -> result.student().name(), String.CASE_INSENSITIVE_ORDER))
+                .map(candidate -> toResult(viewer, viewerPreference, candidate, targetCourse, rules))
+                .sorted(strategyResolver.resolve(rules.strategy()).comparator())
                 .toList();
     }
 
     private MatchResult toResult(Student viewer, StudyPreference viewerPreference, Student candidate,
-            String targetCourse) {
+            String targetCourse, MatchingRules rules) {
         StudyPreference candidatePreference = preferenceFor(candidate, targetCourse);
         int overlapMinutes = overlapMinutes(viewerPreference, candidatePreference);
         MatchScoreBreakdown breakdown = breakdown(viewer, candidate, viewerPreference, candidatePreference,
                 targetCourse, overlapMinutes);
-        int score = (int) Math.round(
-                breakdown.course() * COURSE_WEIGHT
-                        + breakdown.availability() * AVAILABILITY_WEIGHT
-                        + breakdown.studyMode() * STUDY_MODE_WEIGHT
-                        + breakdown.studyGoal() * STUDY_GOAL_WEIGHT
-                        + breakdown.groupSize() * GROUP_SIZE_WEIGHT);
+        int score = rules.score(breakdown);
 
         BuddyState buddyState = buddyStateService.stateBetween(viewer.getId(), candidate.getId());
         StudentProfileResponse profile = profileMapper.toPublicProfile(candidate, buddyState);

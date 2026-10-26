@@ -54,4 +54,10 @@ public class MatchingConfiguration extends BaseEntity {
     public List<MatchingCriteria> getCriteria() {
         return Collections.unmodifiableList(criteria);
     }
+
+    /** Replaces every criterion weight, e.g. when the administrator saves the configuration. */
+    public void replaceCriteria(List<MatchingCriteria> newCriteria) {
+        criteria.clear();
+        criteria.addAll(newCriteria);
+    }
 }
