@@ -87,7 +87,7 @@ public class StudyGroupService {
     }
 
     public StudyGroupResponse closeGroup(UUID studentId, UUID groupId) {
-        StudyGroup group = requireGroup(groupId);
+        StudyGroup group = requireGroupForUpdate(groupId);
         requireLeader(studentId).closeGroup(group);
         return mapper.toDetail(group, studentId);
     }
@@ -99,6 +99,11 @@ public class StudyGroupService {
             throw new PermissionDeniedException(StudyGroupLeader.NOT_LEADER);
         }
         return LedGroupResponse.from(group);
+    }
+
+    StudyGroup requireGroupForUpdate(UUID groupId) {
+        return groupRepository.findForUpdate(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Study group not found."));
     }
 
     StudyGroup requireGroup(UUID groupId) {

@@ -73,7 +73,7 @@ public class MembershipService {
     }
 
     public void removeMember(UUID studentId, UUID groupId, UUID memberId) {
-        StudyGroup group = groupService.requireGroup(groupId);
+        StudyGroup group = groupService.requireGroupForUpdate(groupId);
         StudyGroupLeader leader = groupService.requireLeader(studentId);
         Student member = studentService.requireStudent(memberId);
         leader.removeMember(group, member);

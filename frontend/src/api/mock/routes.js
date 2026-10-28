@@ -4,6 +4,7 @@ import './handlers/students';
 import './handlers/matches';
 import './handlers/connections';
 import './handlers/groups';
+import './handlers/groupAvailability';
 import './handlers/admin';
 
 export { findRoute } from './router';

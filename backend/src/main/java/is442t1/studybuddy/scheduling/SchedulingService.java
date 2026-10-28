@@ -8,6 +8,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -78,6 +79,53 @@ public class SchedulingService {
                         .thenComparing(w -> w.slot().duration(), Comparator.reverseOrder()))
                 .limit(MAX_SUGGESTIONS)
                 .toList();
+    }
+
+    public List<GroupHeatmapCell> groupHeatmap(Map<AvailableMember, List<TimeSlot>> members) {
+        List<GroupHeatmapCell> cells = new ArrayList<>();
+        for (DayOfWeek day : DayOfWeek.values()) {
+            for (int minute = FIRST_HOUR * 60; minute < LAST_HOUR * 60; minute += 30) {
+                LocalTime start = LocalTime.of(minute / 60, minute % 60);
+                LocalTime end = start.plusMinutes(30);
+                List<AvailableMember> available = members.entrySet().stream()
+                        .filter(entry -> coversBlock(entry.getValue(), day, start, end))
+                        .map(Map.Entry::getKey)
+                        .sorted(Comparator.comparing(AvailableMember::name).thenComparing(AvailableMember::id))
+                        .toList();
+                cells.add(new GroupHeatmapCell(day, start, end, available.size(), available));
+            }
+        }
+        return cells;
+    }
+
+    public List<FreeWindow> groupSuggestions(List<GroupHeatmapCell> cells) {
+        List<FreeWindow> windows = new ArrayList<>();
+        for (int i = 0; i < cells.size();) {
+            GroupHeatmapCell first = cells.get(i);
+            int j = i + 1;
+            while (j < cells.size() && cells.get(j).day() == first.day()
+                    && cells.get(j - 1).endTime().equals(cells.get(j).startTime())
+                    && cells.get(j).availableMembers().equals(first.availableMembers())) j++;
+            if (first.freeCount() >= 2) {
+                windows.add(new FreeWindow(new TimeSlot(first.day(), first.startTime(), cells.get(j - 1).endTime()), first.freeCount()));
+            }
+            i = j;
+        }
+        return windows.stream().sorted(Comparator.comparingInt(FreeWindow::freeCount).reversed()
+                .thenComparing(window -> window.slot().duration(), Comparator.reverseOrder())
+                .thenComparing(window -> window.slot().day()).thenComparing(window -> window.slot().startTime()))
+                .limit(MAX_SUGGESTIONS).toList();
+    }
+
+    private boolean coversBlock(List<TimeSlot> slots, DayOfWeek day, LocalTime start, LocalTime end) {
+        LocalTime covered = start;
+        for (TimeSlot slot : slots.stream().filter(item -> item.day() == day)
+                .sorted(Comparator.comparing(TimeSlot::startTime)).toList()) {
+            if (slot.startTime().isAfter(covered)) return false;
+            if (slot.endTime().isAfter(covered)) covered = slot.endTime();
+            if (!covered.isBefore(end)) return true;
+        }
+        return false;
     }
 
     /** True when the slot covers the whole hour from start to end on that day. */

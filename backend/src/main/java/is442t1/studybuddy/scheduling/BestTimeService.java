@@ -3,6 +3,8 @@ package is442t1.studybuddy.scheduling;
 import java.util.List;
 import java.util.UUID;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.LinkedHashMap;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,13 +68,10 @@ public class BestTimeService {
             throw new ResourceNotFoundException("Group not found.");
         }
 
-        String courseCode = group.getCourse().getCourseCode();
-        List<List<TimeSlot>> everyone = group.getMembers().stream()
-                .map(member -> member.availabilityFor(courseCode))
-                .toList();
-
-        return new GroupBestTimes(
-                schedulingService.suggestForGroup(everyone),
-                schedulingService.heatmap(everyone));
+        Map<AvailableMember, List<TimeSlot>> everyone = new LinkedHashMap<>();
+        group.getMembers().forEach(member -> everyone.put(new AvailableMember(member.getId(), member.getName()),
+                group.memberAvailability(member.getId())));
+        List<GroupHeatmapCell> cells = schedulingService.groupHeatmap(everyone);
+        return new GroupBestTimes(schedulingService.groupSuggestions(cells), cells, everyone.size());
     }
 }

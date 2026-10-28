@@ -93,6 +93,33 @@ public class StudyGroup extends BaseEntity {
     @OneToMany(mappedBy = "studyGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MembershipRequest> membershipRequests = new ArrayList<>();
 
+    @OneToMany(mappedBy = "studyGroup", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<GroupMemberAvailability> memberAvailabilities = new ArrayList<>();
+
+    public Optional<GroupMemberAvailability> findMemberAvailability(UUID studentId) {
+        return memberAvailabilities.stream().filter(item -> item.belongsTo(studentId)).findFirst();
+    }
+
+    public List<TimeSlot> memberAvailability(UUID studentId) {
+        Student member = members.stream().filter(item -> item.hasId(studentId)).findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Group member not found."));
+        return findMemberAvailability(studentId).map(GroupMemberAvailability::getSlots)
+                .orElseGet(() -> member.availabilityFor(course.getCourseCode()));
+    }
+
+    void saveMemberAvailability(UUID studentId, List<TimeSlot> slots) {
+        requireOpen();
+        Student member = members.stream().filter(item -> item.hasId(studentId)).findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Group member not found."));
+        findMemberAvailability(studentId).ifPresentOrElse(item -> item.replace(slots),
+                () -> memberAvailabilities.add(new GroupMemberAvailability(this, member, slots)));
+    }
+
+    void resetMemberAvailability(UUID studentId) {
+        requireOpen();
+        memberAvailabilities.removeIf(item -> item.belongsTo(studentId));
+    }
+
     protected StudyGroup() {
         // Required by JPA.
     }
@@ -245,6 +272,7 @@ public class StudyGroup extends BaseEntity {
         if (!members.removeIf(member -> member.isSameStudent(student))) {
             throw new BusinessRuleException("This student is not a member of the group.");
         }
+        memberAvailabilities.removeIf(item -> item.belongsTo(student.getId()));
     }
 
     private void requireOpen() {
@@ -266,6 +294,7 @@ public class StudyGroup extends BaseEntity {
         }
         members.removeIf(member -> member.hasId(studentId));
         membershipRequests.removeIf(request -> request.getStudent().hasId(studentId));
+        memberAvailabilities.removeIf(item -> item.belongsTo(studentId));
     }
 
     /** A request for another group does not exist as far as this group is concerned (404, not 500). */

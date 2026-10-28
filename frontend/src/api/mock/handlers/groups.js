@@ -202,6 +202,7 @@ route(
 		if (studentId === group.leaderId) throw badRequest('The group leader cannot be removed.');
 		if (!group.memberIds.includes(studentId)) throw notFound('This student is not a member.');
 		group.memberIds = group.memberIds.filter((id) => id !== studentId);
+		delete group.availabilityOverrides?.[studentId];
 		return noContent();
 	},
 	{ role: 'STUDENT' },

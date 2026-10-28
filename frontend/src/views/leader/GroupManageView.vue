@@ -148,9 +148,6 @@ async function closeGroup() {
 			<div v-if="group.status === 'CLOSED'" class="alert alert-secondary" role="status">
 				<i class="bi bi-lock me-2"></i>This group is closed. It is kept here as a read-only record.
 			</div>
-			<div v-else-if="!isLeader" class="alert alert-light border" role="status">
-				<i class="bi bi-eye me-2"></i>Member view. You can view this group, but only the group leader can make changes.
-			</div>
 
 			<ul class="nav nav-underline mb-4" role="tablist">
 				<li v-if="group.status === 'OPEN'" class="nav-item" role="presentation">
@@ -181,14 +178,9 @@ async function closeGroup() {
 				/>
 				<MemberList v-else-if="activeTab === 'members'" :members="group.members" :readonly="readonly" @remove="removeMember" />
 				<div v-else-if="activeTab === 'details'" class="py-3">
-					<GroupDetails v-if="readonly" :group="group">
-						<GroupBestTimes v-if="group.status === 'OPEN'" class="mt-4" :group-id="id" :member-count="group.memberCount" />
-					</GroupDetails>
-					<GroupForm v-else :group="group" :saving="saving" submit-label="Save changes" @submit="saveDetails">
-						<template #after-availability>
-							<GroupBestTimes v-if="group.status === 'OPEN'" class="mb-4" :group-id="id" :member-count="group.memberCount" />
-						</template>
-					</GroupForm>
+					<GroupDetails v-if="readonly" :group="group" />
+					<GroupForm v-else :group="group" :saving="saving" submit-label="Save changes" @submit="saveDetails" />
+					<GroupBestTimes class="mt-4" :group-id="id" :member-count="group.memberCount" :closed="group.status === 'CLOSED'" />
 				</div>
 			</div>
 			<LeadershipTransferModal v-model="leadershipOpen" :group-id="id" @transferred="refresh" />
