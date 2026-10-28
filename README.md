@@ -22,6 +22,8 @@ Administrators can create, update and delete accounts. Account roles cannot chan
 
 A student who leads groups cannot be deleted until leadership of every group has been transferred. Administrators can transfer leadership from a suspended leader. Existing groups and memberships are preserved.
 
+Group members can view meeting suggestions and save availability for each group without changing their profile preferences. The heatmap shows availability in 30-minute blocks; hovering over a block shows its available members. Closed groups are read-only.
+
 Account management is covered by backend and mock API tests. When testing deletion across restarts, set `studybuddy.seed.add-students-to-existing=false` so deleted demo accounts are not recreated.
 
 ### Option A: mock data (frontend only)

@@ -112,7 +112,10 @@ route(
 		delete db.students[user.id];
 		db.connections = db.connections.filter((c) => c.fromId !== user.id && c.toId !== user.id);
 		db.joinRequests = db.joinRequests.filter((r) => r.studentId !== user.id);
-		db.groups.forEach((g) => (g.memberIds = g.memberIds.filter((id) => id !== user.id)));
+		db.groups.forEach((group) => {
+			group.memberIds = group.memberIds.filter((id) => id !== user.id);
+			delete group.availabilityOverrides?.[user.id];
+		});
 		return noContent();
 	},
 	ADMIN_ONLY,
