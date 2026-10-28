@@ -253,6 +253,21 @@ public class StudyGroup extends BaseEntity {
         }
     }
 
+    public void transferLeadershipTo(StudyGroupLeader successor) {
+        if (!successor.isActive() || !hasMember(successor.getId()) || isLedBy(successor.getId())) {
+            throw new BusinessRuleException("Choose another active member as the new group leader.");
+        }
+        leader = successor;
+    }
+
+    public void removeDeletedAccount(UUID studentId) {
+        if (isLedBy(studentId)) {
+            throw new BusinessRuleException("Transfer group leadership before deleting this account.");
+        }
+        members.removeIf(member -> member.hasId(studentId));
+        membershipRequests.removeIf(request -> request.getStudent().hasId(studentId));
+    }
+
     /** A request for another group does not exist as far as this group is concerned (404, not 500). */
     private void requireOwnRequest(MembershipRequest request) {
         if (request.getStudyGroup() != this) {

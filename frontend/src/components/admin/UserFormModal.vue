@@ -8,6 +8,7 @@ const props = defineProps({
 	modelValue: Boolean,
 	/** Account being edited; null when creating. */
 	user: { type: Object, default: null },
+	isSelf: Boolean,
 	saving: Boolean,
 	/** Server-side error to show above the form. */
 	error: { type: String, default: '' },
@@ -39,16 +40,23 @@ watch(
 function validate() {
 	const found = {};
 	if (!form.name.trim()) found.name = 'Name is required.';
+	else if (form.name.trim().length > 100) found.name = 'Name must be at most 100 characters.';
 	if (!EMAIL_PATTERN.test(form.email.trim())) found.email = 'Enter a valid email address.';
+	else if (form.email.trim().length > 255) found.email = 'Email must be at most 255 characters.';
 	const needsPassword = !isEditing.value || form.password.length > 0;
 	if (needsPassword && form.password.length < MIN_PASSWORD_LENGTH) {
 		found.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
+	}
+	if (needsPassword && !form.password.trim()) found.password = 'Password must not be blank.';
+	if (needsPassword && new TextEncoder().encode(form.password).length > 72) {
+		found.password = 'Password is too long. Use fewer characters.';
 	}
 	errors.value = found;
 	return Object.keys(found).length === 0;
 }
 
 function onSubmit() {
+	if (props.saving) return;
 	if (!validate()) return;
 	const payload = { name: form.name.trim(), email: form.email.trim(), role: form.role, status: form.status };
 	if (form.password) payload.password = form.password;
@@ -61,6 +69,7 @@ function onSubmit() {
 		:model-value="modelValue"
 		:title="isEditing ? 'Edit account' : 'Create account'"
 		as-form
+		:busy="saving"
 		@update:model-value="emit('update:modelValue', $event)"
 		@submit="onSubmit"
 	>
@@ -75,7 +84,7 @@ function onSubmit() {
 		<div class="row">
 			<div class="col-sm-6">
 				<FormField label="Role" v-slot="{ id }">
-					<select :id="id" v-model="form.role" class="form-select">
+					<select :id="id" v-model="form.role" class="form-select" :disabled="isEditing">
 						<option :value="ROLES.STUDENT">Student</option>
 						<option :value="ROLES.ADMIN">System administrator</option>
 					</select>
@@ -83,7 +92,7 @@ function onSubmit() {
 			</div>
 			<div class="col-sm-6">
 				<FormField label="Status" v-slot="{ id }">
-					<select :id="id" v-model="form.status" class="form-select">
+					<select :id="id" v-model="form.status" class="form-select" :disabled="isSelf">
 						<option v-for="status in USER_STATUSES" :key="status.value" :value="status.value">{{ status.label }}</option>
 					</select>
 				</FormField>
@@ -100,7 +109,7 @@ function onSubmit() {
 		</FormField>
 
 		<template #footer>
-			<button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+			<button type="button" class="btn btn-light" data-bs-dismiss="modal" :disabled="saving">Cancel</button>
 			<button type="submit" class="btn btn-primary" :disabled="saving">
 				<span v-if="saving" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
 				{{ isEditing ? 'Save changes' : 'Create account' }}

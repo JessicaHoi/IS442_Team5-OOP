@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import is442t1.studybuddy.common.exception.ResourceNotFoundException;
+import is442t1.studybuddy.common.exception.BusinessRuleException;
+import is442t1.studybuddy.common.exception.PermissionDeniedException;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentService;
 
@@ -28,7 +30,11 @@ public class MembershipService {
 
     public StudyGroupResponse requestToJoin(UUID studentId, UUID groupId, String message) {
         StudyGroup group = groupService.requireGroup(groupId);
-        group.requestToJoin(studentService.requireStudent(studentId), message);
+        Student student = studentService.requireStudent(studentId);
+        if (!group.getLeader().isActive() || !student.isActive()) {
+            throw new BusinessRuleException("The student and group leader must have active accounts to request membership.");
+        }
+        group.requestToJoin(student, message);
         return mapper.toSummary(group, studentId);
     }
 
@@ -45,7 +51,14 @@ public class MembershipService {
     public StudyGroupResponse acceptRequest(UUID studentId, UUID groupId, UUID requestId) {
         StudyGroup group = groupService.requireGroup(groupId);
         StudyGroupLeader leader = groupService.requireLeader(studentId);
-        leader.acceptMember(requirePendingRequest(group, requestId));
+        if (!leader.leads(group)) {
+            throw new PermissionDeniedException(StudyGroupLeader.NOT_LEADER);
+        }
+        MembershipRequest request = requirePendingRequest(group, requestId);
+        if (!leader.isActive() || !request.getStudent().isActive()) {
+            throw new BusinessRuleException("The student and group leader must have active accounts to accept membership.");
+        }
+        leader.acceptMember(request);
         return mapper.toDetail(group, studentId);
     }
 

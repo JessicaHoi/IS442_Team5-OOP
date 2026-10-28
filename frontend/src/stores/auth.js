@@ -65,5 +65,11 @@ export const useAuthStore = defineStore('auth', () => {
 		writeSession({ token: token.value, user: user.value });
 	}
 
-	return { token, user, isAuthenticated, isAdmin, homePath, login, logout, signOut, setDisplayName };
+	function updateAccountDetails({ name, email }) {
+		if (!user.value) return;
+		user.value = { ...user.value, name, email };
+		writeSession({ token: token.value, user: user.value });
+	}
+
+	return { token, user, isAuthenticated, isAdmin, homePath, login, logout, signOut, setDisplayName, updateAccountDetails };
 });

@@ -12,6 +12,8 @@ import is442t1.studybuddy.course.CourseRepository;
 import is442t1.studybuddy.group.StudyGroupLeaderRepository;
 import is442t1.studybuddy.group.StudyGroupRepository;
 import is442t1.studybuddy.matching.MatchingConfigurationRepository;
+import is442t1.studybuddy.model.UserRepository;
+import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.RequestStatus;
 import is442t1.studybuddy.student.StudentRepository;
 
@@ -21,6 +23,9 @@ import is442t1.studybuddy.student.StudentRepository;
 })
 @ActiveProfiles("test")
 class DemoDataSeederTest {
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private CourseRepository courseRepository;
@@ -48,6 +53,17 @@ class DemoDataSeederTest {
         assertThat(leaderRepository.count()).isPositive();
         assertThat(studentRepository.findByEmail("aisha.rahman@smu.edu.sg")).isPresent();
         assertThat(matchingConfigurationRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void seededAccountsHavePersistedDefaultsAndTheExistingAdministratorName() {
+        assertThat(userRepository.findAll()).hasSize(51).allSatisfy(account -> {
+            assertThat(account.getStatus()).isEqualTo(AccountStatus.ACTIVE);
+            assertThat(account.getCreatedAt()).isNotNull();
+            assertThat(account.getLastLogin()).isNull();
+        });
+        assertThat(userRepository.findByEmailIgnoreCase("admin@smu.edu.sg")).get()
+                .extracting(account -> account.getDisplayName()).isEqualTo("System Administrator");
     }
 
     @Test

@@ -19,6 +19,7 @@ route(
 		const toId = Number(body.toStudentId);
 		if (toId === user.id) throw badRequest('You cannot send a request to yourself.');
 		if (!db.students[toId]) throw notFound('Student not found.');
+		if (db.users.find((candidate) => candidate.id === toId)?.status !== 'ACTIVE') throw conflict('Both students must have active accounts to create a connection.');
 		if ((body.message ?? '').length > MESSAGE_MAX_LENGTH) throw badRequest('Message is too long.');
 		if (findActiveConnection(db, user.id, toId)) {
 			throw conflict('You already have a pending request or connection with this student.');
@@ -61,6 +62,9 @@ function respond(newStatus) {
 		const connection = loadConnection(db, params.id);
 		if (connection.toId !== user.id) throw forbidden('Only the recipient can respond to this request.');
 		if (connection.status !== 'PENDING') throw conflict('This request has already been answered.');
+		if (newStatus === 'ACCEPTED' && db.users.find((candidate) => candidate.id === connection.fromId)?.status !== 'ACTIVE') {
+			throw conflict('Both students must have active accounts to create a connection.');
+		}
 		connection.status = newStatus;
 		connection.respondedAt = new Date().toISOString();
 		return toConnectionView(db, connection, user.id);

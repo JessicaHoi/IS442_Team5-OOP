@@ -11,6 +11,7 @@ const props = defineProps({
 	title: { type: String, default: '' },
 	size: { type: String, default: '' },
 	asForm: Boolean,
+	busy: Boolean,
 });
 const emit = defineEmits(['update:modelValue', 'submit', 'hidden']);
 
@@ -19,6 +20,9 @@ let instance = null;
 
 onMounted(() => {
 	instance = new Modal(root.value);
+	root.value.addEventListener('hide.bs.modal', (event) => {
+		if (props.busy) event.preventDefault();
+	});
 	root.value.addEventListener('hidden.bs.modal', () => {
 		emit('update:modelValue', false);
 		emit('hidden');
@@ -27,8 +31,11 @@ onMounted(() => {
 });
 
 watch(
-	() => props.modelValue,
-	(open) => (open ? instance?.show() : instance?.hide()),
+	[() => props.modelValue, () => props.busy],
+	([open, busy]) => {
+		if (open) instance?.show();
+		else if (!busy) instance?.hide();
+	},
 );
 
 onBeforeUnmount(() => {
@@ -51,7 +58,7 @@ onBeforeUnmount(() => {
 				<component :is="asForm ? 'form' : 'div'" class="modal-content" novalidate @submit.prevent="emit('submit')">
 					<div class="modal-header border-0 pb-0">
 						<h2 class="modal-title h5">{{ title }}</h2>
-						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" :disabled="busy"></button>
 					</div>
 					<div class="modal-body">
 						<slot />

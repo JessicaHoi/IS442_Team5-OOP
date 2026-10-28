@@ -9,9 +9,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import is442t1.studybuddy.model.enums.GroupStatus;
+import is442t1.studybuddy.model.AccountUsageCount;
 
 @Repository
 public interface StudyGroupRepository extends JpaRepository<StudyGroup, UUID> {
+
+    @Query("""
+            select m.id as userId, count(g) as usageCount
+            from StudyGroup g join g.members m
+            group by m.id
+            """)
+    List<AccountUsageCount> countMembershipsByStudent();
 
     List<StudyGroup> findByStatusOrderByCreatedAtDesc(GroupStatus status);
 
@@ -19,4 +27,8 @@ public interface StudyGroupRepository extends JpaRepository<StudyGroup, UUID> {
 
     @Query("select g from StudyGroup g join g.members m where m.id = :studentId")
     List<StudyGroup> findByMemberId(@Param("studentId") UUID studentId);
+
+    List<StudyGroup> findByLeader_Id(UUID leaderId);
+
+    boolean existsByLeader_Id(UUID leaderId);
 }

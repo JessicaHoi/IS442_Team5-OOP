@@ -39,8 +39,12 @@ describe('mock API', () => {
 		expect((await call('get', '/students/me')).status).toBe(401);
 	});
 
-	it('signs out with 204', async () => {
-		expect((await call('post', '/auth/logout', { token })).status).toBe(204);
+	it('signs out only the presented session with 204', async () => {
+		const separateSession = await login(AISHA);
+		expect(separateSession).not.toBe(token);
+		expect((await call('post', '/auth/logout', { token: separateSession })).status).toBe(204);
+		expect((await call('get', '/auth/me', { token: separateSession })).status).toBe(401);
+		expect((await call('get', '/auth/me', { token })).status).toBe(200);
 	});
 
 	it('ranks IS442 candidates by score, best first, and the seeded demo pair is on top', async () => {

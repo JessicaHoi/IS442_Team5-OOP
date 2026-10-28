@@ -32,9 +32,9 @@ DAYS = {"MON": "MONDAY", "TUE": "TUESDAY", "WED": "WEDNESDAY", "THU": "THURSDAY"
 
 # Every table and column the inserts rely on (as Hibernate names them).
 REQUIRED_COLUMNS = {
-    "users": ["id", "email", "password"],
+    "users": ["id", "email", "password", "status", "created_at", "last_login"],
     "student": ["id", "name", "school", "program", "year_of_study", "contact_num"],
-    "systemadministrator": ["id"],
+    "systemadministrator": ["id", "name"],
     "study_group_leader": ["id"],
     "course": ["course_code", "course_name", "school"],
     "student_course": ["student_id", "course_code"],
@@ -93,7 +93,7 @@ def build(data):
     preferences, preference_goals, preference_slots = [], [], []
     for s in data["students"]:
         sid = student_ids[s["key"]]
-        users.append([q(sid), q(s["email"]), q(DEMO_PASSWORD_HASH)])
+        users.append([q(sid), q(s["email"]), q(DEMO_PASSWORD_HASH), q("ACTIVE"), "CURRENT_TIMESTAMP", "null"])
         students.append([q(sid), q(s["name"]), q(s["school"]), q(s["programme"]), q(s["yearOfStudy"]),
                          q(s["contactNumber"])])
         student_courses += [[q(sid), q(code)] for code in s["courses"]]
@@ -103,7 +103,7 @@ def build(data):
             preference_goals += [[q(pid), q(goal)] for goal in p["goals"]]
             preference_slots += slot_rows(pid, p["availability"])
     for admin, aid in zip(data["administrators"], admin_ids):
-        users.append([q(aid), q(admin["email"]), q(DEMO_PASSWORD_HASH)])
+        users.append([q(aid), q(admin["email"]), q(DEMO_PASSWORD_HASH), q("ACTIVE"), "CURRENT_TIMESTAMP", "null"])
 
     # Connections: every connection has its original match request; accepted ones also get an active connection.
     match_requests, connections = [], []
@@ -184,8 +184,9 @@ truncate table
 
     out.append(insert("course", ["course_code", "course_name", "school"],
                       [[q(c["code"]), q(c["name"]), q(c["school"])] for c in data["courses"]]))
-    out.append(insert("users", ["id", "email", "password"], users))
-    out.append(insert("systemadministrator", ["id"], [[q(aid)] for aid in admin_ids]))
+    out.append(insert("users", ["id", "email", "password", "status", "created_at", "last_login"], users))
+    out.append(insert("systemadministrator", ["id", "name"],
+                      [[q(aid), q("System Administrator")] for aid in admin_ids]))
     out.append(insert("student", ["id", "name", "school", "program", "year_of_study", "contact_num"], students))
     out.append(insert("study_group_leader", ["id"], [[q(student_ids[key])] for key in sorted(leader_keys)]))
     out.append(insert("student_course", ["student_id", "course_code"], student_courses))

@@ -1,15 +1,29 @@
 package is442t1.studybuddy.admin;
 
-import is442t1.studybuddy.model.User;
-import is442t1.studybuddy.model.enums.Role;
+import org.hibernate.annotations.ColumnDefault;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+
+import is442t1.studybuddy.model.User;
+import is442t1.studybuddy.model.enums.Role;
 
 @Entity
 @Table(name = "systemadministrator")
 public class SystemAdministrator extends User {
 
-    private static final String DISPLAY_NAME = "System Administrator";
+    @Column(nullable = false)
+    @ColumnDefault("'System Administrator'")
+    private String name = "System Administrator";
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
 
     @Override
     public Role getRole() {
@@ -18,6 +32,6 @@ public class SystemAdministrator extends User {
 
     @Override
     public String getDisplayName() {
-        return DISPLAY_NAME;
+        return name;
     }
 }
