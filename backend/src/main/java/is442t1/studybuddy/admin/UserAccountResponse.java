@@ -16,10 +16,11 @@ public record UserAccountResponse(
         Instant lastLogin,
         Instant createdAt,
         long connectionCount,
-        long groupCount
+        long groupCount,
+        long ledGroupCount
 ) {
-    public static UserAccountResponse from(User user, long connectionCount, long groupCount) {
+    public static UserAccountResponse from(User user, long connectionCount, long groupCount, long ledGroupCount) {
         return new UserAccountResponse(user.getId(), user.getDisplayName(), user.getEmail(), user.getRole(),
-                user.getStatus(), user.getLastLogin(), user.getCreatedAt(), connectionCount, groupCount);
+                user.getStatus(), user.getLastLogin(), user.getCreatedAt(), connectionCount, groupCount, ledGroupCount);
     }
 }

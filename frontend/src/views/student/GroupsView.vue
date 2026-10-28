@@ -109,11 +109,11 @@ const isFull = (group) => group.memberCount >= group.maxSize;
 						<RouterLink v-if="group.myRole === 'LEADER' && group.status === 'OPEN'" class="btn btn-sm btn-primary" :to="{ name: 'group-manage', params: { id: group.id } }">
 							Manage group
 						</RouterLink>
-						<RouterLink v-else-if="group.myRole === 'LEADER'" class="btn btn-sm btn-light border" :to="{ name: 'group-manage', params: { id: group.id } }">
+						<RouterLink v-else-if="group.myRole === 'LEADER' || group.myRole === 'MEMBER'" class="btn btn-sm btn-light border" :to="{ name: group.myRole === 'LEADER' ? 'group-manage' : 'group-view', params: { id: group.id } }">
 							View
 						</RouterLink>
-						<button v-else-if="group.myRole === 'MEMBER' || group.status === 'CLOSED'" type="button" class="btn btn-sm btn-light border" disabled>
-							{{ group.myRole === 'MEMBER' ? 'You are a member' : 'Closed' }}
+						<button v-else-if="group.status === 'CLOSED'" type="button" class="btn btn-sm btn-light border" disabled>
+							Closed
 						</button>
 						<button v-else-if="group.myRequestStatus === 'PENDING'" type="button" class="btn btn-sm btn-light border" disabled>Request pending</button>
 						<button v-else-if="isFull(group)" type="button" class="btn btn-sm btn-light border" disabled>Group full</button>

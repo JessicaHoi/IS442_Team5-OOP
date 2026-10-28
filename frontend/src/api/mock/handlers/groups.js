@@ -1,6 +1,7 @@
 import { badRequest, conflict, created, forbidden, noContent, notFound } from '../errors';
 import { route } from '../router';
 import { nextId } from '../db';
+import { ledGroupView, transferGroupLeadership } from '../groupLeadership';
 import { toGroupDetail, toGroupSummary, toStudentRef } from '../serializers';
 import { validateSlots } from '../../../utils/availability';
 import { MAX_GROUP_SIZE, MEETING_MODES, MIN_GROUP_SIZE, STUDY_GOALS } from '../../../utils/constants';
@@ -91,6 +92,14 @@ route('GET', '/groups/:id', ({ db, user, params }) => toGroupDetail(db, loadGrou
 	role: 'STUDENT',
 });
 
+route('GET', '/groups/:id/leadership', ({ db, user, params }) => ledGroupView(db, loadLedGroup(db, user, params.id)), {
+	role: 'STUDENT',
+});
+
+route('PUT', '/groups/:id/leader', ({ db, user, params, body }) => transferGroupLeadership(db, loadLedGroup(db, user, params.id), body.studentId), {
+	role: 'STUDENT',
+});
+
 route(
 	'PUT',
 	'/groups/:id',
@@ -153,7 +162,8 @@ route(
 	'GET',
 	'/groups/:id/join-requests',
 	({ db, user, params }) => {
-		const group = loadLedGroup(db, user, params.id);
+		const group = loadGroup(db, params.id);
+		if (!group.memberIds.includes(user.id)) throw forbidden('Only group members can view join requests.');
 		return pendingRequests(db, group.id).map((request) => ({
 			id: request.id,
 			student: toStudentRef(db, request.studentId),

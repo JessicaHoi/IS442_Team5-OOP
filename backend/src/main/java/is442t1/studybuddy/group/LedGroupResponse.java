@@ -1,10 +1,9 @@
-package is442t1.studybuddy.admin;
+package is442t1.studybuddy.group;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import is442t1.studybuddy.group.StudyGroup;
 import is442t1.studybuddy.model.enums.GroupStatus;
 
 public record LedGroupResponse(UUID id, String name, GroupStatus status, List<Member> eligibleMembers) {

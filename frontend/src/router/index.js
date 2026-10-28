@@ -50,6 +50,13 @@ const routes = [
 				meta: { ...student, title: 'Create group' },
 			},
 			{
+				path: 'groups/:id',
+				name: 'group-view',
+				component: () => import('../views/leader/GroupManageView.vue'),
+				props: true,
+				meta: { ...student, title: 'Group details' },
+			},
+			{
 				path: 'groups/:id/manage',
 				name: 'group-manage',
 				component: () => import('../views/leader/GroupManageView.vue'),

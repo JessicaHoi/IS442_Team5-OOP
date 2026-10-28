@@ -20,6 +20,8 @@ import is442t1.studybuddy.auth.AuthenticatedUser;
 import is442t1.studybuddy.auth.CurrentUser;
 import is442t1.studybuddy.auth.RequireRole;
 import is442t1.studybuddy.model.enums.Role;
+import is442t1.studybuddy.group.LedGroupResponse;
+import is442t1.studybuddy.group.TransferLeadershipRequest;
 
 @RestController
 @RequestMapping("/api/admin/users")

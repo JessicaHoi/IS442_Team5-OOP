@@ -6,6 +6,8 @@ export const groupsApi = {
 	get: (id) => unwrap(http.get(`/groups/${id}`)),
 	create: (group) => unwrap(http.post('/groups', group)),
 	update: (id, group) => unwrap(http.put(`/groups/${id}`, group)),
+	leadership: (id) => unwrap(http.get(`/groups/${id}/leadership`)),
+	transferLeadership: (id, studentId) => unwrap(http.put(`/groups/${id}/leader`, { studentId })),
 	close: (id) => unwrap(http.post(`/groups/${id}/close`)),
 	bestTimes: (id) => unwrap(http.get(`/groups/${id}/best-times`)),
 

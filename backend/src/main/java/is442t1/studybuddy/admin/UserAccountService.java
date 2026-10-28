@@ -21,8 +21,8 @@ import is442t1.studybuddy.connection.MatchRequestRepository;
 import is442t1.studybuddy.connection.StudyBuddyConnectionRepository;
 import is442t1.studybuddy.group.MembershipRequestRepository;
 import is442t1.studybuddy.group.StudyGroup;
-import is442t1.studybuddy.group.StudyGroupLeader;
-import is442t1.studybuddy.group.StudyGroupLeaderRepository;
+import is442t1.studybuddy.group.GroupLeadershipService;
+import is442t1.studybuddy.group.LedGroupResponse;
 import is442t1.studybuddy.group.StudyGroupRepository;
 import is442t1.studybuddy.model.AccountUsageCount;
 import is442t1.studybuddy.model.User;
@@ -40,20 +40,20 @@ public class UserAccountService {
     private final StudyGroupRepository groupRepository;
     private final PasswordEncoder passwordEncoder;
     private final SessionTokenService tokenService;
-    private final StudyGroupLeaderRepository leaderRepository;
+    private final GroupLeadershipService leadershipService;
     private final MembershipRequestRepository membershipRequestRepository;
     private final MatchRequestRepository matchRequestRepository;
 
     public UserAccountService(UserRepository userRepository, StudyBuddyConnectionRepository connectionRepository,
             StudyGroupRepository groupRepository, PasswordEncoder passwordEncoder, SessionTokenService tokenService,
-            StudyGroupLeaderRepository leaderRepository, MembershipRequestRepository membershipRequestRepository,
+            GroupLeadershipService leadershipService, MembershipRequestRepository membershipRequestRepository,
             MatchRequestRepository matchRequestRepository) {
         this.userRepository = userRepository;
         this.connectionRepository = connectionRepository;
         this.groupRepository = groupRepository;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
-        this.leaderRepository = leaderRepository;
+        this.leadershipService = leadershipService;
         this.membershipRequestRepository = membershipRequestRepository;
         this.matchRequestRepository = matchRequestRepository;
     }
@@ -61,9 +61,10 @@ public class UserAccountService {
     public List<UserAccountResponse> listAccounts() {
         Map<UUID, Long> connections = countsByUser(connectionRepository.countActiveByStudent());
         Map<UUID, Long> groups = countsByUser(groupRepository.countMembershipsByStudent());
+        Map<UUID, Long> leaderships = countsByUser(groupRepository.countLeadershipsByStudent());
         return userRepository.findAll(Sort.by("email")).stream()
                 .map(user -> UserAccountResponse.from(user, connections.getOrDefault(user.getId(), 0L),
-                        groups.getOrDefault(user.getId(), 0L)))
+                        groups.getOrDefault(user.getId(), 0L), leaderships.getOrDefault(user.getId(), 0L)))
                 .toList();
     }
 
@@ -82,7 +83,7 @@ public class UserAccountService {
         user.setStatus(request.status());
         user.setPassword(passwordEncoder.encode(request.password()));
         userRepository.saveAndFlush(user);
-        return UserAccountResponse.from(user, 0, 0);
+        return UserAccountResponse.from(user, 0, 0, 0);
     }
 
     @Transactional
@@ -109,7 +110,7 @@ public class UserAccountService {
             tokenService.revokeAllForUser(userId);
         }
         return UserAccountResponse.from(user, connectionRepository.findActiveForStudent(userId).size(),
-                groupRepository.findByMemberId(userId).size());
+                groupRepository.findByMemberId(userId).size(), groupRepository.countByLeader_Id(userId));
     }
 
     private void requireActiveAdministrator(UUID callerId) {
@@ -130,23 +131,7 @@ public class UserAccountService {
     @Transactional
     public LedGroupResponse transferLeadership(UUID callerId, UUID userId, UUID groupId, UUID successorId) {
         requireActiveAdministrator(callerId);
-        requireAccountForUpdate(userId);
-        User successorAccount = requireAccountForUpdate(successorId);
-        StudyGroup group = groupRepository.findById(groupId)
-                .filter(found -> found.isLedBy(userId))
-                .orElseThrow(() -> new ResourceNotFoundException("Study group not found for this leader."));
-        if (!(successorAccount instanceof Student) || !successorAccount.isActive()
-                || successorId.equals(userId) || !group.hasMember(successorId)) {
-            throw new ValidationException("Choose another active member as the new group leader.");
-        }
-        if (!(successorAccount instanceof StudyGroupLeader)) {
-            leaderRepository.promoteStudent(successorId);
-        }
-        group = groupRepository.findById(groupId).orElseThrow();
-        group.transferLeadershipTo(leaderRepository.findById(successorId).orElseThrow());
-        groupRepository.flush();
-        leaderRepository.demoteIfNoGroups(userId);
-        return LedGroupResponse.from(groupRepository.findById(groupId).orElseThrow());
+        return leadershipService.transfer(userId, groupId, successorId, true);
     }
 
     @Transactional

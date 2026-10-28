@@ -80,7 +80,7 @@ class UserAccountApiTest extends ApiTestSupport {
         assertThat(suspended.get("connectionCount")).isEqualTo(0);
         assertThat(suspended.get("groupCount")).isEqualTo(0);
         assertThat(accounts).allSatisfy(row -> assertThat(row).containsOnlyKeys("id", "name", "email", "role",
-                "status", "lastLogin", "createdAt", "connectionCount", "groupCount"));
+                "status", "lastLogin", "createdAt", "connectionCount", "groupCount", "ledGroupCount"));
     }
 
     @Test

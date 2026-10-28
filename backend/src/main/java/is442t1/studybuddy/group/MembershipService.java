@@ -42,7 +42,10 @@ public class MembershipService {
     @Transactional(readOnly = true)
     public List<JoinRequestResponse> listPendingRequests(UUID studentId, UUID groupId) {
         StudyGroup group = groupService.requireGroup(groupId);
-        return groupService.requireLeader(studentId).viewJoinRequests(group).stream()
+        if (!group.hasMember(studentId)) {
+            throw new PermissionDeniedException("Only group members can view join requests.");
+        }
+        return group.getPendingRequests().stream()
                 .sorted(Comparator.comparing(MembershipRequest::getRequestDate))
                 .map(JoinRequestResponse::from)
                 .toList();

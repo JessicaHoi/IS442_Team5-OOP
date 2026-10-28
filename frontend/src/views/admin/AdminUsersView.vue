@@ -190,7 +190,7 @@ async function deleteUser(user) {
 									<button type="button" class="btn btn-icon btn-light border me-1" :aria-label="`Edit ${user.name}`" title="Edit" @click="openEdit(user)">
 										<i class="bi bi-pencil"></i>
 									</button>
-									<button v-if="user.role === ROLES.STUDENT && user.groupCount > 0" type="button" class="btn btn-icon btn-light border me-1" :aria-label="`Transfer group leadership for ${user.name}`" title="Transfer group leadership" @click="openLeadership(user)">
+									<button v-if="user.role === ROLES.STUDENT && user.ledGroupCount > 0" type="button" class="btn btn-icon btn-light border me-1" :aria-label="`Transfer group leadership for ${user.name}`" title="Transfer group leadership" @click="openLeadership(user)">
 										<i class="bi bi-person-gear"></i>
 									</button>
 									<button

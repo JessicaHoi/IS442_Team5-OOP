@@ -5,6 +5,7 @@ import { programmeLine, timeAgo } from '../../utils/format';
 
 defineProps({
 	requests: { type: Array, required: true },
+	readonly: Boolean,
 	/** Id of the request currently being processed. */
 	busyId: { type: [String, Number], default: null },
 });
@@ -21,7 +22,7 @@ defineEmits(['accept', 'reject']);
 				<div class="small text-muted">{{ programmeLine(request.student) }} · {{ timeAgo(request.createdAt) }}</div>
 				<p v-if="request.message" class="small fst-italic mb-0 mt-1">“{{ request.message }}”</p>
 			</div>
-			<div class="d-flex gap-2">
+			<div v-if="!readonly" class="d-flex gap-2">
 				<button type="button" class="btn btn-sm btn-light border" :disabled="busyId === request.id" @click="$emit('reject', request)">Reject</button>
 				<button type="button" class="btn btn-sm btn-primary" :disabled="busyId === request.id" @click="$emit('accept', request)">Accept</button>
 			</div>
