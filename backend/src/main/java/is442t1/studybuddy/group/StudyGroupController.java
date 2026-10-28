@@ -31,10 +31,13 @@ public class StudyGroupController {
 
     private final StudyGroupService groupService;
     private final MembershipService membershipService;
+    private final GroupLeadershipService leadershipService;
 
-    public StudyGroupController(StudyGroupService groupService, MembershipService membershipService) {
+    public StudyGroupController(StudyGroupService groupService, MembershipService membershipService,
+            GroupLeadershipService leadershipService) {
         this.groupService = groupService;
         this.membershipService = membershipService;
+        this.leadershipService = leadershipService;
     }
 
     @GetMapping
@@ -64,6 +67,17 @@ public class StudyGroupController {
     public StudyGroupResponse updateGroup(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @Valid @RequestBody StudyGroupRequest request) {
         return groupService.updateGroup(caller.id(), groupId, request);
+    }
+
+    @GetMapping("/{groupId}/leadership")
+    public LedGroupResponse getLeadership(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId) {
+        return groupService.getLeadership(caller.id(), groupId);
+    }
+
+    @PutMapping("/{groupId}/leader")
+    public LedGroupResponse transferLeadership(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
+            @Valid @RequestBody TransferLeadershipRequest request) {
+        return leadershipService.transfer(caller.id(), groupId, request.studentId(), false);
     }
 
     @PostMapping("/{groupId}/close")

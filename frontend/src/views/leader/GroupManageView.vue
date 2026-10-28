@@ -1,6 +1,6 @@
 <script setup>
-import { onMounted, ref } from 'vue';
-import { RouterLink, useRouter } from 'vue-router';
+import { computed, ref, watch } from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { groupsApi } from '../../api/groups.api';
 import { useLookupsStore } from '../../stores/lookups';
 import { useToast } from '../../composables/useToast';
@@ -11,14 +11,17 @@ import StatusBadge from '../../components/ui/StatusBadge.vue';
 import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 import GroupForm from '../../components/groups/GroupForm.vue';
+import GroupDetails from '../../components/groups/GroupDetails.vue';
 import GroupBestTimes from '../../components/groups/GroupBestTimes.vue';
 import JoinRequestList from '../../components/groups/JoinRequestList.vue';
 import MemberList from '../../components/groups/MemberList.vue';
+import LeadershipTransferModal from '../../components/admin/LeadershipTransferModal.vue';
 
 const props = defineProps({ id: { type: String, required: true } });
 
 const lookups = useLookupsStore();
 const router = useRouter();
+const route = useRoute();
 const toast = useToast();
 const { confirm } = useConfirm();
 
@@ -27,28 +30,36 @@ const requests = ref([]);
 const activeTab = ref('requests');
 const busyRequestId = ref(null);
 const saving = ref(false);
+const leadershipOpen = ref(false);
+const isLeader = computed(() => group.value?.myRole === 'LEADER');
+const viewOnly = computed(() => route.name === 'group-view');
+const readonly = computed(() => viewOnly.value || !isLeader.value || group.value?.status === 'CLOSED');
 
 const { loading, error, run: load } = useAsync(async () => {
 	await lookups.loadCourses();
 	const loaded = await groupsApi.get(props.id);
-	if (loaded.myRole !== 'LEADER') {
-		toast.error('Only the group leader can manage this group.');
+	if (!['LEADER', 'MEMBER'].includes(loaded.myRole)) {
+		toast.error('Only group members can view this page.');
 		await router.replace('/groups');
 		return;
 	}
+	if (loaded.myRole === 'MEMBER' && (group.value?.id !== loaded.id || group.value?.myRole !== 'MEMBER')) activeTab.value = 'details';
 	group.value = loaded;
+	if (loaded.myRole === 'MEMBER' && route.name === 'group-manage') {
+		await router.replace({ name: 'group-view', params: { id: props.id } });
+	}
 	requests.value = loaded.status === 'OPEN' ? await groupsApi.joinRequests(props.id) : [];
 	if (loaded.status === 'CLOSED') activeTab.value = 'members';
 });
 
-onMounted(load);
+watch(() => props.id, load, { immediate: true });
 
 async function refresh() {
-	group.value = await groupsApi.get(props.id);
-	requests.value = group.value.status === 'OPEN' ? await groupsApi.joinRequests(props.id) : [];
+	await load();
 }
 
 async function decide(request, accept) {
+	if (readonly.value || busyRequestId.value) return;
 	busyRequestId.value = request.id;
 	try {
 		if (accept) await groupsApi.acceptRequest(props.id, request.id);
@@ -63,6 +74,7 @@ async function decide(request, accept) {
 }
 
 async function removeMember(member) {
+	if (readonly.value) return;
 	const confirmed = await confirm({
 		title: `Remove ${member.name}?`,
 		message: 'They will lose access to this group and will need to request to join again.',
@@ -80,6 +92,7 @@ async function removeMember(member) {
 }
 
 async function saveDetails(payload) {
+	if (readonly.value || saving.value) return;
 	saving.value = true;
 	try {
 		group.value = await groupsApi.update(props.id, payload);
@@ -92,6 +105,7 @@ async function saveDetails(payload) {
 }
 
 async function closeGroup() {
+	if (readonly.value) return;
 	const confirmed = await confirm({
 		title: 'Close this group?',
 		message: 'Pending join requests will be rejected and no one else can join. This cannot be undone.',
@@ -121,7 +135,11 @@ async function closeGroup() {
 			<PageHeader class="mt-2" :title="group.name" :subtitle="`${group.courseCode} · ${group.courseName}`">
 				<template #actions>
 					<StatusBadge :status="group.status" class="align-self-center" />
-					<button v-if="group.status === 'OPEN'" type="button" class="btn btn-outline-danger" @click="closeGroup">
+					<RouterLink v-if="isLeader && viewOnly" class="btn btn-primary" :to="{ name: 'group-manage', params: { id } }">Manage group</RouterLink>
+					<button v-if="isLeader && !viewOnly" type="button" class="btn btn-light border" @click="leadershipOpen = true">
+						<i class="bi bi-person-gear me-2"></i>Transfer leadership
+					</button>
+					<button v-if="!readonly" type="button" class="btn btn-outline-danger" @click="closeGroup">
 						<i class="bi bi-lock me-2"></i>Close group
 					</button>
 				</template>
@@ -129,6 +147,9 @@ async function closeGroup() {
 
 			<div v-if="group.status === 'CLOSED'" class="alert alert-secondary" role="status">
 				<i class="bi bi-lock me-2"></i>This group is closed. It is kept here as a read-only record.
+			</div>
+			<div v-else-if="!isLeader" class="alert alert-light border" role="status">
+				<i class="bi bi-eye me-2"></i>Member view. You can view this group, but only the group leader can make changes.
 			</div>
 
 			<ul class="nav nav-underline mb-4" role="tablist">
@@ -154,18 +175,23 @@ async function closeGroup() {
 					v-if="activeTab === 'requests' && group.status === 'OPEN'"
 					:requests="requests"
 					:busy-id="busyRequestId"
+					:readonly="readonly"
 					@accept="decide($event, true)"
 					@reject="decide($event, false)"
 				/>
-				<MemberList v-else-if="activeTab === 'members'" :members="group.members" :readonly="group.status === 'CLOSED'" @remove="removeMember" />
+				<MemberList v-else-if="activeTab === 'members'" :members="group.members" :readonly="readonly" @remove="removeMember" />
 				<div v-else-if="activeTab === 'details'" class="py-3">
-					<GroupForm :group="group" :saving="saving" :readonly="group.status === 'CLOSED'" submit-label="Save changes" @submit="saveDetails">
+					<GroupDetails v-if="readonly" :group="group">
+						<GroupBestTimes v-if="group.status === 'OPEN'" class="mt-4" :group-id="id" :member-count="group.memberCount" />
+					</GroupDetails>
+					<GroupForm v-else :group="group" :saving="saving" submit-label="Save changes" @submit="saveDetails">
 						<template #after-availability>
 							<GroupBestTimes v-if="group.status === 'OPEN'" class="mb-4" :group-id="id" :member-count="group.memberCount" />
 						</template>
 					</GroupForm>
 				</div>
 			</div>
+			<LeadershipTransferModal v-model="leadershipOpen" :group-id="id" @transferred="refresh" />
 		</template>
 	</div>
 </template>

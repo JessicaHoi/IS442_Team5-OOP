@@ -1,4 +1,4 @@
-package is442t1.studybuddy.admin;
+package is442t1.studybuddy.group;
 
 import java.util.UUID;
 

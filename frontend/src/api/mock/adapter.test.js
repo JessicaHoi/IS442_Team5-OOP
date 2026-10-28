@@ -103,7 +103,8 @@ describe('mock API', () => {
 		expect(accepted.data.members.some((m) => m.id === requests[0].student.id)).toBe(true);
 		// A non-leader cannot manage the group.
 		const other = await login('priya.nair@smu.edu.sg');
-		expect((await call('get', '/groups/1/join-requests', { token: other })).status).toBe(403);
+		expect((await call('get', '/groups/1/join-requests', { token: other })).status).toBe(200);
+		expect((await call('post', '/groups/1/close', { token: other })).status).toBe(403);
 	});
 
 	it('changing the matching strategy is stored by the admin endpoint', async () => {

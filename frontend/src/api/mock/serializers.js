@@ -129,5 +129,6 @@ export function toAccountView(db, user) {
 			(c) => c.status === 'ACCEPTED' && (c.fromId === user.id || c.toId === user.id),
 		).length,
 		groupCount: db.groups.filter((g) => g.memberIds.includes(user.id)).length,
+		ledGroupCount: db.groups.filter((g) => g.leaderId === user.id).length,
 	};
 }

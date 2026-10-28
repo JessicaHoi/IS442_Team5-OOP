@@ -92,6 +92,15 @@ public class StudyGroupService {
         return mapper.toDetail(group, studentId);
     }
 
+    @Transactional(readOnly = true)
+    public LedGroupResponse getLeadership(UUID studentId, UUID groupId) {
+        StudyGroup group = requireGroup(groupId);
+        if (!group.isLedBy(studentId)) {
+            throw new PermissionDeniedException(StudyGroupLeader.NOT_LEADER);
+        }
+        return LedGroupResponse.from(group);
+    }
+
     StudyGroup requireGroup(UUID groupId) {
         return groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Study group not found."));

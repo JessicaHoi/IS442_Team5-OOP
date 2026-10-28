@@ -3,6 +3,7 @@ import { route } from '../router';
 import { nextId } from '../db';
 import { revokeUserSessions } from '../sessions';
 import { toAccountView } from '../serializers';
+import { ledGroupView, transferGroupLeadership } from '../groupLeadership';
 import { MATCHING_CRITERIA, MATCHING_STRATEGIES, ROLES, USER_STATUSES } from '../../../utils/constants';
 
 const ADMIN_ONLY = { role: 'ADMIN' };
@@ -39,16 +40,6 @@ function validatePassword(password) {
 	if (new TextEncoder().encode(password).length > 72) throw badRequest('Password is too long. Use fewer characters.');
 }
 
-function ledGroupView(db, group) {
-	return {
-		id: group.id,
-		name: group.name,
-		status: group.status,
-		eligibleMembers: db.users.filter((user) => group.memberIds.includes(user.id) && user.id !== group.leaderId && user.status === 'ACTIVE' && user.role === ROLES.STUDENT)
-			.map(({ id, name }) => ({ id, name })),
-	};
-}
-
 route('GET', '/admin/users/:id/led-groups', ({ db, params }) => {
 	const user = loadUser(db, params.id);
 	return db.groups.filter((group) => group.leaderId === user.id).map((group) => ledGroupView(db, group));
@@ -58,12 +49,7 @@ route('PUT', '/admin/users/:id/led-groups/:groupId/leader', ({ db, params, body 
 	const user = loadUser(db, params.id);
 	const group = db.groups.find((candidate) => candidate.id === Number(params.groupId) && candidate.leaderId === user.id);
 	if (!group) throw notFound('Study group not found for this leader.');
-	const successor = db.users.find((candidate) => candidate.id === Number(body.studentId));
-	if (!successor || !ledGroupView(db, group).eligibleMembers.some((member) => member.id === successor.id)) {
-		throw badRequest('Choose another active member as the new group leader.');
-	}
-	group.leaderId = successor.id;
-	return ledGroupView(db, group);
+	return transferGroupLeadership(db, group, body.studentId);
 }, ADMIN_ONLY);
 
 route('GET', '/admin/users', ({ db }) => db.users.map((user) => toAccountView(db, user)), ADMIN_ONLY);

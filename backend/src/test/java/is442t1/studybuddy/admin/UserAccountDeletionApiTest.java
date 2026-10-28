@@ -104,7 +104,7 @@ class UserAccountDeletionApiTest extends AccountManagementTestSupport {
         assertThat(studentRepository.findById(oldId).orElseThrow().getClass()).isEqualTo(Student.class);
         assertThat(leaders.existsById(newId)).isTrue();
         mockMvc.perform(as(newToken, get("/api/groups/" + first + "/join-requests"))).andExpect(status().isOk());
-        mockMvc.perform(as(oldToken, get("/api/groups/" + first + "/join-requests"))).andExpect(status().isForbidden());
+        mockMvc.perform(as(oldToken, get("/api/groups/" + first + "/join-requests"))).andExpect(status().isOk());
         mockMvc.perform(as(adminToken, delete("/api/admin/users/" + oldId))).andExpect(status().isNoContent());
         for (UUID group : List.of(first, second)) {
             mockMvc.perform(as(newToken, get("/api/groups/" + group))).andExpect(status().isOk())
