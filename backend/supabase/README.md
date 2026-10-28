@@ -12,7 +12,7 @@
    SUPABASE_DDL_AUTO=update ./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
    ```
 
-   In Windows PowerShell, use `$env:SUPABASE_DDL_AUTO="update"; .\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. Wait for `Started StudybuddyApplication`, then stop it with Ctrl+C. If the log shows `GenerationTarget encountered exception` for `study_group`, the table already has rows. Run the two `alter table study_group ...` statements from [Changing an entity](../../README.md#changing-an-entity) in the SQL Editor, then repeat this step.
+   In Windows PowerShell, use `$env:SUPABASE_DDL_AUTO="update"; .\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. Wait for `Started StudybuddyApplication`, check for schema-update errors, then stop it with Ctrl+C and run `Remove-Item Env:SUPABASE_DDL_AUTO` to restore the default validation mode. If schema updates fail, see [Changing an entity](../../README.md#changing-an-entity).
 
 2. **Run the script.** In the Supabase dashboard, open **SQL Editor**, then **New query**. Paste the whole of `seed-demo-data.sql` and click **Run**. It runs in one transaction, so it loads everything or nothing. With `psql`, run `psql "<connection string>" -v ON_ERROR_STOP=1 -f backend/supabase/seed-demo-data.sql`.
 
@@ -28,4 +28,12 @@ python3 backend/supabase/generate_seed_sql.py
 
 Ids are derived from stable keys (email, group name), so regenerating gives the same ids, and the diff only shows what changed. If an entity gains a required column, add it to `REQUIRED_COLUMNS` and to the matching insert in the generator.
 
-Tested against PostgreSQL 17: tables created by Hibernate with `update`, script run twice (the second run reloads cleanly), then the backend started in `validate` mode and the API checked.
+## Account fields
+
+Account status, creation and last-login timestamps, and administrator names are mapped by the entities. Local H2 updates automatically on startup. Existing Supabase databases use the same one-run Hibernate update described above; no separate migration script is required for these additions. To preserve existing data, run only the schema-update step, not the demo seed script.
+
+The required new columns use `@ColumnDefault` so Hibernate can add them to populated tables. Existing accounts receive `ACTIVE` status and the schema-update time as their creation timestamp; administrator names default to `System Administrator`. New accounts receive their creation timestamp when saved. Last login starts as `NULL`. Login recording and suspension enforcement are separate from these persistence changes.
+
+Account persistence and upgrading an existing H2 schema are covered by backend tests.
+
+The account-field schema update and generated seed were verified against a disposable local PostgreSQL 18 database. Existing account details were preserved, and the seed script ran twice successfully. The shared Supabase database was not modified.

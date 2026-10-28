@@ -1,7 +1,11 @@
 package is442t1.studybuddy.common.web;
 
+import java.sql.SQLException;
+import java.util.Locale;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -28,6 +32,17 @@ import is442t1.studybuddy.common.exception.ValidationException;
 public class GlobalExceptionHandler {
 
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleIntegrityConflict(DataIntegrityViolationException exception) {
+        Throwable cause = exception.getMostSpecificCause();
+        String detail = cause.getMessage() == null ? "" : cause.getMessage().toLowerCase(Locale.ROOT);
+        if (cause instanceof SQLException sql && "23505".equals(sql.getSQLState())
+                && (detail.contains("(email") || detail.contains("email_key"))) {
+            return respond(HttpStatus.CONFLICT, "Another account already uses this email address.");
+        }
+        return respond(HttpStatus.CONFLICT, "The change conflicts with existing data.");
+    }
 
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<ErrorResponse> handleDomain(DomainException exception) {

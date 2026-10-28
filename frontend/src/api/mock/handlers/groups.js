@@ -130,6 +130,7 @@ route(
 	({ db, user, params, body }) => {
 		const group = loadGroup(db, params.id);
 		requireOpen(group);
+		if (db.users.find((candidate) => candidate.id === group.leaderId)?.status !== 'ACTIVE') throw conflict('The student and group leader must have active accounts to request membership.');
 		if (group.memberIds.includes(user.id)) throw conflict('You are already in this group.');
 		if (group.memberIds.length >= group.maxSize) throw conflict('This group is full.');
 		if (pendingRequests(db, group.id).some((request) => request.studentId === user.id)) {
@@ -170,6 +171,7 @@ function decideRequest(accept) {
 		const request = pendingRequests(db, group.id).find((r) => r.id === Number(params.rid));
 		if (!request) throw notFound('Join request not found.');
 		if (accept) {
+			if (db.users.find((candidate) => candidate.id === request.studentId)?.status !== 'ACTIVE') throw conflict('The student and group leader must have active accounts to accept membership.');
 			if (group.memberIds.length >= group.maxSize) throw conflict('The group is full. Remove a member or raise the maximum size first.');
 			group.memberIds.push(request.studentId);
 		}

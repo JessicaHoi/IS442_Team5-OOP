@@ -46,6 +46,7 @@ public class ConnectionService {
         }
         Student sender = studentService.requireStudent(senderId);
         Student receiver = studentService.requireStudent(request.toStudentId());
+        requireActiveParticipants(sender, receiver);
         if (connectionRepository.findActiveBetween(senderId, receiver.getId()).isPresent()
                 || !requestRepository.findPendingBetween(senderId, receiver.getId()).isEmpty()) {
             throw new BusinessRuleException("You already have a pending request or connection with this student.");
@@ -85,6 +86,7 @@ public class ConnectionService {
         requireRecipient(viewerId, request);
         requirePending(request);
 
+        requireActiveParticipants(request.getSender(), request.getReceiver());
         Instant acceptedAt = Instant.now();
         request.setStatus(RequestStatus.ACCEPTED);
         request.setRespondedAt(acceptedAt);
@@ -132,6 +134,12 @@ public class ConnectionService {
                 request.getRespondedAt(),
                 profileMapper.toPublicProfile(otherStudent,
                         buddyStateService.stateBetween(viewerId, otherStudent.getId())));
+    }
+
+    private static void requireActiveParticipants(Student first, Student second) {
+        if (!first.isActive() || !second.isActive()) {
+            throw new BusinessRuleException("Both students must have active accounts to create a connection.");
+        }
     }
 
     private ConnectionResponse toConnectionResponse(StudyBuddyConnection connection, UUID viewerId) {

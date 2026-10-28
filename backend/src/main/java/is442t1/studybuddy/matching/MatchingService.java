@@ -63,6 +63,7 @@ public class MatchingService {
         MatchingRules rules = configService.currentRules();
 
         return studentRepository.findAll().stream()
+                .filter(Student::isActive)
                 .filter(candidate -> !candidate.hasId(viewerId))
                 .filter(candidate -> matchesFilters(candidate, course, goal, day, studyMode, groupFormat))
                 .map(candidate -> toResult(viewer, viewerPreference, candidate, targetCourse, rules))

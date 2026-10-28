@@ -15,6 +15,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.test.context.ActiveProfiles;
 
+import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentRepository;
 
@@ -37,6 +38,9 @@ class ExistingDatabaseDemoStudentsTest {
     void addsMissingDemoStudentsWithoutReplacingExistingAccountsAndIsIdempotent() throws Exception {
         Student existingStudent = studentRepository.findByEmail("local.student@test.smu.edu.sg").orElseThrow();
         assertThat(existingStudent.getName()).isEqualTo("Existing Local Student");
+        assertThat(existingStudent.getStatus()).isEqualTo(AccountStatus.ACTIVE);
+        assertThat(existingStudent.getCreatedAt()).isNotNull();
+        assertThat(existingStudent.getLastLogin()).isNull();
         assertThat(studentRepository.count()).isGreaterThanOrEqualTo(50);
         assertThat(studentRepository.findByEmail("aisha.rahman@smu.edu.sg")).isPresent();
 

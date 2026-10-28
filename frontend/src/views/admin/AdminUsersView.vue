@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { adminApi } from '../../api/admin.api';
 import { useAuthStore } from '../../stores/auth';
 import { useToast } from '../../composables/useToast';
@@ -14,10 +15,12 @@ import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 import EmptyState from '../../components/ui/EmptyState.vue';
 import UserFormModal from '../../components/admin/UserFormModal.vue';
+import LeadershipTransferModal from '../../components/admin/LeadershipTransferModal.vue';
 
 const PAGE_SIZE = 12;
 
 const auth = useAuthStore();
+const router = useRouter();
 const toast = useToast();
 const { confirm } = useConfirm();
 
@@ -57,6 +60,13 @@ const formOpen = ref(false);
 const editing = ref(null);
 const saving = ref(false);
 const formError = ref('');
+const leadershipOpen = ref(false);
+const leadershipUser = ref(null);
+
+function openLeadership(user) {
+	leadershipUser.value = user;
+	leadershipOpen.value = true;
+}
 
 function openCreate() {
 	editing.value = null;
@@ -71,12 +81,22 @@ function openEdit(user) {
 }
 
 async function saveUser(payload) {
+	if (saving.value) return;
 	saving.value = true;
 	formError.value = '';
 	try {
-		if (editing.value) await adminApi.updateUser(editing.value.id, payload);
-		else await adminApi.createUser(payload);
+		const updatingSelf = editing.value && isSelf(editing.value);
+		const saved = editing.value
+			? await adminApi.updateUser(editing.value.id, payload)
+			: await adminApi.createUser(payload);
 		formOpen.value = false;
+		if (updatingSelf && payload.password) {
+			auth.logout();
+			toast.success('Password updated. Please sign in again.');
+			await router.replace({ name: 'login' });
+			return;
+		}
+		if (updatingSelf) auth.updateAccountDetails(saved);
 		toast.success(editing.value ? 'Account updated.' : 'Account created.');
 		await load();
 	} catch (caught) {
@@ -90,7 +110,7 @@ async function saveUser(payload) {
 async function deleteUser(user) {
 	const confirmed = await confirm({
 		title: `Delete ${user.name}?`,
-		message: 'This permanently removes the account, their connections, join requests and any groups they lead.',
+		message: 'This permanently removes the account, their connections and join requests. A student who leads groups cannot be deleted until leadership of every group has been transferred.',
 		confirmLabel: 'Delete account',
 		danger: true,
 	});
@@ -144,7 +164,7 @@ async function deleteUser(user) {
 								<th class="ps-3">Account</th>
 								<th>Role</th>
 								<th>Status</th>
-								<th>Last active</th>
+								<th>Last login</th>
 								<th class="text-end">Connections</th>
 								<th class="text-end">Groups</th>
 								<th class="pe-3 text-end"><span class="visually-hidden">Actions</span></th>
@@ -169,6 +189,9 @@ async function deleteUser(user) {
 								<td class="pe-3 text-end text-nowrap">
 									<button type="button" class="btn btn-icon btn-light border me-1" :aria-label="`Edit ${user.name}`" title="Edit" @click="openEdit(user)">
 										<i class="bi bi-pencil"></i>
+									</button>
+									<button v-if="user.role === ROLES.STUDENT && user.groupCount > 0" type="button" class="btn btn-icon btn-light border me-1" :aria-label="`Transfer group leadership for ${user.name}`" title="Transfer group leadership" @click="openLeadership(user)">
+										<i class="bi bi-person-gear"></i>
 									</button>
 									<button
 										type="button"
@@ -197,7 +220,8 @@ async function deleteUser(user) {
 			</div>
 		</template>
 
-		<UserFormModal v-model="formOpen" :user="editing" :saving="saving" :error="formError" @submit="saveUser" />
+		<UserFormModal v-model="formOpen" :user="editing" :is-self="Boolean(editing && isSelf(editing))" :saving="saving" :error="formError" @submit="saveUser" />
+		<LeadershipTransferModal v-model="leadershipOpen" :user="leadershipUser" @transferred="load" />
 	</div>
 </template>
 

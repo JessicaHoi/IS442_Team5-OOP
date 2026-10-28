@@ -1,10 +1,15 @@
 package is442t1.studybuddy.auth;
 
+import java.time.Instant;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import is442t1.studybuddy.common.exception.AuthenticationException;
+import is442t1.studybuddy.common.exception.PermissionDeniedException;
 import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.UserRepository;
 
@@ -25,11 +30,27 @@ public class AuthService {
         this.tokenService = tokenService;
     }
 
+    @Transactional
     public LoginResponse login(String email, String password) {
         User user = userRepository.findByEmailIgnoreCase(email.trim())
                 .filter(found -> passwordEncoder.matches(password, found.getPassword()))
                 .orElseThrow(() -> new AuthenticationException(INVALID_CREDENTIALS));
-        return new LoginResponse(tokenService.issue(user), SessionUser.from(user));
+        if (!user.isActive()) {
+            throw new PermissionDeniedException("This account is suspended. Contact an administrator.");
+        }
+        if (userRepository.updateLastLoginForActiveAccount(user.getId(), user.getPassword(), Instant.now()) != 1) {
+            throw new AuthenticationException(INVALID_CREDENTIALS);
+        }
+        String token = tokenService.issue(user);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    tokenService.revoke(token);
+                }
+            }
+        });
+        return new LoginResponse(token, SessionUser.from(user));
     }
 
     public SessionUser currentUser(AuthenticatedUser caller) {

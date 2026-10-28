@@ -1,3 +1,7 @@
+# Temporary during Phases 1–8; restore port 8080 after Phase 8.
+server:
+  port: 9090
+
 spring:
   application:
     name: studybuddy

@@ -13,6 +13,9 @@ import is442t1.studybuddy.model.enums.RequestStatus;
 @Repository
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
 
+    @Query("select r from MatchRequest r where r.sender.id = :studentId or r.receiver.id = :studentId")
+    List<MatchRequest> findAllForStudent(@Param("studentId") UUID studentId);
+
     List<MatchRequest> findByReceiver_IdAndStatus(UUID receiverId, RequestStatus status);
 
     List<MatchRequest> findBySender_IdAndStatus(UUID senderId, RequestStatus status);

@@ -16,6 +16,14 @@ There are three ways to run the app:
 
 All three load the same demo accounts (see [Demo accounts](#demo-accounts)). The backend supports sign-in, profiles and preferences, study-buddy matching and connection management, and study groups. In B and C, pages that call other missing endpoints show an error until those are built.
 
+The backend supports administrator account listing with account status, timestamps and usage counts. Suspended accounts cannot sign in or use existing sessions. Successful sign-ins update the last-login timestamp.
+
+Administrators can create, update and delete accounts. Account roles cannot change after creation. Administrators cannot suspend or delete their own accounts. Password changes and suspension revoke existing sessions after the change is saved.
+
+A student who leads groups cannot be deleted until leadership of every group has been transferred. Administrators can transfer leadership from a suspended leader. Existing groups and memberships are preserved.
+
+Account management is covered by backend and mock API tests. When testing deletion across restarts, set `studybuddy.seed.add-students-to-existing=false` so deleted demo accounts are not recreated.
+
 ### Option A: mock data (frontend only)
 
 API calls are answered in the browser by the mock (see [Configuration](#configuration)), so no backend or database is needed.
@@ -49,7 +57,7 @@ cd backend
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=supabase
 ```
 
-On Windows PowerShell, quote the flag: `.\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. The backend starts on http://localhost:8080.
+On Windows PowerShell, quote the flag: `.\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. The backend starts on http://localhost:9090.
 
 **4. Point the frontend at the backend.** Create `frontend/.env.development.local` (gitignored) containing:
 
@@ -62,7 +70,7 @@ VITE_USE_MOCK=false
 ```bash
 cd frontend
 npm install        # first time only
-npm run dev        # http://localhost:5173, sends /api calls to http://localhost:8080
+npm run dev        # http://localhost:5173, sends /api calls to http://localhost:9090
 ```
 
 Stop the backend when you're done. The free Supabase tier only allows a few connections, and the whole team shares them.
@@ -118,10 +126,10 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 | `VITE_USE_MOCK` | `true` answers `/api/*` from the in-memory mock, `false` calls the real backend | `true` in dev, `false` in production |
 | `VITE_API_BASE_URL` | Base path of the API | `/api` |
 | `VITE_APP_NAME` | Name shown in the navbar and page titles | `StudyBuddy` |
-| `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:8080` |
+| `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:9090` |
 | `BUILD_OUT_DIR` | Where `npm run build` writes the bundle | `../backend/src/main/resources/static` |
 
-To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 8080 (see [Quick start](#quick-start)).
+To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 9090 (see [Quick start](#quick-start)).
 
 ## Monolith packaging
 
@@ -158,7 +166,7 @@ There are no SQL files in the repo. Hibernate generates the tables from the `@En
 
 The local H2 database updates itself on every start. Supabase needs a deliberate step, and `update` only ever adds tables and columns. It never renames, drops or changes an existing column.
 
-**Adding a field or entity.** Run once with `SUPABASE_DDL_AUTO=update` and look for `alter table ... add column` in the log. A new `nullable = false` field can't be added to a table that already has rows: Hibernate logs a warning (`GenerationTarget encountered exception`) and starts without the column. Add that column by hand with a default instead, for example `alter table course add column credits integer not null default 0;`.
+**Adding a field or entity.** Run once with `SUPABASE_DDL_AUTO=update` and look for `alter table ... add column` in the log, then remove the override to return to validation mode. A new `nullable = false` field needs a database default when the table already has rows. Use Hibernate's `@ColumnDefault` alongside the Java field initializer, as the account status and administrator name do; the initializer alone only affects new Java objects. Account creation timestamps use `@CreationTimestamp` for new accounts and `@ColumnDefault("CURRENT_TIMESTAMP")` for existing rows. Check for `GenerationTarget encountered exception` before assuming the schema update succeeded.
 
 **Any other change.** Run the SQL yourself in Supabase's **SQL Editor** before running the new code against Supabase:
 

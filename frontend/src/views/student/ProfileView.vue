@@ -42,9 +42,9 @@ const addableCourses = computed(() =>
 
 function apply(me) {
 	Object.assign(profile, {
-		name: me.name,
-		school: me.school,
-		programme: me.programme,
+		name: me.name ?? '',
+		school: me.school ?? '',
+		programme: me.programme ?? '',
 		yearOfStudy: me.yearOfStudy ?? '',
 		contactNumber: me.contactNumber ?? '',
 		courses: [...me.courses],

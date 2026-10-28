@@ -6,7 +6,7 @@ import { AxiosError } from 'axios';
 import { findRoute } from './routes';
 import { getDb, saveDb } from './db';
 import { HttpError, MockResponse } from './errors';
-import { TOKEN_PREFIX } from './handlers/auth';
+import { resolveSession } from './sessions';
 
 const LATENCY_MS = 150;
 
@@ -27,12 +27,9 @@ function parseBody(config) {
 	}
 }
 
-function authenticate(db, config) {
+function bearerToken(config) {
 	const header = config.headers?.get?.('Authorization') ?? config.headers?.Authorization ?? '';
-	if (!header.startsWith(`Bearer ${TOKEN_PREFIX}`)) return null;
-	const id = Number(header.slice(`Bearer ${TOKEN_PREFIX}`.length));
-	const user = db.users.find((u) => u.id === id);
-	return user && user.status === 'ACTIVE' ? user : null;
+	return header.startsWith('Bearer ') ? header.slice(7) : null;
 }
 
 function execute(config) {
@@ -42,13 +39,14 @@ function execute(config) {
 	if (!found) throw new HttpError(404, `No mock endpoint for ${method} ${toPath(config)}`);
 
 	const { route, params } = found;
-	const user = authenticate(db, config);
+	const token = bearerToken(config);
+	const user = resolveSession(db, token);
 	if (!route.access.public) {
 		if (!user) throw new HttpError(401, 'Please sign in again.');
 		if (route.access.role && route.access.role !== user.role) throw new HttpError(403, 'You are not allowed to do that.');
 	}
 
-	const result = route.handler({ db, user, params, query: config.params ?? {}, body: parseBody(config) });
+	const result = route.handler({ db, user, token, params, query: config.params ?? {}, body: parseBody(config) });
 	if (method !== 'GET') saveDb();
 	return result instanceof MockResponse ? result : new MockResponse(200, result);
 }

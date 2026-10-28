@@ -8,7 +8,7 @@ import vue from '@vitejs/plugin-vue';
  */
 export default defineConfig(({ mode }) => {
 	const env = loadEnv(mode, process.cwd(), '');
-	const backendUrl = env.BACKEND_URL || 'http://localhost:8080';
+	const backendUrl = env.BACKEND_URL || 'http://localhost:9090';
 	// In production the SPA is packaged inside the Spring Boot jar (monolith).
 	const buildOutDir = env.BUILD_OUT_DIR || '../backend/src/main/resources/static';
 

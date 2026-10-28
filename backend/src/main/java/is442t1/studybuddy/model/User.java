@@ -1,13 +1,20 @@
 package is442t1.studybuddy.model;
 
+import java.time.Instant;
 import java.util.Locale;
 
+import org.hibernate.annotations.ColumnDefault;
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.Column;
-import jakarta.persistence.Table;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Inheritance;
 import jakarta.persistence.InheritanceType;
+import jakarta.persistence.Table;
 
+import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.Role;
 
 @Entity 
@@ -21,6 +28,42 @@ public abstract class User extends BaseEntity {
     /** BCrypt hash, never the plain-text password. */
     @Column(nullable = false)
     private String password;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @ColumnDefault("'ACTIVE'")
+    private AccountStatus status = AccountStatus.ACTIVE;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    @ColumnDefault("CURRENT_TIMESTAMP")
+    private Instant createdAt;
+
+    private Instant lastLogin;
+
+    public AccountStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(AccountStatus status) {
+        this.status = status;
+    }
+
+    public boolean isActive() {
+        return status == AccountStatus.ACTIVE;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(Instant lastLogin) {
+        this.lastLogin = lastLogin;
+    }
 
     public String getEmail() {
         return email;

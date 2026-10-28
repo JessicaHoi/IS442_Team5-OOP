@@ -21,4 +21,11 @@ public interface StudyGroupLeaderRepository extends JpaRepository<StudyGroupLead
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "insert into study_group_leader (id) values (:studentId)", nativeQuery = true)
     void promoteStudent(@Param("studentId") UUID studentId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            delete from study_group_leader where id = :studentId
+              and not exists (select 1 from study_group where leader_id = :studentId)
+            """, nativeQuery = true)
+    void demoteIfNoGroups(@Param("studentId") UUID studentId);
 }
