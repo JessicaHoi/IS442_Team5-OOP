@@ -5,5 +5,6 @@ import './handlers/matches';
 import './handlers/connections';
 import './handlers/groups';
 import './handlers/admin';
+import './handlers/strategyPreview';
 
 export { findRoute } from './router';
