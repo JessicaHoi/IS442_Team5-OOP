@@ -53,12 +53,14 @@ class MatchingPreviewApiTest extends ApiTestSupport {
         String studentEmail = createStudent("Lea Toh", COURSE);
         String body = """
                 {"studentId":"%s","proposed":%s}""";
+        String everyCriterionOff = config("BALANCED").replace("\"enabled\":true", "\"enabled\":false");
 
         mockMvc.perform(as(login(studentEmail), get("/api/admin/matching-config/preview/students")))
                 .andExpect(status().isForbidden());
         mockMvc.perform(as(adminToken, post("/api/admin/matching-config/preview"))
-                        .content(body.formatted(idOf(studentEmail), config("COURSE_FIRST"))))
-                .andExpect(status().isBadRequest());
+                        .content(body.formatted(idOf(studentEmail), everyCriterionOff)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Enable at least one criterion with a weight above 0."));
         mockMvc.perform(as(adminToken, post("/api/admin/matching-config/preview"))
                         .content(body.formatted("00000000-0000-0000-0000-000000000000", config("BALANCED"))))
                 .andExpect(status().isNotFound());
