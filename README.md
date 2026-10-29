@@ -373,7 +373,7 @@ The mock engine (`src/api/mock/matching.js`) is a stand-in for the real engine a
 - Scores use each student's preference for the searched course, or their first preference when no course is selected.
 - Each criterion scores 0 to 1: course match, hours of weekly overlap (3 hours or more scores 1), meeting-mode and group-format compatibility (identical 1, either side flexible 0.75, conflicting 0), and shared goals (overlap over union).
 - The overall score is the weighted average of the enabled criteria, as a whole number out of 100.
-- **Availability-First** and **Course-First** first group candidates into quarter-point tiers of that criterion, then sort by overall score inside each tier.
+- **Availability-First** and **Course-First** first group candidates into quarter-point tiers of that criterion, then sort by overall score inside each tier. The backend uses the same rule; both strategies extend `CriterionFirstRankingStrategy`.
 
 ## Testing
 

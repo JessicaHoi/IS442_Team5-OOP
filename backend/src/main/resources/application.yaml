@@ -52,3 +52,7 @@ studybuddy:
     location: classpath:seed/demo-data.json
     # Password for every demo account (local demo data only).
     demo-password: password
+  matching:
+    preview:
+      # How many top matches each side of the admin strategy preview shows.
+      size: 10

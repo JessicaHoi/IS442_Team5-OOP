@@ -39,18 +39,27 @@ public class MatchingConfigService {
 
     @Transactional
     public MatchingConfigDto updateConfig(MatchingConfigDto request) {
-        if (!strategyResolver.supports(request.strategy())) {
-            throw new ValidationException("This matching strategy is not available yet.");
-        }
-        Map<MatchingCriterion, Integer> weights = validatedWeights(request.criteria());
+        MatchingRules rules = toRules(request);
 
         MatchingConfiguration configuration = repository.findAll().stream().findFirst()
                 .orElseGet(MatchingConfiguration::defaults);
-        configuration.setStrategy(request.strategy());
-        configuration.replaceCriteria(weights.entrySet().stream()
+        configuration.setStrategy(rules.strategy());
+        configuration.replaceCriteria(rules.weights().entrySet().stream()
+                .sorted(Map.Entry.comparingByKey())
                 .map(entry -> new MatchingCriteria(entry.getKey().key(), entry.getValue()))
                 .toList());
         return toDto(repository.save(configuration));
+    }
+
+    /**
+     * Validates settings the administrator has not saved yet (e.g. for a preview)
+     * and turns them into rules the matching engine can run.
+     */
+    public MatchingRules toRules(MatchingConfigDto settings) {
+        if (!strategyResolver.supports(settings.strategy())) {
+            throw new ValidationException("This matching strategy is not available yet.");
+        }
+        return new MatchingRules(settings.strategy(), validatedWeights(settings.criteria()));
     }
 
     /** The strategy and weights to use for a search. */

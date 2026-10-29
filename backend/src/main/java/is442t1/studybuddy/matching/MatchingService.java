@@ -53,14 +53,26 @@ public class MatchingService {
     @Transactional(readOnly = true)
     public List<MatchResult> search(UUID viewerId, String course, StudyGoal goal, String dayCode,
             StudyMode studyMode, GroupPreference groupFormat) {
-        DayOfWeek day = parseDay(dayCode);
+        return rank(viewerId, course, goal, parseDay(dayCode), studyMode, groupFormat, configService.currentRules());
+    }
+
+    /**
+     * Ranks every candidate for a student under the given rules, which may be
+     * settings the administrator has not saved yet. Used by the strategy preview.
+     */
+    @Transactional(readOnly = true)
+    public List<MatchResult> rankWith(UUID viewerId, String course, MatchingRules rules) {
+        return rank(viewerId, course, null, null, null, null, rules);
+    }
+
+    private List<MatchResult> rank(UUID viewerId, String course, StudyGoal goal, DayOfWeek day,
+            StudyMode studyMode, GroupPreference groupFormat, MatchingRules rules) {
         Student viewer = studentRepository.findById(viewerId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found."));
         StudyPreference viewerPreference = preferenceFor(viewer, course);
         String targetCourse = course != null && !course.isBlank()
                 ? course
                 : viewerPreference == null ? null : viewerPreference.getCourse().getCourseCode();
-        MatchingRules rules = configService.currentRules();
 
         return studentRepository.findAll().stream()
                 .filter(Student::isActive)

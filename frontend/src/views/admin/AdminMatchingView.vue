@@ -8,6 +8,7 @@ import PageHeader from '../../components/ui/PageHeader.vue';
 import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 import WeightRow from '../../components/admin/WeightRow.vue';
+import StrategyPreview from '../../components/admin/StrategyPreview.vue';
 
 const toast = useToast();
 
@@ -101,6 +102,8 @@ async function save() {
 					<i class="bi bi-exclamation-triangle me-2"></i>Enable at least one criterion with a weight above 0.
 				</div>
 			</section>
+
+			<StrategyPreview :config="config" :is-dirty="isDirty" :is-valid="isValid" />
 
 			<div class="d-flex flex-wrap justify-content-end gap-2">
 				<button type="button" class="btn btn-light border" :disabled="saving" @click="resetToDefaults">Reset to defaults</button>
