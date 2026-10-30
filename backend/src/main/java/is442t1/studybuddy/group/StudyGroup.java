@@ -224,6 +224,17 @@ public class StudyGroup extends BaseEntity {
         return request;
     }
 
+    /** A member leaves on their own. The leader has to hand the group over or close it first. */
+    public void leave(Student student) {
+        requireOpen();
+        if (isLedBy(student.getId())) {
+            throw new BusinessRuleException("The group leader cannot leave. Transfer leadership or close the group first.");
+        }
+        if (!dropMember(student)) {
+            throw new BusinessRuleException("You are not a member of this group.");
+        }
+    }
+
     void applyDetails(GroupDetails details) {
         requireOpen();
         TimeSlot.requireValidAvailability(details.availability());
@@ -269,10 +280,17 @@ public class StudyGroup extends BaseEntity {
         if (isLedBy(student.getId())) {
             throw new BusinessRuleException("The group leader cannot be removed.");
         }
-        if (!members.removeIf(member -> member.isSameStudent(student))) {
+        if (!dropMember(student)) {
             throw new BusinessRuleException("This student is not a member of the group.");
         }
-        memberAvailabilities.removeIf(item -> item.belongsTo(student.getId()));
+    }
+
+    private boolean dropMember(Student student) {
+        boolean removed = members.removeIf(member -> member.isSameStudent(student));
+        if (removed) {
+            memberAvailabilities.removeIf(item -> item.belongsTo(student.getId()));
+        }
+        return removed;
     }
 
     private void requireOpen() {

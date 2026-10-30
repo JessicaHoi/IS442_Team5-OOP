@@ -283,6 +283,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `GET /groups/{id}/join-requests` | Leader only. Pending requests. |
 | | `POST /groups/{id}/join-requests/{rid}/accept` and `/reject` | Leader only. Accept returns `409` when the group is full. |
 | | `DELETE /groups/{id}/members/{studentId}` | Leader only. The leader cannot be removed. `204`. |
+| | `POST /groups/{id}/leave` | The caller leaves. `204`. `409` for the leader, a non-member or a closed group. |
 | | `GET /groups/{id}/leadership` | Leader only. Returns `{id, name, status, eligibleMembers:[{id, name}]}`. |
 | | `PUT /groups/{id}/leader` | Leader only. Body `{studentId}`, another active member. Returns the same shape as `/leadership`. |
 | | `GET /groups/{id}/best-times` | Members only. Returns suggested windows and the 30-minute heatmap, see shape below. |

@@ -104,6 +104,23 @@ async function saveDetails(payload) {
 	}
 }
 
+async function leaveGroup() {
+	const confirmed = await confirm({
+		title: 'Leave this group?',
+		message: 'You will need to request to join again if you change your mind.',
+		confirmLabel: 'Leave group',
+		danger: true,
+	});
+	if (!confirmed) return;
+	try {
+		await groupsApi.leave(props.id);
+		toast.success('You left the group.');
+		await router.replace('/groups');
+	} catch (caught) {
+		toast.error(caught.message);
+	}
+}
+
 async function closeGroup() {
 	if (readonly.value) return;
 	const confirmed = await confirm({
@@ -138,6 +155,9 @@ async function closeGroup() {
 					<RouterLink v-if="isLeader && viewOnly" class="btn btn-primary" :to="{ name: 'group-manage', params: { id } }">Manage group</RouterLink>
 					<button v-if="isLeader && !viewOnly" type="button" class="btn btn-light border" @click="leadershipOpen = true">
 						<i class="bi bi-person-gear me-2"></i>Transfer leadership
+					</button>
+					<button v-if="group.myRole === 'MEMBER' && group.status === 'OPEN'" type="button" class="btn btn-outline-danger" @click="leaveGroup">
+						<i class="bi bi-box-arrow-right me-2"></i>Leave group
 					</button>
 					<button v-if="!readonly" type="button" class="btn btn-outline-danger" @click="closeGroup">
 						<i class="bi bi-lock me-2"></i>Close group

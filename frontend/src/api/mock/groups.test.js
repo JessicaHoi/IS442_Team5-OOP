@@ -81,4 +81,11 @@ describe('group leadership and member access', () => {
 		expect(group.status).toBe('CLOSED');
 		expect(group.memberIds).toHaveLength(count);
 	});
+
+	it('lets a member leave, but not the leader', async () => {
+		expect((await call('post', `/groups/${group.id}/leave`, { token: leaderToken })).status).toBe(409);
+		expect((await call('post', `/groups/${group.id}/leave`, { token: memberToken })).status).toBe(204);
+		expect(group.memberIds).not.toContain(member.id);
+		expect((await call('post', `/groups/${group.id}/leave`, { token: memberToken })).status).toBe(409);
+	});
 });

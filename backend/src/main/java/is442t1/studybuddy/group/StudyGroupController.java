@@ -110,6 +110,12 @@ public class StudyGroupController {
         return membershipService.rejectRequest(caller.id(), groupId, requestId);
     }
 
+    @PostMapping("/{groupId}/leave")
+    public ResponseEntity<Void> leave(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId) {
+        membershipService.leaveGroup(caller.id(), groupId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{groupId}/members/{studentId}")
     public ResponseEntity<Void> removeMember(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @PathVariable UUID studentId) {

@@ -207,3 +207,18 @@ route(
 	},
 	{ role: 'STUDENT' },
 );
+
+route(
+	'POST',
+	'/groups/:id/leave',
+	({ db, user, params }) => {
+		const group = loadGroup(db, params.id);
+		requireOpen(group);
+		if (group.leaderId === user.id) throw conflict('The group leader cannot leave. Transfer leadership or close the group first.');
+		if (!group.memberIds.includes(user.id)) throw conflict('You are not a member of this group.');
+		group.memberIds = group.memberIds.filter((id) => id !== user.id);
+		delete group.availabilityOverrides?.[user.id];
+		return noContent();
+	},
+	{ role: 'STUDENT' },
+);

@@ -19,4 +19,5 @@ export const groupsApi = {
 	acceptRequest: (id, requestId) => unwrap(http.post(`/groups/${id}/join-requests/${requestId}/accept`)),
 	rejectRequest: (id, requestId) => unwrap(http.post(`/groups/${id}/join-requests/${requestId}/reject`)),
 	removeMember: (id, studentId) => unwrap(http.delete(`/groups/${id}/members/${studentId}`)),
+	leave: (id) => unwrap(http.post(`/groups/${id}/leave`)),
 };
