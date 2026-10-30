@@ -51,7 +51,7 @@ class DemoDataSeederTest {
         assertThat(studentRepository.count()).isGreaterThanOrEqualTo(50);
         assertThat(groupRepository.count()).isPositive();
         assertThat(leaderRepository.count()).isPositive();
-        assertThat(studentRepository.findByEmail("aisha.rahman@smu.edu.sg")).isPresent();
+        assertThat(studentRepository.findByEmail("aisha.rahman@studybuddy.example")).isPresent();
         assertThat(matchingConfigurationRepository.count()).isEqualTo(1);
     }
 
@@ -62,7 +62,7 @@ class DemoDataSeederTest {
             assertThat(account.getCreatedAt()).isNotNull();
             assertThat(account.getLastLogin()).isNull();
         });
-        assertThat(userRepository.findByEmailIgnoreCase("admin@smu.edu.sg")).get()
+        assertThat(userRepository.findByEmailIgnoreCase("admin@studybuddy.example")).get()
                 .extracting(account -> account.getDisplayName()).isEqualTo("System Administrator");
     }
 

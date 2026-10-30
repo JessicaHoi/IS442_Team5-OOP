@@ -41,7 +41,7 @@ class UserAccountMutationApiTest extends AccountManagementTestSupport {
     @Test
     void createsBothSubclassesWithHashedPasswordsAndNormalizedDetails() throws Exception {
         for (String role : List.of("STUDENT", "ADMIN")) {
-            String email = UUID.randomUUID() + "@TEST.SMU.EDU.SG";
+            String email = UUID.randomUUID() + "@TEST.STUDYBUDDY.EXAMPLE";
             var body = fields("  New Account  ", "  " + email + "  ", role, "ACTIVE");
             String response = mockMvc.perform(as(adminToken, post("/api/admin/users")).content(json(body)))
                     .andExpect(status().isCreated()).andExpect(jsonPath("$.name").value("New Account"))
@@ -85,8 +85,8 @@ class UserAccountMutationApiTest extends AccountManagementTestSupport {
                 Map.of("name", " "), Map.of("email", "invalid"), Map.of("role", "OTHER"),
                 Map.of("status", "OTHER"), Map.of("password", "short"), Map.of("password", "      "),
                 Map.of("password", "a".repeat(73)), Map.of("password", "界".repeat(25)),
-                Map.of("name", "a".repeat(101)), Map.of("email", "a".repeat(250) + "@test.smu.edu.sg"))) {
-            var body = fields("Invalid Account", UUID.randomUUID() + "@test.smu.edu.sg", "STUDENT", "ACTIVE");
+                Map.of("name", "a".repeat(101)), Map.of("email", "a".repeat(250) + "@test.studybuddy.example"))) {
+            var body = fields("Invalid Account", UUID.randomUUID() + "@test.studybuddy.example", "STUDENT", "ACTIVE");
             body.putAll(invalid);
             mockMvc.perform(as(adminToken, post("/api/admin/users")).content(json(body)))
                     .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").isString());
@@ -114,7 +114,7 @@ class UserAccountMutationApiTest extends AccountManagementTestSupport {
         String hash = users.findById(id).orElseThrow().getPassword();
         var update = fields(users.findById(id).orElseThrow());
         update.put("name", "Updated Name");
-        update.put("email", "  " + UUID.randomUUID() + "@TEST.SMU.EDU.SG  ");
+        update.put("email", "  " + UUID.randomUUID() + "@TEST.STUDYBUDDY.EXAMPLE  ");
         update(id, update, 200);
         update.put("password", null);
         update(id, update, 200);

@@ -121,7 +121,7 @@ class SessionTokenServiceTest {
         Student student = new Student();
         student.setId(id);
         student.setName("Session Student");
-        student.setEmail(id + "@test.smu.edu.sg");
+        student.setEmail(id + "@test.studybuddy.example");
         student.setPassword(passwordHash);
         return student;
     }

@@ -10,7 +10,7 @@ CREATE TABLE systemadministrator (
 );
 
 INSERT INTO users (id, email, password)
-VALUES ('00000000-0000-0000-0000-000000000001', 'legacy.admin@test.smu.edu.sg', 'legacy-password-hash');
+VALUES ('00000000-0000-0000-0000-000000000001', 'legacy.admin@test.studybuddy.example', 'legacy-password-hash');
 
 INSERT INTO systemadministrator (id)
 VALUES ('00000000-0000-0000-0000-000000000001');

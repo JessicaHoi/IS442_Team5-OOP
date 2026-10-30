@@ -31,7 +31,7 @@ class UserAccountSchemaUpdateTest {
                 UUID.fromString("00000000-0000-0000-0000-000000000001")).orElseThrow();
 
         assertThat(userRepository.count()).isEqualTo(1);
-        assertThat(administrator.getEmail()).isEqualTo("legacy.admin@test.smu.edu.sg");
+        assertThat(administrator.getEmail()).isEqualTo("legacy.admin@test.studybuddy.example");
         assertThat(administrator.getPassword()).isEqualTo("legacy-password-hash");
         assertThat(administrator.getStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(administrator.getCreatedAt()).isNotNull();

@@ -53,14 +53,14 @@
 	],
 	"administrators": [
 		{
-			"email": "admin@smu.edu.sg"
+			"email": "admin@studybuddy.example"
 		}
 	],
 	"students": [
 		{
 			"key": "s2",
 			"name": "Aisha Rahman",
-			"email": "aisha.rahman@smu.edu.sg",
+			"email": "aisha.rahman@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 2,
@@ -119,7 +119,7 @@
 		{
 			"key": "s3",
 			"name": "Wei Jie Tan",
-			"email": "wei.jie.tan@smu.edu.sg",
+			"email": "wei.jie.tan@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 2,
@@ -161,7 +161,7 @@
 		{
 			"key": "s4",
 			"name": "Priya Nair",
-			"email": "priya.nair@smu.edu.sg",
+			"email": "priya.nair@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 4,
@@ -203,7 +203,7 @@
 		{
 			"key": "s5",
 			"name": "Marcus Lim",
-			"email": "marcus.lim@smu.edu.sg",
+			"email": "marcus.lim@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 3,
@@ -251,7 +251,7 @@
 		{
 			"key": "s6",
 			"name": "Nurul Huda",
-			"email": "nurul.huda@smu.edu.sg",
+			"email": "nurul.huda@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 1,
@@ -321,7 +321,7 @@
 		{
 			"key": "s7",
 			"name": "Jun Hao Lee",
-			"email": "jun.hao.lee@smu.edu.sg",
+			"email": "jun.hao.lee@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 1,
@@ -357,7 +357,7 @@
 		{
 			"key": "s8",
 			"name": "Sarah Chen",
-			"email": "sarah.chen@smu.edu.sg",
+			"email": "sarah.chen@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 1,
@@ -398,7 +398,7 @@
 		{
 			"key": "s9",
 			"name": "Daniel Ong",
-			"email": "daniel.ong@smu.edu.sg",
+			"email": "daniel.ong@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 2,
@@ -467,7 +467,7 @@
 		{
 			"key": "s10",
 			"name": "Kavya Iyer",
-			"email": "kavya.iyer@smu.edu.sg",
+			"email": "kavya.iyer@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 1,
@@ -503,7 +503,7 @@
 		{
 			"key": "s11",
 			"name": "Ethan Goh",
-			"email": "ethan.goh@smu.edu.sg",
+			"email": "ethan.goh@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 4,
@@ -552,7 +552,7 @@
 		{
 			"key": "s12",
 			"name": "Mei Ling Wong",
-			"email": "mei.ling.wong@smu.edu.sg",
+			"email": "mei.ling.wong@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 4,
@@ -612,7 +612,7 @@
 		{
 			"key": "s13",
 			"name": "Rizwan Ahmad",
-			"email": "rizwan.ahmad@smu.edu.sg",
+			"email": "rizwan.ahmad@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computing and Law",
 			"yearOfStudy": 4,
@@ -659,7 +659,7 @@
 		{
 			"key": "s14",
 			"name": "Chloe Tan",
-			"email": "chloe.tan@smu.edu.sg",
+			"email": "chloe.tan@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 4,
@@ -707,7 +707,7 @@
 		{
 			"key": "s15",
 			"name": "Arjun Menon",
-			"email": "arjun.menon@smu.edu.sg",
+			"email": "arjun.menon@studybuddy.example",
 			"school": "School of Accountancy",
 			"programme": "Accountancy",
 			"yearOfStudy": 1,
@@ -784,7 +784,7 @@
 		{
 			"key": "s16",
 			"name": "Hui Min Koh",
-			"email": "hui.min.koh@smu.edu.sg",
+			"email": "hui.min.koh@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 3,
@@ -824,7 +824,7 @@
 		{
 			"key": "s17",
 			"name": "Isaac Teo",
-			"email": "isaac.teo@smu.edu.sg",
+			"email": "isaac.teo@studybuddy.example",
 			"school": "School of Accountancy",
 			"programme": "Accountancy",
 			"yearOfStudy": 4,
@@ -862,7 +862,7 @@
 		{
 			"key": "s18",
 			"name": "Farah Ismail",
-			"email": "farah.ismail@smu.edu.sg",
+			"email": "farah.ismail@studybuddy.example",
 			"school": "School of Social Sciences",
 			"programme": "Psychology",
 			"yearOfStudy": 1,
@@ -942,7 +942,7 @@
 		{
 			"key": "s19",
 			"name": "Brandon Ng",
-			"email": "brandon.ng@smu.edu.sg",
+			"email": "brandon.ng@studybuddy.example",
 			"school": "School of Accountancy",
 			"programme": "Accountancy",
 			"yearOfStudy": 3,
@@ -984,7 +984,7 @@
 		{
 			"key": "s20",
 			"name": "Yuki Tanaka",
-			"email": "yuki.tanaka@smu.edu.sg",
+			"email": "yuki.tanaka@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Software Engineering",
 			"yearOfStudy": 2,
@@ -1020,7 +1020,7 @@
 		{
 			"key": "s21",
 			"name": "Sophia Lau",
-			"email": "sophia.lau@smu.edu.sg",
+			"email": "sophia.lau@studybuddy.example",
 			"school": "Lee Kong Chian School of Business",
 			"programme": "Business Management",
 			"yearOfStudy": 3,
@@ -1087,7 +1087,7 @@
 		{
 			"key": "s22",
 			"name": "Ravi Kumar",
-			"email": "ravi.kumar@smu.edu.sg",
+			"email": "ravi.kumar@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 1,
@@ -1129,7 +1129,7 @@
 		{
 			"key": "s23",
 			"name": "Jia Hui Chua",
-			"email": "jia.hui.chua@smu.edu.sg",
+			"email": "jia.hui.chua@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 1,
@@ -1177,7 +1177,7 @@
 		{
 			"key": "s24",
 			"name": "Nathan Yeo",
-			"email": "nathan.yeo@smu.edu.sg",
+			"email": "nathan.yeo@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 4,
@@ -1244,7 +1244,7 @@
 		{
 			"key": "s25",
 			"name": "Amirah Yusof",
-			"email": "amirah.yusof@smu.edu.sg",
+			"email": "amirah.yusof@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 3,
@@ -1287,7 +1287,7 @@
 		{
 			"key": "s26",
 			"name": "Zhi Wei Sim",
-			"email": "zhi.wei.sim@smu.edu.sg",
+			"email": "zhi.wei.sim@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 2,
@@ -1324,7 +1324,7 @@
 		{
 			"key": "s27",
 			"name": "Grace Ho",
-			"email": "grace.ho@smu.edu.sg",
+			"email": "grace.ho@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 2,
@@ -1392,7 +1392,7 @@
 		{
 			"key": "s28",
 			"name": "Hafiz Salleh",
-			"email": "hafiz.salleh@smu.edu.sg",
+			"email": "hafiz.salleh@studybuddy.example",
 			"school": "School of Economics",
 			"programme": "Economics",
 			"yearOfStudy": 3,
@@ -1439,7 +1439,7 @@
 		{
 			"key": "s29",
 			"name": "Tiffany Ang",
-			"email": "tiffany.ang@smu.edu.sg",
+			"email": "tiffany.ang@studybuddy.example",
 			"school": "School of Economics",
 			"programme": "Economics",
 			"yearOfStudy": 3,
@@ -1488,7 +1488,7 @@
 		{
 			"key": "s30",
 			"name": "Vikram Singh",
-			"email": "vikram.singh@smu.edu.sg",
+			"email": "vikram.singh@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Software Engineering",
 			"yearOfStudy": 4,
@@ -1545,7 +1545,7 @@
 		{
 			"key": "s31",
 			"name": "Eunice Lee",
-			"email": "eunice.lee@smu.edu.sg",
+			"email": "eunice.lee@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Information Systems",
 			"yearOfStudy": 4,
@@ -1584,7 +1584,7 @@
 		{
 			"key": "s32",
 			"name": "Darren Chong",
-			"email": "darren.chong@smu.edu.sg",
+			"email": "darren.chong@studybuddy.example",
 			"school": "School of Economics",
 			"programme": "Economics",
 			"yearOfStudy": 3,
@@ -1628,7 +1628,7 @@
 		{
 			"key": "s33",
 			"name": "Siti Aminah",
-			"email": "siti.aminah@smu.edu.sg",
+			"email": "siti.aminah@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computing and Law",
 			"yearOfStudy": 1,
@@ -1684,7 +1684,7 @@
 		{
 			"key": "s34",
 			"name": "Ryan Phua",
-			"email": "ryan.phua@smu.edu.sg",
+			"email": "ryan.phua@studybuddy.example",
 			"school": "Lee Kong Chian School of Business",
 			"programme": "Marketing",
 			"yearOfStudy": 3,
@@ -1730,7 +1730,7 @@
 		{
 			"key": "s35",
 			"name": "Lakshmi Pillai",
-			"email": "lakshmi.pillai@smu.edu.sg",
+			"email": "lakshmi.pillai@studybuddy.example",
 			"school": "School of Social Sciences",
 			"programme": "Psychology",
 			"yearOfStudy": 1,
@@ -1767,7 +1767,7 @@
 		{
 			"key": "s36",
 			"name": "Kelvin Toh",
-			"email": "kelvin.toh@smu.edu.sg",
+			"email": "kelvin.toh@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Software Engineering",
 			"yearOfStudy": 3,
@@ -1833,7 +1833,7 @@
 		{
 			"key": "s37",
 			"name": "Natalie Foo",
-			"email": "natalie.foo@smu.edu.sg",
+			"email": "natalie.foo@studybuddy.example",
 			"school": "School of Economics",
 			"programme": "Economics",
 			"yearOfStudy": 3,
@@ -1874,7 +1874,7 @@
 		{
 			"key": "s38",
 			"name": "Irfan Hakim",
-			"email": "irfan.hakim@smu.edu.sg",
+			"email": "irfan.hakim@studybuddy.example",
 			"school": "School of Economics",
 			"programme": "Economics",
 			"yearOfStudy": 4,
@@ -1922,7 +1922,7 @@
 		{
 			"key": "s39",
 			"name": "Cheryl Seah",
-			"email": "cheryl.seah@smu.edu.sg",
+			"email": "cheryl.seah@studybuddy.example",
 			"school": "School of Economics",
 			"programme": "Economics",
 			"yearOfStudy": 4,
@@ -1982,7 +1982,7 @@
 		{
 			"key": "s40",
 			"name": "Benedict Lim",
-			"email": "benedict.lim@smu.edu.sg",
+			"email": "benedict.lim@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 4,
@@ -2020,7 +2020,7 @@
 		{
 			"key": "s41",
 			"name": "Anjali Sharma",
-			"email": "anjali.sharma@smu.edu.sg",
+			"email": "anjali.sharma@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 3,
@@ -2066,7 +2066,7 @@
 		{
 			"key": "s42",
 			"name": "Jonathan Wee",
-			"email": "jonathan.wee@smu.edu.sg",
+			"email": "jonathan.wee@studybuddy.example",
 			"school": "Lee Kong Chian School of Business",
 			"programme": "Marketing",
 			"yearOfStudy": 1,
@@ -2127,7 +2127,7 @@
 		{
 			"key": "s43",
 			"name": "Sabrina Tay",
-			"email": "sabrina.tay@smu.edu.sg",
+			"email": "sabrina.tay@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Software Engineering",
 			"yearOfStudy": 2,
@@ -2174,7 +2174,7 @@
 		{
 			"key": "s44",
 			"name": "Haziq Rosli",
-			"email": "haziq.rosli@smu.edu.sg",
+			"email": "haziq.rosli@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 1,
@@ -2214,7 +2214,7 @@
 		{
 			"key": "s45",
 			"name": "Olivia Kwek",
-			"email": "olivia.kwek@smu.edu.sg",
+			"email": "olivia.kwek@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Software Engineering",
 			"yearOfStudy": 1,
@@ -2270,7 +2270,7 @@
 		{
 			"key": "s46",
 			"name": "Shawn Ler",
-			"email": "shawn.ler@smu.edu.sg",
+			"email": "shawn.ler@studybuddy.example",
 			"school": "Lee Kong Chian School of Business",
 			"programme": "Business Management",
 			"yearOfStudy": 4,
@@ -2316,7 +2316,7 @@
 		{
 			"key": "s47",
 			"name": "Deepa Krishnan",
-			"email": "deepa.krishnan@smu.edu.sg",
+			"email": "deepa.krishnan@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computer Science",
 			"yearOfStudy": 1,
@@ -2357,7 +2357,7 @@
 		{
 			"key": "s48",
 			"name": "Timothy Low",
-			"email": "timothy.low@smu.edu.sg",
+			"email": "timothy.low@studybuddy.example",
 			"school": "Lee Kong Chian School of Business",
 			"programme": "Business Management",
 			"yearOfStudy": 2,
@@ -2435,7 +2435,7 @@
 		{
 			"key": "s49",
 			"name": "Rachel Soh",
-			"email": "rachel.soh@smu.edu.sg",
+			"email": "rachel.soh@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Software Engineering",
 			"yearOfStudy": 2,
@@ -2472,7 +2472,7 @@
 		{
 			"key": "s50",
 			"name": "Mohammed Faiz",
-			"email": "mohammed.faiz@smu.edu.sg",
+			"email": "mohammed.faiz@studybuddy.example",
 			"school": "School of Computing and Information Systems",
 			"programme": "Computing and Law",
 			"yearOfStudy": 2,
@@ -2516,7 +2516,7 @@
 		{
 			"key": "s51",
 			"name": "Xin Yi Lim",
-			"email": "xin.yi.lim@smu.edu.sg",
+			"email": "xin.yi.lim@studybuddy.example",
 			"school": "Lee Kong Chian School of Business",
 			"programme": "Marketing",
 			"yearOfStudy": 1,

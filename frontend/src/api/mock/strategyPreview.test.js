@@ -21,7 +21,7 @@ describe('mock strategy preview', () => {
 	let adminToken;
 	beforeAll(async () => {
 		resetDb();
-		adminToken = await login('admin@smu.edu.sg');
+		adminToken = await login('admin@studybuddy.example');
 	});
 
 	it('ranks the same student under saved and proposed settings without saving', async () => {
@@ -46,7 +46,7 @@ describe('mock strategy preview', () => {
 		const proposed = { ...structuredClone(DEFAULT_MATCHING_CONFIG), strategy: 'COURSE_FIRST' };
 		const { status } = await call('post', '/admin/matching-config/preview', { token: adminToken, data: { studentId: 2, proposed } });
 		expect(status).toBe(400);
-		const studentToken = await login('aisha.rahman@smu.edu.sg');
+		const studentToken = await login('aisha.rahman@studybuddy.example');
 		expect((await call('get', '/admin/matching-config/preview/students', { token: studentToken })).status).toBe(403);
 	});
 

@@ -98,10 +98,10 @@ The password for every account is `password`. The login page has one-click butto
 
 | Role | Email |
 |---|---|
-| Student (also a group leader) | `aisha.rahman@smu.edu.sg` |
-| System administrator | `admin@smu.edu.sg` |
+| Student (also a group leader) | `aisha.rahman@studybuddy.example` |
+| System administrator | `admin@studybuddy.example` |
 
-Any other seeded student can sign in with `<first>.<last>@smu.edu.sg`, e.g. `wei.jie.tan@smu.edu.sg`. The backend and the mock use the same demo data.
+Any other seeded student can sign in with `<first>.<last>@studybuddy.example`, e.g. `wei.jie.tan@studybuddy.example`. The backend and the mock use the same demo data.
 
 To reset the demo data:
 

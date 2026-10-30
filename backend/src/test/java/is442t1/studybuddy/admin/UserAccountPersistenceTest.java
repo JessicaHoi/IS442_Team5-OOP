@@ -40,7 +40,7 @@ class UserAccountPersistenceTest {
         leader.setName("Existing Leader");
 
         for (User account : new User[] {student, leader, new SystemAdministrator()}) {
-            account.setEmail(UUID.randomUUID() + "@test.smu.edu.sg");
+            account.setEmail(UUID.randomUUID() + "@test.studybuddy.example");
             account.setPassword("existing-password-hash");
             userRepository.saveAndFlush(account);
             UUID id = account.getId();
@@ -66,7 +66,7 @@ class UserAccountPersistenceTest {
     @Test
     void persistsCustomAdministratorNameStatusAndLoginWithoutChangingCreationTime() {
         SystemAdministrator administrator = new SystemAdministrator();
-        administrator.setEmail("  " + UUID.randomUUID() + "@TEST.SMU.EDU.SG  ");
+        administrator.setEmail("  " + UUID.randomUUID() + "@TEST.STUDYBUDDY.EXAMPLE  ");
         administrator.setPassword("unchanged-password-hash");
         administrator.setName("Jane Tan");
         userRepository.saveAndFlush(administrator);
@@ -88,7 +88,7 @@ class UserAccountPersistenceTest {
         assertThat(saved.getLastLogin()).isEqualTo(lastLogin);
         assertThat(saved.getCreatedAt()).isEqualTo(createdAt);
         assertThat(saved.getPassword()).isEqualTo("unchanged-password-hash");
-        assertThat(saved.getEmail()).endsWith("@test.smu.edu.sg").isEqualTo(saved.getEmail().trim());
+        assertThat(saved.getEmail()).endsWith("@test.studybuddy.example").isEqualTo(saved.getEmail().trim());
 
         saved.setStatus(AccountStatus.ACTIVE);
         entityManager.flush();
