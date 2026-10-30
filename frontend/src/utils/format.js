@@ -35,6 +35,16 @@ export function formatDate(isoString) {
 	return new Date(isoString).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** "Wed, 4 Nov 2026 · 7:00 pm – 9:00 pm", in the viewer's time zone. */
+export function formatSessionTime(startsAt, endsAt) {
+	const start = new Date(startsAt);
+	const end = new Date(endsAt);
+	const date = (value) => value.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+	const time = (value) => value.toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' });
+	const sameDay = date(start) === date(end);
+	return `${date(start)} · ${time(start)} – ${sameDay ? '' : `${date(end)} · `}${time(end)}`;
+}
+
 /** "Year 2 · Information Systems" */
 export function programmeLine(student) {
 	return [student.yearOfStudy ? `Year ${student.yearOfStudy}` : '', student.programme].filter(Boolean).join(' · ');

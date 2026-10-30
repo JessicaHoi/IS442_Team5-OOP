@@ -1,3 +1,4 @@
+import { removeAllRsvps } from '../studySessions';
 import { badRequest, conflict, created, noContent, notFound } from '../errors';
 import { route } from '../router';
 import { nextId } from '../db';
@@ -112,6 +113,7 @@ route(
 		delete db.students[user.id];
 		db.connections = db.connections.filter((c) => c.fromId !== user.id && c.toId !== user.id);
 		db.joinRequests = db.joinRequests.filter((r) => r.studentId !== user.id);
+		removeAllRsvps(db, user.id);
 		db.groups.forEach((group) => {
 			group.memberIds = group.memberIds.filter((id) => id !== user.id);
 			delete group.availabilityOverrides?.[user.id];

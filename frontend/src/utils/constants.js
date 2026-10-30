@@ -102,6 +102,9 @@ export const MIN_GROUP_SIZE = 2;
 export const MAX_GROUP_SIZE = 20;
 export const MESSAGE_MAX_LENGTH = 300;
 
+/** A session happens one way or the other, so `EITHER` is not offered. */
+export const SESSION_MEETING_MODES = MEETING_MODES.filter((mode) => mode.value !== 'EITHER');
+
 /** Look up the display label for an enum value. */
 export function labelOf(options, value) {
 	return options.find((option) => option.value === value)?.label ?? value ?? '';

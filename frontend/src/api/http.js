@@ -43,11 +43,21 @@ http.interceptors.request.use((config) => {
 	return config;
 });
 
+/** A request for text, such as a calendar file, gets its JSON error body as a string. */
+function parseErrorBody(data) {
+	if (typeof data !== 'string') return data;
+	try {
+		return JSON.parse(data);
+	} catch {
+		return null;
+	}
+}
+
 http.interceptors.response.use(
 	(response) => response,
 	(error) => {
 		const status = error.response?.status;
-		const data = error.response?.data;
+		const data = parseErrorBody(error.response?.data);
 		const message =
 			data?.message ||
 			data?.error ||

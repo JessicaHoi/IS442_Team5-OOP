@@ -11,7 +11,10 @@ const props = defineProps({
 	groupId: { type: String, required: true },
 	memberCount: { type: Number, default: 0 },
 	closed: Boolean,
+	/** Offer "Schedule this" on each suggestion. */
+	canSchedule: Boolean,
 });
+defineEmits(['schedule']);
 const data = ref({ suggestions: [], heatmap: [], memberCount: 0 });
 const loading = ref(false);
 const error = ref('');
@@ -53,7 +56,7 @@ const windowLabel = (slot) => formatSlot({ day: slot.day.slice(0, 3), start: (sl
 		<ErrorState v-else-if="error" :message="error" @retry="load" />
 		<template v-else>
 			<div class="d-flex flex-wrap gap-2 mb-3">
-				<span v-for="suggestion in data.suggestions" :key="`${suggestion.slot.day}-${suggestion.slot.startTime ?? suggestion.slot.start}`" class="badge rounded-pill text-bg-light border fw-semibold">{{ windowLabel(suggestion.slot) }} · {{ suggestion.freeCount }} of {{ data.memberCount }} free</span>
+				<span v-for="suggestion in data.suggestions" :key="`${suggestion.slot.day}-${suggestion.slot.startTime ?? suggestion.slot.start}`" class="badge rounded-pill text-bg-light border fw-semibold d-inline-flex align-items-center gap-2">{{ windowLabel(suggestion.slot) }} · {{ suggestion.freeCount }} of {{ data.memberCount }} free<button v-if="canSchedule" type="button" class="btn btn-link btn-sm p-0" @click="$emit('schedule', suggestion.slot)">Schedule this</button></span>
 				<span v-if="!data.suggestions.length" class="text-body-secondary small">No shared free time yet. Update your availability for this group to help find a time.</span>
 			</div>
 			<AvailabilityGrid :cells="data.heatmap" :member-count="data.memberCount" />

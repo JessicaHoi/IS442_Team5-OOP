@@ -396,6 +396,7 @@ export function createSeedData() {
 			connection: connections.length + 1,
 			group: groups.length + 1,
 			joinRequest: joinRequests.length + 1,
+			studySession: 1,
 		},
 		courses: COURSES,
 		users,
@@ -403,6 +404,7 @@ export function createSeedData() {
 		connections,
 		groups,
 		joinRequests,
+		studySessions: [],
 		matchingConfig: structuredClone(DEFAULT_MATCHING_CONFIG),
 	};
 }

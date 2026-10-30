@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -12,6 +13,7 @@ import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.common.exception.ValidationException;
 import is442t1.studybuddy.course.Course;
 import is442t1.studybuddy.course.CourseService;
+import is442t1.studybuddy.group.event.GroupClosed;
 import is442t1.studybuddy.model.enums.GroupStatus;
 import is442t1.studybuddy.student.StudentRepository;
 
@@ -26,16 +28,18 @@ public class StudyGroupService {
     private final CourseService courseService;
     private final StudyGroupMapper mapper;
     private final GroupProperties properties;
+    private final ApplicationEventPublisher events;
 
     public StudyGroupService(StudyGroupRepository groupRepository, StudyGroupLeaderRepository leaderRepository,
             StudentRepository studentRepository, CourseService courseService, StudyGroupMapper mapper,
-            GroupProperties properties) {
+            GroupProperties properties, ApplicationEventPublisher events) {
         this.groupRepository = groupRepository;
         this.leaderRepository = leaderRepository;
         this.studentRepository = studentRepository;
         this.courseService = courseService;
         this.mapper = mapper;
         this.properties = properties;
+        this.events = events;
     }
 
     /** Open groups, optionally for one course, newest first. */
@@ -89,6 +93,7 @@ public class StudyGroupService {
     public StudyGroupResponse closeGroup(UUID studentId, UUID groupId) {
         StudyGroup group = requireGroupForUpdate(groupId);
         requireLeader(studentId).closeGroup(group);
+        events.publishEvent(new GroupClosed(groupId));
         return mapper.toDetail(group, studentId);
     }
 

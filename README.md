@@ -130,6 +130,7 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 | `VITE_APP_NAME` | Name shown in the navbar and page titles | `StudyBuddy` |
 | `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:9090` |
 | `BUILD_OUT_DIR` | Where `npm run build` writes the bundle | `../backend/src/main/resources/static` |
+| `APP_URL` | Backend setting: where students open the app, used for links in calendar files. Blank leaves the links out. | blank |
 
 To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 9090 (see [Quick start](#quick-start)).
 
@@ -286,6 +287,13 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `POST /groups/{id}/leave` | The caller leaves. `204`. `409` for the leader, a non-member or a closed group. |
 | | `PUT /groups/{id}/chat-link` | Leader only. Body `{url}`, which must start with `https://t.me/`. Returns the group. |
 | | `DELETE /groups/{id}/chat-link` | Leader only. `204`. |
+| | `GET /groups/{id}/sessions?scope=upcoming\|past` | Members only. `upcoming` is the default: sessions not yet finished, including cancelled ones, soonest first. `past` is newest first. |
+| | `POST /groups/{id}/sessions` | Leader only. `201`. Body `{title, startsAt, endsAt, meetingMode, location?, note?}`. `meetingMode` is `IN_PERSON` or `ONLINE`; the start must be in the future and the length at most 8 hours. `409` if the group is closed. |
+| | `PUT /groups/{id}/sessions/{sid}` | Leader only. Same body. `409` once the session has started or been cancelled. |
+| | `POST /groups/{id}/sessions/{sid}/cancel` | Leader only. Returns the session. Same `409`. |
+| | `PUT /groups/{id}/sessions/{sid}/rsvp` | Members only. Body `{response}`, `GOING` or `NOT_GOING`. Same `409`. |
+| | `GET /groups/{id}/sessions/{sid}/calendar.ics` | Members only. An iCalendar file (`text/calendar`). Errors are still JSON. |
+| | `GET /sessions/upcoming` | The caller's scheduled sessions in all their groups, soonest first. |
 | | `GET /groups/{id}/leadership` | Leader only. Returns `{id, name, status, eligibleMembers:[{id, name}]}`. |
 | | `PUT /groups/{id}/leader` | Leader only. Body `{studentId}`, another active member. Returns the same shape as `/leadership`. |
 | | `GET /groups/{id}/best-times` | Members only. Returns suggested windows and the 30-minute heatmap, see shape below. |
@@ -314,6 +322,8 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | Study goal | `CONCEPT_REVIEW`, `PROBLEM_SOLVING`, `EXAM_PREPARATION`, `PROJECT_DISCUSSION` |
 | Day | `MON` `TUE` `WED` `THU` `FRI` `SAT` `SUN` |
 | Strategy | `BALANCED`, `AVAILABILITY_FIRST`, `COURSE_FIRST` |
+| Session status | `SCHEDULED`, `CANCELLED` |
+| RSVP response | `GOING`, `NOT_GOING` |
 | Connection status (in a match) | `NONE`, `PENDING_SENT`, `PENDING_RECEIVED`, `CONNECTED` |
 
 ### Shapes
@@ -371,6 +381,16 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
   "heatmap": [ { "day": "WEDNESDAY", "startTime": "19:00:00", "endTime": "19:30:00", "freeCount": 4,
                  "availableMembers": [ { "id": 2, "name": "…" } ] } ],
   "memberCount": 5
+}
+
+// Study session (GET /groups/{id}/sessions, /sessions/upcoming)
+{
+  "id": 1, "groupId": 2, "groupName": "…", "title": "…",
+  "startsAt": "ISO-8601", "endsAt": "ISO-8601", "meetingMode": "IN_PERSON",
+  "location": "… or null", "note": "… or null", "status": "SCHEDULED",
+  "myRsvp": "GOING",                                          // null if the caller has not answered
+  "goingCount": 1, "notGoingCount": 0,
+  "attendees": [ { "id": 3, "name": "…", "response": "GOING" } ]
 }
 
 // Join request (GET /groups/{id}/join-requests)

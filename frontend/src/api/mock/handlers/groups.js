@@ -1,6 +1,7 @@
 import { badRequest, conflict, created, forbidden, noContent, notFound } from '../errors';
 import { route } from '../router';
 import { nextId } from '../db';
+import { cancelUpcomingSessions, removeUpcomingRsvps } from '../studySessions';
 import { ledGroupView, transferGroupLeadership } from '../groupLeadership';
 import { toGroupDetail, toGroupSummary, toStudentRef } from '../serializers';
 import { validateSlots } from '../../../utils/availability';
@@ -129,6 +130,7 @@ route(
 		requireOpen(group);
 		group.status = 'CLOSED';
 		pendingRequests(db, group.id).forEach((request) => (request.status = 'REJECTED'));
+		cancelUpcomingSessions(db, group.id);
 		return toGroupDetail(db, group, user.id);
 	},
 	{ role: 'STUDENT' },
@@ -204,6 +206,7 @@ route(
 		if (!group.memberIds.includes(studentId)) throw notFound('This student is not a member.');
 		group.memberIds = group.memberIds.filter((id) => id !== studentId);
 		delete group.availabilityOverrides?.[studentId];
+		removeUpcomingRsvps(db, group.id, studentId);
 		return noContent();
 	},
 	{ role: 'STUDENT' },
@@ -219,6 +222,7 @@ route(
 		if (!group.memberIds.includes(user.id)) throw conflict('You are not a member of this group.');
 		group.memberIds = group.memberIds.filter((id) => id !== user.id);
 		delete group.availabilityOverrides?.[user.id];
+		removeUpcomingRsvps(db, group.id, user.id);
 		return noContent();
 	},
 	{ role: 'STUDENT' },
