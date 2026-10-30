@@ -36,6 +36,7 @@ public class StudentProfileMapper {
                 student.getYearOfStudy(),
                 courses,
                 contactVisible ? student.getContactNum() : null,
+                contactVisible ? student.getTelegramHandle() : null,
                 contactVisible,
                 buddyState.status(),
                 buddyState.connectionId(),

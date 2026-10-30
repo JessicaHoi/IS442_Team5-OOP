@@ -2,6 +2,7 @@ import { badRequest, notFound } from '../errors';
 import { route } from '../router';
 import { toOwnProfile, toPublicProfile } from '../serializers';
 import { validateSlots } from '../../../utils/availability';
+import { INVALID_HANDLE_MESSAGE, normalizeTelegramHandle } from '../../../utils/telegram';
 import { MEETING_MODES, GROUP_FORMATS, STUDY_GOALS } from '../../../utils/constants';
 
 const isOneOf = (options, value) => options.some((option) => option.value === value);
@@ -21,8 +22,11 @@ route(
 			throw badRequest('Unknown course selected.');
 		}
 
+		const telegramHandle = normalizeTelegramHandle(body.telegramHandle);
+		if (telegramHandle === null) throw badRequest(INVALID_HANDLE_MESSAGE);
+
 		const student = db.students[user.id];
-		Object.assign(student, { school, programme: programme.trim(), yearOfStudy: Number(yearOfStudy), contactNumber: contactNumber.trim(), courses });
+		Object.assign(student, { telegramHandle: telegramHandle || null, school, programme: programme.trim(), yearOfStudy: Number(yearOfStudy), contactNumber: contactNumber.trim(), courses });
 		db.users.find((u) => u.id === user.id).name = name.trim();
 		// A preference is only kept for a course the student still takes.
 		student.preferences = student.preferences.filter((preference) => courses.includes(preference.course));

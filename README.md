@@ -254,7 +254,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 
 - **Auth.** Send `Authorization: Bearer <token>` on every request except login. A `401` sends the user back to the login page.
 - **Errors.** Use the HTTP status plus a JSON body `{ "message": "Human readable text" }`. The message is shown to the user.
-- **Privacy.** `contactNumber` must be `null` unless the viewer owns the profile or has an `ACCEPTED` connection with that student. The server enforces this. The UI only displays what it receives.
+- **Privacy.** `contactNumber` and `telegramHandle` must be `null` unless the viewer owns the profile or has an `ACCEPTED` connection with that student. The server enforces this. The UI only displays what it receives.
 
 ### Endpoints
 
@@ -265,7 +265,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `POST /auth/logout` | Revokes the token. `204`. |
 | Courses | `GET /courses` | Returns `[{code, name, school}]`. |
 | Student | `GET /students/me` | Own profile, see shape below. |
-| | `PUT /students/me/profile` | Body `{name, school, programme, yearOfStudy, contactNumber, courses:[code]}`. Removes preferences for courses no longer taken. |
+| | `PUT /students/me/profile` | Body `{name, school, programme, yearOfStudy, contactNumber, telegramHandle?, courses:[code]}`. `telegramHandle` is optional and may be a username, `@username` or a `t.me` link; it is stored as the bare username, and blank clears it. Removes preferences for courses no longer taken. |
 | | `PUT /students/me/preferences` | Body `{preferences:[{course, meetingMode, groupFormat, goals:[..], availability:[slot]}]}`. Replaces the full list. At most one per course, and only for courses the student takes. |
 | | `GET /students/{id}` | Public profile (contact hidden unless connected). |
 | Matching | `GET /matches` | Query `course`, `goal`, `day`, `studyMode`, `groupFormat`, all optional. Sorted by weighted compatibility score; phone numbers remain hidden until the connection is accepted. |
@@ -327,6 +327,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
   "school": "…", "programme": "Information Systems", "yearOfStudy": 2,
   "courses": ["IS442", "IS212"],
   "contactNumber": "+65 9123 4567",                          // null when hidden
+  "telegramHandle": "aisha_r",                               // null when hidden or not set
   "contactVisible": true,
   "connectionStatus": "NONE", "connectionId": null,
   "preferences": [                                           // one per course, sorted by course code

@@ -31,6 +31,9 @@ public record UpdateProfileRequest(
         @Pattern(regexp = "\\+?[\\d\\s-]{8,15}", message = "Enter a valid phone number, e.g. +65 9123 4567.")
         String contactNumber,
 
+        /** Optional. Checked by {@link TelegramHandle}, which also accepts {@code @name} and t.me links. */
+        String telegramHandle,
+
         @NotEmpty(message = "Select at least one course.")
         List<@NotBlank String> courses
 ) {

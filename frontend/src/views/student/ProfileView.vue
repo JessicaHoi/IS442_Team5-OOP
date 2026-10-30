@@ -15,13 +15,15 @@ import PreferenceEditor from '../../components/profile/PreferenceEditor.vue';
 import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 
+import { INVALID_HANDLE_MESSAGE, normalizeTelegramHandle } from '../../utils/telegram';
+
 const PHONE_PATTERN = /^\+?[\d\s-]{8,15}$/;
 
 const lookups = useLookupsStore();
 const auth = useAuthStore();
 const toast = useToast();
 
-const profile = reactive({ name: '', school: '', programme: '', yearOfStudy: '', contactNumber: '', courses: [] });
+const profile = reactive({ name: '', school: '', programme: '', yearOfStudy: '', contactNumber: '', telegramHandle: '', courses: [] });
 /** One study preference per course the student needs a buddy for. */
 const prefs = ref([]);
 const courseToAdd = ref('');
@@ -47,6 +49,7 @@ function apply(me) {
 		programme: me.programme ?? '',
 		yearOfStudy: me.yearOfStudy ?? '',
 		contactNumber: me.contactNumber ?? '',
+		telegramHandle: me.telegramHandle ?? '',
 		courses: [...me.courses],
 	});
 	prefs.value = me.preferences.map((preference) => ({
@@ -93,6 +96,7 @@ function validate() {
 	if (!profile.programme.trim()) found.programme = 'Enter your programme.';
 	if (!profile.yearOfStudy) found.yearOfStudy = 'Choose your year.';
 	if (!PHONE_PATTERN.test(profile.contactNumber.trim())) found.contactNumber = 'Enter a valid phone number, e.g. +65 9123 4567.';
+	if (normalizeTelegramHandle(profile.telegramHandle) === null) found.telegramHandle = INVALID_HANDLE_MESSAGE;
 	if (profile.courses.length === 0) found.courses = 'Select at least one course.';
 	if (prefs.value.length === 0) found.preferences = 'Add a preference for at least one course you need a study buddy for.';
 
@@ -130,6 +134,7 @@ async function save() {
 			programme: profile.programme.trim(),
 			yearOfStudy: Number(profile.yearOfStudy),
 			contactNumber: profile.contactNumber.trim(),
+			telegramHandle: normalizeTelegramHandle(profile.telegramHandle),
 			courses: profile.courses,
 		});
 		const saved = await studentsApi.updatePreferences(prefs.value);
@@ -164,6 +169,14 @@ async function save() {
 					<div class="col-md-6">
 						<FormField label="Contact number" required :error="errors.contactNumber" hint="Only shown to students you are connected with." v-slot="{ id, invalidClass }">
 							<input :id="id" v-model="profile.contactNumber" type="tel" class="form-control" :class="invalidClass" autocomplete="tel" />
+						</FormField>
+					</div>
+					<div class="col-md-6">
+						<FormField label="Telegram username" :error="errors.telegramHandle" hint="Optional. Only shown to students you are connected with." v-slot="{ id, invalidClass }">
+							<div class="input-group">
+								<span class="input-group-text">@</span>
+								<input :id="id" v-model="profile.telegramHandle" class="form-control" :class="invalidClass" autocomplete="off" autocapitalize="none" spellcheck="false" />
+							</div>
 						</FormField>
 					</div>
 					<div class="col-md-6">

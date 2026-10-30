@@ -5,6 +5,7 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -128,6 +129,50 @@ class StudentProfileApiTest extends ApiTestSupport {
         mockMvc.perform(as(login(createStudent("Hal Lee", "IS442")), get("/api/students/not-a-uuid")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("The requested resource does not exist."));
+    }
+
+    private static final String PROFILE_WITH_HANDLE = """
+            {"name":"Aisha Rahman","school":"School of Economics","programme":"Economics","yearOfStudy":3,
+             "contactNumber":"+65 8000 0000","telegramHandle":"%s","courses":["IS442"]}""";
+
+    @Test
+    void savesTheTelegramHandleWithoutItsPrefixAndClearsItWhenBlank() throws Exception {
+        String token = login(createStudent("Aisha Rahman", "IS442"));
+
+        mockMvc.perform(as(token, put("/api/students/me/profile")).content(PROFILE_WITH_HANDLE.formatted("@aisha_r")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.telegramHandle").value("aisha_r"));
+        mockMvc.perform(as(token, put("/api/students/me/profile")).content(PROFILE_WITH_HANDLE.formatted("not valid!")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Enter a valid Telegram username, e.g. @aisha_r."));
+        mockMvc.perform(as(token, put("/api/students/me/profile")).content(PROFILE_WITH_HANDLE.formatted("")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.telegramHandle").value(nullValue()));
+    }
+
+    @Test
+    void onlyAConnectedStudentSeesTheTelegramHandleLikeTheContactNumber() throws Exception {
+        String ownerEmail = createStudent("Aisha Rahman", "IS442");
+        String ownerToken = login(ownerEmail);
+        String viewerToken = login(createStudent("Finn Ho", "IS442"));
+        mockMvc.perform(as(ownerToken, put("/api/students/me/profile")).content(PROFILE_WITH_HANDLE.formatted("aisha_r")))
+                .andExpect(status().isOk());
+        String profile = "/api/students/" + idOf(ownerEmail);
+
+        mockMvc.perform(as(viewerToken, get(profile))).andExpect(jsonPath("$.telegramHandle").value(nullValue()));
+        mockMvc.perform(as(viewerToken, get("/api/matches")))
+                .andExpect(jsonPath("$[?(@.student.telegramHandle == 'aisha_r')]").isEmpty());
+
+        String requestId = read(mockMvc.perform(as(viewerToken, post("/api/connections"))
+                        .content("{\"toStudentId\":\"" + idOf(ownerEmail) + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        mockMvc.perform(as(viewerToken, get(profile))).andExpect(jsonPath("$.telegramHandle").value(nullValue()));
+
+        mockMvc.perform(as(ownerToken, post("/api/connections/" + requestId + "/accept"))).andExpect(status().isOk());
+        mockMvc.perform(as(viewerToken, get(profile))).andExpect(jsonPath("$.telegramHandle").value("aisha_r"));
+        mockMvc.perform(as(viewerToken, get("/api/connections").param("view", "active")))
+                .andExpect(jsonPath("$[0].other.telegramHandle").value("aisha_r"));
     }
 
     @Test
