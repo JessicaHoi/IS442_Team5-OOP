@@ -38,6 +38,9 @@ spring:
       path: /h2-console
 # --- Study Buddy settings ---
 studybuddy:
+  app:
+    # Where students open the app, used for links in calendar files. Blank leaves the links out.
+    url: ${APP_URL:}
   auth:
     # How long a sign-in token stays valid. Tokens are held in memory, so a restart also signs everyone out.
     token-ttl: 12h

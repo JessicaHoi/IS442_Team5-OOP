@@ -2,6 +2,8 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
 import { groupsApi } from '../../api/groups.api';
+import { sessionsApi } from '../../api/sessions.api';
+import { formatSessionTime } from '../../utils/format';
 import { useLookupsStore } from '../../stores/lookups';
 import { useToast } from '../../composables/useToast';
 import PageHeader from '../../components/ui/PageHeader.vue';
@@ -18,6 +20,7 @@ const activeTab = ref('discover');
 const courseFilter = ref('');
 const discover = ref([]);
 const mine = ref([]);
+const upcomingSessions = ref([]);
 const loading = ref(true);
 const error = ref('');
 
@@ -33,7 +36,12 @@ async function load() {
 	error.value = '';
 	try {
 		await lookups.loadCourses();
-		[discover.value, mine.value] = await Promise.all([groupsApi.list(courseFilter.value), groupsApi.mine()]);
+		// The reminder strip is a convenience: if it fails to load, the groups should still show.
+		[discover.value, mine.value, upcomingSessions.value] = await Promise.all([
+			groupsApi.list(courseFilter.value),
+			groupsApi.mine(),
+			sessionsApi.upcoming().catch(() => []),
+		]);
 	} catch (caught) {
 		error.value = caught.message;
 	} finally {
@@ -79,6 +87,16 @@ const isFull = (group) => group.memberCount >= group.maxSize;
 				<RouterLink class="btn btn-primary" to="/groups/new"><i class="bi bi-plus-lg me-2"></i>Create group</RouterLink>
 			</template>
 		</PageHeader>
+
+		<section v-if="upcomingSessions.length" class="card-flat px-3 py-2 mb-4" aria-label="Your next study sessions">
+			<h2 class="h6 mt-1 mb-2"><i class="bi bi-calendar-event me-2"></i>Your next sessions</h2>
+			<ul class="list-unstyled mb-1">
+				<li v-for="session in upcomingSessions.slice(0, 3)" :key="session.id" class="small mb-1">
+					<RouterLink :to="{ name: 'group-view', params: { id: session.groupId } }" class="fw-medium">{{ session.title }}</RouterLink>
+					<span class="text-muted"> · {{ session.groupName }} · {{ formatSessionTime(session.startsAt, session.endsAt) }}</span>
+				</li>
+			</ul>
+		</section>
 
 		<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
 			<ul class="nav nav-underline" role="tablist">

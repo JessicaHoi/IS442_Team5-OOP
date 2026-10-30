@@ -4,12 +4,14 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.PermissionDeniedException;
+import is442t1.studybuddy.group.event.MemberLeft;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentService;
 
@@ -21,11 +23,14 @@ public class MembershipService {
     private final StudyGroupService groupService;
     private final StudentService studentService;
     private final StudyGroupMapper mapper;
+    private final ApplicationEventPublisher events;
 
-    public MembershipService(StudyGroupService groupService, StudentService studentService, StudyGroupMapper mapper) {
+    public MembershipService(StudyGroupService groupService, StudentService studentService, StudyGroupMapper mapper,
+            ApplicationEventPublisher events) {
         this.groupService = groupService;
         this.studentService = studentService;
         this.mapper = mapper;
+        this.events = events;
     }
 
     public StudyGroupResponse requestToJoin(UUID studentId, UUID groupId, String message) {
@@ -77,11 +82,13 @@ public class MembershipService {
         StudyGroupLeader leader = groupService.requireLeader(studentId);
         Student member = studentService.requireStudent(memberId);
         leader.removeMember(group, member);
+        events.publishEvent(new MemberLeft(groupId, memberId));
     }
 
     public void leaveGroup(UUID studentId, UUID groupId) {
         StudyGroup group = groupService.requireGroupForUpdate(groupId);
         group.leave(studentService.requireStudent(studentId));
+        events.publishEvent(new MemberLeft(groupId, studentId));
     }
 
     private static MembershipRequest requirePendingRequest(StudyGroup group, UUID requestId) {

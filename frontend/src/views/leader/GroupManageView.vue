@@ -16,6 +16,7 @@ import GroupBestTimes from '../../components/groups/GroupBestTimes.vue';
 import JoinRequestList from '../../components/groups/JoinRequestList.vue';
 import MemberList from '../../components/groups/MemberList.vue';
 import GroupChatLink from '../../components/groups/GroupChatLink.vue';
+import SessionList from '../../components/groups/SessionList.vue';
 import LeadershipTransferModal from '../../components/admin/LeadershipTransferModal.vue';
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -32,6 +33,7 @@ const activeTab = ref('requests');
 const busyRequestId = ref(null);
 const saving = ref(false);
 const leadershipOpen = ref(false);
+const sessionPrefill = ref(null);
 const isLeader = computed(() => group.value?.myRole === 'LEADER');
 const viewOnly = computed(() => route.name === 'group-view');
 const readonly = computed(() => viewOnly.value || !isLeader.value || group.value?.status === 'CLOSED');
@@ -54,6 +56,11 @@ const { loading, error, run: load } = useAsync(async () => {
 });
 
 watch(() => props.id, load, { immediate: true });
+
+function scheduleFromSuggestion(slot) {
+	sessionPrefill.value = slot;
+	activeTab.value = 'sessions';
+}
 
 async function refresh() {
 	await load();
@@ -153,7 +160,7 @@ async function closeGroup() {
 	if (readonly.value) return;
 	const confirmed = await confirm({
 		title: 'Close this group?',
-		message: 'Pending join requests will be rejected and no one else can join. This cannot be undone.',
+		message: 'Pending join requests will be rejected, upcoming sessions will be cancelled and no one else can join. This cannot be undone.',
 		confirmLabel: 'Close group',
 		danger: true,
 	});
@@ -214,6 +221,9 @@ async function closeGroup() {
 					</button>
 				</li>
 				<li class="nav-item" role="presentation">
+					<button type="button" class="nav-link" :class="{ active: activeTab === 'sessions' }" role="tab" @click="activeTab = 'sessions'">Sessions</button>
+				</li>
+				<li class="nav-item" role="presentation">
 					<button type="button" class="nav-link" :class="{ active: activeTab === 'details' }" role="tab" @click="activeTab = 'details'">Details</button>
 				</li>
 			</ul>
@@ -228,11 +238,18 @@ async function closeGroup() {
 					@reject="decide($event, false)"
 				/>
 				<MemberList v-else-if="activeTab === 'members'" :members="group.members" :readonly="readonly" @remove="removeMember" />
+				<SessionList
+					v-else-if="activeTab === 'sessions'"
+					:group-id="id"
+					:can-manage="!readonly"
+					:prefill="sessionPrefill"
+					@prefill-used="sessionPrefill = null"
+				/>
 				<div v-else-if="activeTab === 'details'" class="py-3">
 					<GroupDetails v-if="readonly" :group="group" />
 					<GroupForm v-else :group="group" :saving="saving" submit-label="Save changes" @submit="saveDetails" />
 					<GroupChatLink v-if="!readonly" class="mt-4" :link="group.chatLink ?? null" :saving="saving" @save="saveChatLink" @clear="clearChatLink" />
-					<GroupBestTimes class="mt-4" :group-id="id" :member-count="group.memberCount" :closed="group.status === 'CLOSED'" />
+					<GroupBestTimes class="mt-4" :group-id="id" :member-count="group.memberCount" :closed="group.status === 'CLOSED'" :can-schedule="!readonly" @schedule="scheduleFromSuggestion" />
 				</div>
 			</div>
 			<LeadershipTransferModal v-model="leadershipOpen" :group-id="id" @transferred="refresh" />
