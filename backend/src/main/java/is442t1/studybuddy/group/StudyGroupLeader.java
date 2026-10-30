@@ -71,6 +71,16 @@ public class StudyGroupLeader extends Student {
         group.removeMember(student);
     }
 
+    public void setChatLink(StudyGroup group, String url) {
+        requireLeads(group);
+        group.setChatLink(url);
+    }
+
+    public void clearChatLink(StudyGroup group) {
+        requireLeads(group);
+        group.clearChatLink();
+    }
+
     private void requireLeads(StudyGroup group) {
         if (!leads(group)) {
             throw new PermissionDeniedException(NOT_LEADER);

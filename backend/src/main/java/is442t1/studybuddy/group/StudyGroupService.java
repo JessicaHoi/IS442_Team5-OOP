@@ -106,6 +106,17 @@ public class StudyGroupService {
                 .orElseThrow(() -> new ResourceNotFoundException("Study group not found."));
     }
 
+    public StudyGroupResponse setChatLink(UUID studentId, UUID groupId, String url) {
+        StudyGroup group = requireGroupForUpdate(groupId);
+        requireLeader(studentId).setChatLink(group, url);
+        return mapper.toDetail(group, studentId);
+    }
+
+    public void clearChatLink(UUID studentId, UUID groupId) {
+        StudyGroup group = requireGroupForUpdate(groupId);
+        requireLeader(studentId).clearChatLink(group);
+    }
+
     StudyGroup requireGroup(UUID groupId) {
         return groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Study group not found."));

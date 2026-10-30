@@ -44,6 +44,7 @@ export function toPublicProfile(db, studentId, viewerId) {
 		courses: student.courses,
 		preferences: student.preferences,
 		contactNumber: contactVisible ? student.contactNumber : null,
+		telegramHandle: contactVisible ? student.telegramHandle ?? null : null,
 		contactVisible,
 		connectionStatus: status,
 		connectionId: connection?.id ?? null,
@@ -110,6 +111,7 @@ export function toGroupDetail(db, group, viewerId) {
 	const canSeeMembers = summary.myRole !== 'NONE';
 	return {
 		...summary,
+		...(canSeeMembers && group.chatLink ? { chatLink: group.chatLink } : {}),
 		members: canSeeMembers
 			? group.memberIds.map((id) => ({ ...toStudentRef(db, id), isLeader: id === group.leaderId }))
 			: [],

@@ -39,6 +39,10 @@ public class Student extends User {
     private Integer yearOfStudy;
     private String contactNum;
 
+    /** Bare username without the leading {@code @}. Follows the same privacy rule as {@link #contactNum}. */
+    @Column(length = 32)
+    private String telegramHandle;
+
     @ManyToMany
     @JoinTable(
             name = "student_course",
@@ -99,6 +103,14 @@ public class Student extends User {
 
     public void setContactNum(String contactNum) {
         this.contactNum = contactNum;
+    }
+
+    public String getTelegramHandle() {
+        return telegramHandle;
+    }
+
+    public void setTelegramHandle(String telegramHandle) {
+        this.telegramHandle = telegramHandle;
     }
 
     public Set<Course> getCoursesTaken() {

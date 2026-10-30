@@ -21,7 +21,7 @@ defineEmits(['accept', 'decline', 'end']);
 			<div class="fw-medium">{{ connection.other.name }}</div>
 			<div class="small text-muted">{{ programmeLine(connection.other) }} · {{ timeAgo(connection.createdAt) }}</div>
 			<p v-if="connection.message && mode !== 'active'" class="small fst-italic mb-0 mt-1">“{{ connection.message }}”</p>
-			<div v-if="mode === 'active'" class="small mt-1"><ContactField :value="connection.other.contactNumber" /></div>
+			<div v-if="mode === 'active'" class="small mt-1"><ContactField :value="connection.other.contactNumber" :telegram-handle="connection.other.telegramHandle" /></div>
 		</div>
 
 		<div class="d-flex gap-2 align-items-center">

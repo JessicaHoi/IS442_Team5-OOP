@@ -15,6 +15,7 @@ import GroupDetails from '../../components/groups/GroupDetails.vue';
 import GroupBestTimes from '../../components/groups/GroupBestTimes.vue';
 import JoinRequestList from '../../components/groups/JoinRequestList.vue';
 import MemberList from '../../components/groups/MemberList.vue';
+import GroupChatLink from '../../components/groups/GroupChatLink.vue';
 import LeadershipTransferModal from '../../components/admin/LeadershipTransferModal.vue';
 
 const props = defineProps({ id: { type: String, required: true } });
@@ -104,6 +105,50 @@ async function saveDetails(payload) {
 	}
 }
 
+async function saveChatLink(url) {
+	if (readonly.value || saving.value) return;
+	saving.value = true;
+	try {
+		group.value = await groupsApi.setChatLink(props.id, url);
+		toast.success('Chat link saved.');
+	} catch (caught) {
+		toast.error(caught.message);
+	} finally {
+		saving.value = false;
+	}
+}
+
+async function clearChatLink() {
+	if (readonly.value || saving.value) return;
+	saving.value = true;
+	try {
+		await groupsApi.clearChatLink(props.id);
+		await refresh();
+		toast.success('Chat link removed.');
+	} catch (caught) {
+		toast.error(caught.message);
+	} finally {
+		saving.value = false;
+	}
+}
+
+async function leaveGroup() {
+	const confirmed = await confirm({
+		title: 'Leave this group?',
+		message: 'You will need to request to join again if you change your mind.',
+		confirmLabel: 'Leave group',
+		danger: true,
+	});
+	if (!confirmed) return;
+	try {
+		await groupsApi.leave(props.id);
+		toast.success('You left the group.');
+		await router.replace('/groups');
+	} catch (caught) {
+		toast.error(caught.message);
+	}
+}
+
 async function closeGroup() {
 	if (readonly.value) return;
 	const confirmed = await confirm({
@@ -138,6 +183,12 @@ async function closeGroup() {
 					<RouterLink v-if="isLeader && viewOnly" class="btn btn-primary" :to="{ name: 'group-manage', params: { id } }">Manage group</RouterLink>
 					<button v-if="isLeader && !viewOnly" type="button" class="btn btn-light border" @click="leadershipOpen = true">
 						<i class="bi bi-person-gear me-2"></i>Transfer leadership
+					</button>
+					<a v-if="group.chatLink" class="btn btn-primary" :href="group.chatLink" target="_blank" rel="noopener noreferrer">
+						<i class="bi bi-telegram me-2"></i>Open group chat
+					</a>
+					<button v-if="group.myRole === 'MEMBER' && group.status === 'OPEN'" type="button" class="btn btn-outline-danger" @click="leaveGroup">
+						<i class="bi bi-box-arrow-right me-2"></i>Leave group
 					</button>
 					<button v-if="!readonly" type="button" class="btn btn-outline-danger" @click="closeGroup">
 						<i class="bi bi-lock me-2"></i>Close group
@@ -180,6 +231,7 @@ async function closeGroup() {
 				<div v-else-if="activeTab === 'details'" class="py-3">
 					<GroupDetails v-if="readonly" :group="group" />
 					<GroupForm v-else :group="group" :saving="saving" submit-label="Save changes" @submit="saveDetails" />
+					<GroupChatLink v-if="!readonly" class="mt-4" :link="group.chatLink ?? null" :saving="saving" @save="saveChatLink" @clear="clearChatLink" />
 					<GroupBestTimes class="mt-4" :group-id="id" :member-count="group.memberCount" :closed="group.status === 'CLOSED'" />
 				</div>
 			</div>

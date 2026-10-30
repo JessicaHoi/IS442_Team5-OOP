@@ -54,6 +54,7 @@ public class StudentService {
         student.setProgram(request.programme().trim());
         student.setYearOfStudy(request.yearOfStudy());
         student.setContactNum(request.contactNumber().trim());
+        student.setTelegramHandle(TelegramHandle.normalize(request.telegramHandle()));
         student.replaceCoursesTaken(courseService.requireCourses(request.courses()));
         return profileMapper.toOwnProfile(student);
     }

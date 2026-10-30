@@ -40,7 +40,7 @@ const lookups = useLookupsStore();
 
 			<dl class="row mb-0 gy-3">
 				<dt class="col-sm-4 section-title mb-0 pt-1">Contact</dt>
-				<dd class="col-sm-8 mb-0"><ContactField :value="student.contactNumber" /></dd>
+				<dd class="col-sm-8 mb-0"><ContactField :value="student.contactNumber" :telegram-handle="student.telegramHandle" /></dd>
 
 				<dt class="col-sm-4 section-title mb-0 pt-1">Courses</dt>
 				<dd class="col-sm-8 mb-0 d-flex flex-wrap gap-1">

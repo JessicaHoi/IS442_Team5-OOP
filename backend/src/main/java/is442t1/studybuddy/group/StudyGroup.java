@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -28,6 +29,7 @@ import jakarta.persistence.Table;
 
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.ResourceNotFoundException;
+import is442t1.studybuddy.common.exception.ValidationException;
 import is442t1.studybuddy.course.Course;
 import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.TimeSlot;
@@ -44,6 +46,8 @@ import is442t1.studybuddy.student.Student;
 @Entity
 @Table(name = "study_group")
 public class StudyGroup extends BaseEntity {
+
+    private static final Pattern CHAT_LINK = Pattern.compile("https://t\\.me/[A-Za-z0-9_+/?=&-]{1,240}");
 
     @Column(nullable = false)
     private String groupName;
@@ -81,6 +85,10 @@ public class StudyGroup extends BaseEntity {
 
     @Column(nullable = false)
     private int maxSize;
+
+    /** A Telegram chat the leader pasted in. Only members see it. */
+    @Column(length = 255)
+    private String chatLink;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -167,6 +175,10 @@ public class StudyGroup extends BaseEntity {
         return maxSize;
     }
 
+    public String getChatLink() {
+        return chatLink;
+    }
+
     public GroupStatus getStatus() {
         return status;
     }
@@ -224,6 +236,17 @@ public class StudyGroup extends BaseEntity {
         return request;
     }
 
+    /** A member leaves on their own. The leader has to hand the group over or close it first. */
+    public void leave(Student student) {
+        requireOpen();
+        if (isLedBy(student.getId())) {
+            throw new BusinessRuleException("The group leader cannot leave. Transfer leadership or close the group first.");
+        }
+        if (!dropMember(student)) {
+            throw new BusinessRuleException("You are not a member of this group.");
+        }
+    }
+
     void applyDetails(GroupDetails details) {
         requireOpen();
         TimeSlot.requireValidAvailability(details.availability());
@@ -269,10 +292,31 @@ public class StudyGroup extends BaseEntity {
         if (isLedBy(student.getId())) {
             throw new BusinessRuleException("The group leader cannot be removed.");
         }
-        if (!members.removeIf(member -> member.isSameStudent(student))) {
+        if (!dropMember(student)) {
             throw new BusinessRuleException("This student is not a member of the group.");
         }
-        memberAvailabilities.removeIf(item -> item.belongsTo(student.getId()));
+    }
+
+    private boolean dropMember(Student student) {
+        boolean removed = members.removeIf(member -> member.isSameStudent(student));
+        if (removed) {
+            memberAvailabilities.removeIf(item -> item.belongsTo(student.getId()));
+        }
+        return removed;
+    }
+
+    void setChatLink(String url) {
+        requireOpen();
+        String link = url == null ? "" : url.trim();
+        if (!CHAT_LINK.matcher(link).matches()) {
+            throw new ValidationException("Enter a Telegram link that starts with https://t.me/.");
+        }
+        chatLink = link;
+    }
+
+    void clearChatLink() {
+        requireOpen();
+        chatLink = null;
     }
 
     private void requireOpen() {

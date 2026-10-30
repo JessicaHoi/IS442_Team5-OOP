@@ -79,6 +79,11 @@ public class MembershipService {
         leader.removeMember(group, member);
     }
 
+    public void leaveGroup(UUID studentId, UUID groupId) {
+        StudyGroup group = groupService.requireGroupForUpdate(groupId);
+        group.leave(studentService.requireStudent(studentId));
+    }
+
     private static MembershipRequest requirePendingRequest(StudyGroup group, UUID requestId) {
         return group.findPendingRequest(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Join request not found."));
