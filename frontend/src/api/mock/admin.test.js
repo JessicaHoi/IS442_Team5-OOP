@@ -22,15 +22,15 @@ describe('administrator account lifecycle', () => {
 	let token;
 	beforeEach(async () => {
 		resetDb();
-		token = await login('admin@studybuddy.example');
+		token = await login('admin@smu.edu.sg');
 	});
 
 	it('creates a normalized account and preserves an omitted password during editing', async () => {
-		const created = await call('post', '/admin/users', { token, data: { name: ' New Student ', email: ' NEW@STUDYBUDDY.EXAMPLE ', role: 'STUDENT', status: 'ACTIVE', password: 'initial-password' } });
+		const created = await call('post', '/admin/users', { token, data: { name: ' New Student ', email: ' NEW@SMU.EDU.SG ', role: 'STUDENT', status: 'ACTIVE', password: 'initial-password' } });
 		expect(created.status).toBe(201);
-		expect(created.data.email).toBe('new@studybuddy.example');
+		expect(created.data.email).toBe('new@smu.edu.sg');
 		expect(created.data).not.toHaveProperty('password');
-		const studentToken = await login('new@studybuddy.example', 'initial-password');
+		const studentToken = await login('new@smu.edu.sg', 'initial-password');
 		const updated = await call('put', `/admin/users/${created.data.id}`, { token, data: fields(created.data, { name: 'Renamed Student' }) });
 		expect(updated.status).toBe(200);
 		expect((await call('get', '/auth/me', { token: studentToken })).data.name).toBe('Renamed Student');

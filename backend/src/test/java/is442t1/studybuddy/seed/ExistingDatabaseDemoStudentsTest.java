@@ -36,20 +36,20 @@ class ExistingDatabaseDemoStudentsTest {
 
     @Test
     void addsMissingDemoStudentsWithoutReplacingExistingAccountsAndIsIdempotent() throws Exception {
-        Student existingStudent = studentRepository.findByEmail("local.student@test.studybuddy.example").orElseThrow();
+        Student existingStudent = studentRepository.findByEmail("local.student@test.smu.edu.sg").orElseThrow();
         assertThat(existingStudent.getName()).isEqualTo("Existing Local Student");
         assertThat(existingStudent.getStatus()).isEqualTo(AccountStatus.ACTIVE);
         assertThat(existingStudent.getCreatedAt()).isNotNull();
         assertThat(existingStudent.getLastLogin()).isNull();
         assertThat(studentRepository.count()).isGreaterThanOrEqualTo(50);
-        assertThat(studentRepository.findByEmail("aisha.rahman@studybuddy.example")).isPresent();
+        assertThat(studentRepository.findByEmail("aisha.rahman@smu.edu.sg")).isPresent();
 
         long countAfterInitialMerge = studentRepository.count();
         ApplicationArguments args = new DefaultApplicationArguments(new String[0]);
         demoDataSeeder.run(args);
 
         assertThat(studentRepository.count()).isEqualTo(countAfterInitialMerge);
-        assertThat(studentRepository.findByEmail("local.student@test.studybuddy.example"))
+        assertThat(studentRepository.findByEmail("local.student@test.smu.edu.sg"))
                 .get()
                 .extracting(Student::getName)
                 .isEqualTo("Existing Local Student");
@@ -62,9 +62,9 @@ class ExistingDatabaseDemoStudentsTest {
         @Order(Ordered.HIGHEST_PRECEDENCE)
         ApplicationRunner createExistingAccount(StudentRepository studentRepository) {
             return (args) -> {
-                if (studentRepository.findByEmail("local.student@test.studybuddy.example").isEmpty()) {
+                if (studentRepository.findByEmail("local.student@test.smu.edu.sg").isEmpty()) {
                     Student existingStudent = new Student();
-                    existingStudent.setEmail("local.student@test.studybuddy.example");
+                    existingStudent.setEmail("local.student@test.smu.edu.sg");
                     existingStudent.setPassword("already-hashed");
                     existingStudent.setName("Existing Local Student");
                     studentRepository.save(existingStudent);

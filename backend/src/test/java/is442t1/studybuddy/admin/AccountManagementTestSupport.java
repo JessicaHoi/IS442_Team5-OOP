@@ -69,7 +69,7 @@ abstract class AccountManagementTestSupport extends ApiTestSupport {
     }
 
     protected Map<String, Object> createAccount(String name, String role) throws Exception {
-        var body = fields(name, UUID.randomUUID() + "@test.studybuddy.example", role, "ACTIVE");
+        var body = fields(name, UUID.randomUUID() + "@test.smu.edu.sg", role, "ACTIVE");
         String response = mockMvc.perform(as(adminToken, post("/api/admin/users")).content(json(body)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return read(response, "$");

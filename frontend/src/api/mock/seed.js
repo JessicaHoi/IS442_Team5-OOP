@@ -167,7 +167,7 @@ export function createSeedData() {
 		{
 			id: 1,
 			name: 'System Admin',
-			email: 'admin@studybuddy.example',
+			email: 'admin@smu.edu.sg',
 			password: DEMO_PASSWORD,
 			role: 'ADMIN',
 			status: 'ACTIVE',
@@ -193,7 +193,7 @@ export function createSeedData() {
 		users.push({
 			id,
 			name,
-			email: `${name.toLowerCase().replace(/\s+/g, '.')}@studybuddy.example`,
+			email: `${name.toLowerCase().replace(/\s+/g, '.')}@smu.edu.sg`,
 			password: DEMO_PASSWORD,
 			role: 'STUDENT',
 			status: SUSPENDED_INDEXES.includes(index) ? 'SUSPENDED' : 'ACTIVE',

@@ -17,7 +17,7 @@ async function login(email) {
 	return data.token;
 }
 
-const AISHA = 'aisha.rahman@studybuddy.example';
+const AISHA = 'aisha.rahman@smu.edu.sg';
 
 describe('mock API', () => {
 	let token;
@@ -27,7 +27,7 @@ describe('mock API', () => {
 	});
 
 	it('is seeded with at least 10 courses and 50 student profiles', async () => {
-		const adminToken = await login('admin@studybuddy.example');
+		const adminToken = await login('admin@smu.edu.sg');
 		const { data: users } = await call('get', '/admin/users', { token: adminToken });
 		expect(COURSES.length).toBeGreaterThanOrEqual(10);
 		expect(users.filter((u) => u.role === 'STUDENT').length).toBeGreaterThanOrEqual(50);
@@ -63,7 +63,7 @@ describe('mock API', () => {
 		expect(sent.status).toBe(201);
 		expect((await call('get', '/students/3', { token })).data.contactNumber).toBeNull();
 
-		const weiJieToken = await login('wei.jie.tan@studybuddy.example');
+		const weiJieToken = await login('wei.jie.tan@smu.edu.sg');
 		const { data: incoming } = await call('get', '/connections', { token: weiJieToken, params: { view: 'incoming' } });
 		const request = incoming.find((c) => c.other.id === 2);
 		await call('post', `/connections/${request.id}/accept`, { token: weiJieToken });
@@ -74,7 +74,7 @@ describe('mock API', () => {
 	});
 
 	it('keeps one study preference per course and drops it when the course is removed', async () => {
-		const studentToken = await login('priya.nair@studybuddy.example');
+		const studentToken = await login('priya.nair@smu.edu.sg');
 		const { data: me } = await call('get', '/students/me', { token: studentToken });
 		const [first, second] = me.courses;
 		const preference = (course) => ({
@@ -102,13 +102,13 @@ describe('mock API', () => {
 		expect(accepted.status).toBe(200);
 		expect(accepted.data.members.some((m) => m.id === requests[0].student.id)).toBe(true);
 		// A non-leader cannot manage the group.
-		const other = await login('priya.nair@studybuddy.example');
+		const other = await login('priya.nair@smu.edu.sg');
 		expect((await call('get', '/groups/1/join-requests', { token: other })).status).toBe(200);
 		expect((await call('post', '/groups/1/close', { token: other })).status).toBe(403);
 	});
 
 	it('changing the matching strategy is stored by the admin endpoint', async () => {
-		const adminToken = await login('admin@studybuddy.example');
+		const adminToken = await login('admin@smu.edu.sg');
 		const { data: config } = await call('get', '/admin/matching-config', { token: adminToken });
 		const update = await call('put', '/admin/matching-config', { token: adminToken, data: { ...config, strategy: 'COURSE_FIRST' } });
 		expect(update.data.strategy).toBe('COURSE_FIRST');

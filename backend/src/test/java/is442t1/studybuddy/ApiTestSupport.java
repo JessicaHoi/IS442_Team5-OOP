@@ -108,6 +108,6 @@ public abstract class ApiTestSupport {
     }
 
     private static String uniqueEmail(String name) {
-        return name.toLowerCase().replace(' ', '.') + "." + UUID.randomUUID() + "@test.studybuddy.example";
+        return name.toLowerCase().replace(' ', '.') + "." + UUID.randomUUID() + "@test.smu.edu.sg";
     }
 }

@@ -70,9 +70,9 @@ class StudentTest {
     void storesEmailTrimmedAndInLowerCase() {
         Student student = new Student();
 
-        student.setEmail("  Aisha.Rahman@STUDYBUDDY.example ");
+        student.setEmail("  Aisha.Rahman@SMU.edu.sg ");
 
-        assertThat(student.getEmail()).isEqualTo("aisha.rahman@studybuddy.example");
+        assertThat(student.getEmail()).isEqualTo("aisha.rahman@smu.edu.sg");
     }
 
     private static Student studentTaking(Course... courses) {
