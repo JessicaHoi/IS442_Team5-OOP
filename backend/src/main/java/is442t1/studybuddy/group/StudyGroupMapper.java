@@ -15,13 +15,13 @@ import is442t1.studybuddy.student.Student;
 public class StudyGroupMapper {
 
     public StudyGroupResponse toSummary(StudyGroup group, UUID viewerId) {
-        return toResponse(group, viewerId, null);
+        return toResponse(group, viewerId, null, null);
     }
 
     /** Detail view. Only the leader and members see the member list. */
     public StudyGroupResponse toDetail(StudyGroup group, UUID viewerId) {
         List<StudyGroupResponse.Member> members = group.hasMember(viewerId) ? membersOf(group) : List.of();
-        return toResponse(group, viewerId, members);
+        return toResponse(group, viewerId, members, group.hasMember(viewerId) ? group.getChatLink() : null);
     }
 
     public StudyGroupResponse.Role roleOf(StudyGroup group, UUID viewerId) {
@@ -31,7 +31,8 @@ public class StudyGroupMapper {
         return group.hasMember(viewerId) ? StudyGroupResponse.Role.MEMBER : StudyGroupResponse.Role.NONE;
     }
 
-    private StudyGroupResponse toResponse(StudyGroup group, UUID viewerId, List<StudyGroupResponse.Member> members) {
+    private StudyGroupResponse toResponse(StudyGroup group, UUID viewerId, List<StudyGroupResponse.Member> members,
+            String chatLink) {
         StudyGroupLeader leader = group.getLeader();
         return new StudyGroupResponse(
                 group.getId(),
@@ -52,6 +53,7 @@ public class StudyGroupMapper {
                 group.hasPendingRequestFrom(viewerId)
                         ? StudyGroupResponse.RequestState.PENDING
                         : StudyGroupResponse.RequestState.NONE,
+                chatLink,
                 members);
     }
 

@@ -4,6 +4,7 @@ import { nextId } from '../db';
 import { ledGroupView, transferGroupLeadership } from '../groupLeadership';
 import { toGroupDetail, toGroupSummary, toStudentRef } from '../serializers';
 import { validateSlots } from '../../../utils/availability';
+import { INVALID_CHAT_LINK_MESSAGE, isValidChatLink } from '../../../utils/telegram';
 import { MAX_GROUP_SIZE, MEETING_MODES, MIN_GROUP_SIZE, STUDY_GOALS } from '../../../utils/constants';
 
 const isOneOf = (options, value) => options.some((option) => option.value === value);
@@ -218,6 +219,31 @@ route(
 		if (!group.memberIds.includes(user.id)) throw conflict('You are not a member of this group.');
 		group.memberIds = group.memberIds.filter((id) => id !== user.id);
 		delete group.availabilityOverrides?.[user.id];
+		return noContent();
+	},
+	{ role: 'STUDENT' },
+);
+
+route(
+	'PUT',
+	'/groups/:id/chat-link',
+	({ db, user, params, body }) => {
+		const group = loadLedGroup(db, user, params.id);
+		requireOpen(group);
+		if (!isValidChatLink(body.url)) throw badRequest(INVALID_CHAT_LINK_MESSAGE);
+		group.chatLink = body.url.trim();
+		return toGroupDetail(db, group, user.id);
+	},
+	{ role: 'STUDENT' },
+);
+
+route(
+	'DELETE',
+	'/groups/:id/chat-link',
+	({ db, user, params }) => {
+		const group = loadLedGroup(db, user, params.id);
+		requireOpen(group);
+		delete group.chatLink;
 		return noContent();
 	},
 	{ role: 'STUDENT' },

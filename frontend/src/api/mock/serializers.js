@@ -111,6 +111,7 @@ export function toGroupDetail(db, group, viewerId) {
 	const canSeeMembers = summary.myRole !== 'NONE';
 	return {
 		...summary,
+		...(canSeeMembers && group.chatLink ? { chatLink: group.chatLink } : {}),
 		members: canSeeMembers
 			? group.memberIds.map((id) => ({ ...toStudentRef(db, id), isLeader: id === group.leaderId }))
 			: [],

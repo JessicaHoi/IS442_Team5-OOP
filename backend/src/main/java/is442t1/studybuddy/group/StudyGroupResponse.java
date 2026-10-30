@@ -34,6 +34,8 @@ public record StudyGroupResponse(
         Role myRole,
         RequestState myRequestStatus,
         @JsonInclude(JsonInclude.Include.NON_NULL)
+        String chatLink,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         List<Member> members
 ) {
 

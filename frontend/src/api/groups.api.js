@@ -20,4 +20,6 @@ export const groupsApi = {
 	rejectRequest: (id, requestId) => unwrap(http.post(`/groups/${id}/join-requests/${requestId}/reject`)),
 	removeMember: (id, studentId) => unwrap(http.delete(`/groups/${id}/members/${studentId}`)),
 	leave: (id) => unwrap(http.post(`/groups/${id}/leave`)),
+	setChatLink: (id, url) => unwrap(http.put(`/groups/${id}/chat-link`, { url })),
+	clearChatLink: (id) => unwrap(http.delete(`/groups/${id}/chat-link`)),
 };

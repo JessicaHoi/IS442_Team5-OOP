@@ -82,6 +82,19 @@ describe('group leadership and member access', () => {
 		expect(group.memberIds).toHaveLength(count);
 	});
 
+	it('shows the chat link to members only and lets only the leader change it', async () => {
+		const stranger = db.users.find((user) => user.role === 'STUDENT' && user.status === 'ACTIVE' && !group.memberIds.includes(user.id));
+		const strangerToken = await login(stranger);
+		const url = 'https://t.me/+AbC_123';
+		expect((await call('put', `/groups/${group.id}/chat-link`, { token: memberToken, data: { url } })).status).toBe(403);
+		expect((await call('put', `/groups/${group.id}/chat-link`, { token: leaderToken, data: { url: 'https://evil.example' } })).status).toBe(400);
+		expect((await call('put', `/groups/${group.id}/chat-link`, { token: leaderToken, data: { url } })).data.chatLink).toBe(url);
+		expect((await call('get', `/groups/${group.id}`, { token: memberToken })).data.chatLink).toBe(url);
+		expect((await call('get', `/groups/${group.id}`, { token: strangerToken })).data.chatLink).toBeUndefined();
+		expect((await call('delete', `/groups/${group.id}/chat-link`, { token: leaderToken })).status).toBe(204);
+		expect((await call('get', `/groups/${group.id}`, { token: memberToken })).data.chatLink).toBeUndefined();
+	});
+
 	it('lets a member leave, but not the leader', async () => {
 		expect((await call('post', `/groups/${group.id}/leave`, { token: leaderToken })).status).toBe(409);
 		expect((await call('post', `/groups/${group.id}/leave`, { token: memberToken })).status).toBe(204);

@@ -116,6 +116,18 @@ public class StudyGroupController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{groupId}/chat-link")
+    public StudyGroupResponse setChatLink(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
+            @RequestBody ChatLinkRequest request) {
+        return groupService.setChatLink(caller.id(), groupId, request.url());
+    }
+
+    @DeleteMapping("/{groupId}/chat-link")
+    public ResponseEntity<Void> clearChatLink(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId) {
+        groupService.clearChatLink(caller.id(), groupId);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{groupId}/members/{studentId}")
     public ResponseEntity<Void> removeMember(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @PathVariable UUID studentId) {
