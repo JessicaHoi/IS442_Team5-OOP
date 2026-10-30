@@ -283,11 +283,22 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `GET /groups/{id}/join-requests` | Leader only. Pending requests. |
 | | `POST /groups/{id}/join-requests/{rid}/accept` and `/reject` | Leader only. Accept returns `409` when the group is full. |
 | | `DELETE /groups/{id}/members/{studentId}` | Leader only. The leader cannot be removed. `204`. |
+| | `GET /groups/{id}/leadership` | Leader only. Returns `{id, name, status, eligibleMembers:[{id, name}]}`. |
+| | `PUT /groups/{id}/leader` | Leader only. Body `{studentId}`, another active member. Returns the same shape as `/leadership`. |
+| | `GET /groups/{id}/best-times` | Members only. Returns suggested windows and the 30-minute heatmap, see shape below. |
+| | `GET /connections/{id}/best-times` | Either student. Returns up to three shared slots. |
+| | `GET /groups/{id}/availability/me` | Members only. Returns `{source, revision, availability:[slot]}`. `source` is `GROUP` (saved for this group) or `PROFILE` (from the study preference). |
+| | `PUT /groups/{id}/availability/me` | Members only. Body `{revision, availability:[slot]}`. `409` if the group is closed or `revision` is out of date. |
+| | `DELETE /groups/{id}/availability/me?revision=` | Members only. Goes back to the profile availability. |
 | Admin | `GET /admin/users` | Returns accounts with usage fields. |
 | | `POST /admin/users` | Body `{name,email,password,role,status}`. `409` for a duplicate email. |
 | | `PUT /admin/users/{id}` | Same body. `password` optional. |
-| | `DELETE /admin/users/{id}` | `204`. |
+| | `DELETE /admin/users/{id}` | `204`. Permanently removes the account. `409` while the account leads a group. |
+| | `GET /admin/users/{id}/led-groups` | Groups the account leads, with `eligibleMembers`. |
+| | `PUT /admin/users/{id}/led-groups/{groupId}/leader` | Body `{studentId}`. Transfers leadership, including from a suspended leader. |
 | | `GET` and `PUT /admin/matching-config` | See shape below. |
+| | `GET /admin/matching-config/preview/students` | Sample students for the preview: `[{id, name, courses:[code]}]`. |
+| | `POST /admin/matching-config/preview` | Body `{studentId, course?, proposed:<matching configuration>}`. Ranks the student's matches under the saved and the proposed settings without saving. |
 
 ### Enums
 
@@ -349,12 +360,20 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
   "members": [ { "id": 2, "name": "…", "programme": "…", "yearOfStudy": 2, "isLeader": true } ]
 }
 
+// Best times (GET /groups/{id}/best-times). The backend sends full day names and "HH:mm:ss".
+{
+  "suggestions": [ { "slot": { "day": "WEDNESDAY", "startTime": "19:00:00", "endTime": "21:00:00" }, "freeCount": 4 } ],
+  "heatmap": [ { "day": "WEDNESDAY", "startTime": "19:00:00", "endTime": "19:30:00", "freeCount": 4,
+                 "availableMembers": [ { "id": 2, "name": "…" } ] } ],
+  "memberCount": 5
+}
+
 // Join request (GET /groups/{id}/join-requests)
 { "id": 1, "student": { "id": 3, "name": "…", "programme": "…", "yearOfStudy": 2 }, "message": "…", "createdAt": "ISO-8601" }
 
 // Account (GET /admin/users)
 { "id": 3, "name": "…", "email": "…", "role": "STUDENT", "status": "ACTIVE",
-  "lastLogin": "ISO-8601 or null", "createdAt": "ISO-8601", "connectionCount": 1, "groupCount": 2 }
+  "lastLogin": "ISO-8601 or null", "createdAt": "ISO-8601", "connectionCount": 1, "groupCount": 2, "ledGroupCount": 0 }
 
 // Matching configuration (GET / PUT /admin/matching-config)
 {
