@@ -131,8 +131,27 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 | `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:9090` |
 | `BUILD_OUT_DIR` | Where `npm run build` writes the bundle | `../backend/src/main/resources/static` |
 | `APP_URL` | Backend setting: where students open the app, used for links in calendar files. Blank leaves the links out. | blank |
+| `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_POLLING` | Backend settings for the optional bot. See [Telegram (optional)](#telegram-optional). | off |
 
 To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 9090 (see [Quick start](#quick-start)).
+
+## Telegram (optional)
+
+The app works fully with Telegram off, which is the default. Turning it on lets students connect their Telegram account from the Profile page.
+
+1. In Telegram, message **@BotFather**, send `/newbot` and copy the token. **Each developer uses their own bot:** the token belongs in `backend/.env`, never in git or chat.
+2. Add these to `backend/.env`, then restart the backend:
+
+   ```
+   TELEGRAM_ENABLED=true
+   TELEGRAM_BOT_TOKEN=<token>
+   TELEGRAM_BOT_USERNAME=<bot username, without @>
+   ```
+
+- **One running instance per token.** Telegram only lets one poller read a bot's updates. A second one logs `Another poller or webhook uses this bot token`. Set `TELEGRAM_POLLING=false` on any extra instance.
+- **Shared database.** Connections are stored per bot, so teammates' bots don't affect each other. A student connected through one bot shows as not connected on another.
+- **Seed script.** `backend/supabase/seed-demo-data.sql` wipes every table, including Telegram connections.
+- **No public URL needed.** The bot polls Telegram, so it works from a laptop.
 
 ## Monolith packaging
 
@@ -265,10 +284,14 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `GET /auth/me` | Returns `{id,name,email,role}`. |
 | | `POST /auth/logout` | Revokes the token. `204`. |
 | Courses | `GET /courses` | Returns `[{code, name, school}]`. |
+| Integrations | `GET /integrations` | Any signed-in user. Returns `{telegram:{enabled, botUsername}}`; `botUsername` is `null` when Telegram is off. |
 | Student | `GET /students/me` | Own profile, see shape below. |
 | | `PUT /students/me/profile` | Body `{name, school, programme, yearOfStudy, contactNumber, telegramHandle?, courses:[code]}`. `telegramHandle` is optional and may be a username, `@username` or a `t.me` link; it is stored as the bare username, and blank clears it. Removes preferences for courses no longer taken. |
 | | `PUT /students/me/preferences` | Body `{preferences:[{course, meetingMode, groupFormat, goals:[..], availability:[slot]}]}`. Replaces the full list. At most one per course, and only for courses the student takes. |
 | | `GET /students/{id}` | Public profile (contact hidden unless connected). |
+| | `GET /students/me/telegram` | Own Telegram connection, see shape below. `linked` is `false` when Telegram is off. |
+| | `POST /students/me/telegram/link` | Returns `{url, expiresAt}`, a single-use link valid for 10 minutes. A new link replaces the student's earlier ones. `409` when Telegram is off. |
+| | `DELETE /students/me/telegram` | Disconnects Telegram. `204`, also when nothing is connected. |
 | Matching | `GET /matches` | Query `course`, `goal`, `day`, `studyMode`, `groupFormat`, all optional. Sorted by weighted compatibility score; phone numbers remain hidden until the connection is accepted. |
 | Connections | `POST /connections` | Body `{toStudentId, message?}` returns `201`. Message is optional (max 300 characters); `409` if a pending or active connection already exists. |
 | | `GET /connections?view=incoming\|sent\|active` | Lists pending requests or active connections. |
@@ -392,6 +415,9 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
   "goingCount": 1, "notGoingCount": 0,
   "attendees": [ { "id": 3, "name": "…", "response": "GOING" } ]
 }
+
+// Telegram connection (GET /students/me/telegram). Only the student themselves can read it.
+{ "linked": true, "username": "aisha_r", "firstName": "Aisha", "canMessage": true, "linkedAt": "ISO-8601" }  // all null or false when not linked; username is null if they have none
 
 // Join request (GET /groups/{id}/join-requests)
 { "id": 1, "student": { "id": 3, "name": "…", "programme": "…", "yearOfStudy": 2 }, "message": "…", "createdAt": "ISO-8601" }

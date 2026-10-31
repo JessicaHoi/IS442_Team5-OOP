@@ -10,3 +10,6 @@ spring:
 studybuddy:
   seed:
     enabled: false
+  # Stays off even if backend/.env turns it on, so tests never reach a real bot.
+  telegram:
+    enabled: false
