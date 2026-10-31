@@ -14,7 +14,8 @@ Browser ──> Controller ──> Service ──> Database
 
 Telegram ──> TelegramUpdatePoller ──> UpdateClassifier ──> TelegramUpdateRouter ──> handlers ──> Database and Telegram
 
-Timer ──> SessionReminderJob ──> SessionChatService ──> Telegram
+Timer ──> SessionCardJob ──> SessionChatService ──> Telegram
+Timer ──> SessionCardRefresher ──> Telegram   (the only thing that posts or edits session cards)
 ```
 
 So there are three ways in: a person using the app, a person using Telegram, and a timer.
@@ -35,7 +36,7 @@ So there are three ways in: a person using the app, a person using Telegram, and
 
 **2. Events run after the commit, on a background thread.** `ChatSyncListener` uses `@TransactionalEventListener` and `@Async`. If the save rolls back, Telegram never hears about it. If Telegram fails, the save still stands. The `telegramExecutor` runs two at a time with up to 200 waiting, so a slow Telegram never slows a web request. If even that fills up, the update is dropped and logged.
 
-**3. Handlers read the current state instead of trusting the event.** Background events can arrive out of order, so a post for a session cancelled a moment later must not announce it as scheduled. That's why `postIf` checks the session's status first.
+**3. Handlers read the current state instead of trusting the event.** Background events can arrive out of order, so a reply about a session cancelled a moment later must not go out as if it were still on. That's why `replyToCard` checks the session's status first, and the card is always rendered from current data.
 
 **4. Group messages are ignored, never stored or logged.** As an admin, the bot receives every message in the chat. `UpdateClassifier` turns them into `BotEvent.Ignored`.
 
@@ -60,26 +61,41 @@ So there are three ways in: a person using the app, a person using Telegram, and
 3. After the commit, `ChatSyncListener` calls `GroupChatService.onMemberLeft`, which revokes the invite and removes them from the chat. Banning is how a bot removes someone, and an unban straight after lets them be invited again later.
 4. Telegram refuses to remove a chat's owner. That becomes `REMOVAL_FAILED`, and the leader sees a warning. A chat upgraded since the id was saved is followed to its new id, so that doesn't count as a refusal.
 
-### Scheduling a session
-1. `SessionList` calls `StudySessionController`, `StudySessionService.schedule` and `StudySession.schedule`, where the rules live. The service publishes `SessionScheduled`.
-2. After the commit, `ChatSyncListener` calls `SessionChatService.postScheduled`.
-3. It reads the session and checks for a working chat, then `SessionMessages` writes the text and `ChatSender.send` posts it.
-4. `SessionChatStore.recordPost` saves the message id and time on the session's `SessionChatCard`.
+### The session card
+This is the flow worth knowing best. Each session has one message in the chat, its card, and **one class changes it**: `SessionCardRefresher`.
 
-Changing or cancelling follows the same path.
+1. Anything that affects a card only marks the session dirty: scheduling, changing or cancelling it, someone answering, a member joining or leaving. `ChatSyncListener` does this straight after the commit. It's just adding an id to a set in memory.
+2. Every 3 seconds, one thread takes each dirty session, reads its **current** state and renders the text with `SessionMessages.card`.
+3. No message yet and the session is still to come: it posts one, and `recordPost` saves the message id on `SessionChatCard`. Otherwise it edits the message. Editing never notifies anyone.
+4. It saves the phase it just showed, then `syncPins` makes sure the soonest upcoming session is the pinned one.
+
+Why it's built this way:
+- **Bursts merge.** Five presses inside 3 seconds become one edit, which stays inside Telegram's limit of about 20 messages a minute per group.
+- **No overwriting.** With one thread rendering current data, an older edit can't replace a newer one, so rule 3 above needs no extra code here.
+- **Failures sort themselves out.** "Message is not modified" counts as success. "Message to edit not found" means someone deleted the card, so it's forgotten and posted again. A temporary failure, or a rate limit, pauses the refresher and tries again. A restart loses at most a few seconds of marks, and the next change or the sweep fixes that.
+
+The phases are in `CardPhase`: `OPEN` has buttons, `STARTED` and `ENDED` don't, and `CANCELLED` is short.
+
+### What happens when a session changes
+`StudySession.update` returns a `SessionChange`, so the service knows what actually happened:
+- **`NONE`:** nothing is saved or published, so pressing Save without changes does nothing at all.
+- **`DETAILS`, including a new end time:** the card updates, quietly.
+- **`START_MOVED`:** answers are cleared, because they were for the old time. The card updates, and `SessionChatService.startMoved` sends one reply asking people to answer again. The reminder can go out again for the new time.
+
+Cancelling shows on the card, removes the buttons, unpins it and sends one short reply.
 
 ### Pressing Going or Can't
 1. The button carries `rsvp:<session id>:G`. Telegram allows 64 bytes, and this is 43.
 2. The poller, classifier and router reach `SessionChatService.buttonPressed`, and `RsvpPress.parse` reads the data.
 3. `SessionChatStore.responderFor` works out which student this is: first who they joined the chat as, then whoever connected that Telegram account. Nobody found means a pop-up, and nothing is saved.
-4. `StudySessionService.respond` saves it, with the same rules as the app.
+4. `StudySessionService.respond` saves it, with the same rules as the app, and publishes `SessionAnswered`. So answering in the app updates the card the same way.
 5. `answerButton` shows a small notice to the person who pressed. Any unexpected error still gets an answer, or the button would keep spinning.
 
-### Sending reminders
-1. Every 60 seconds `SessionReminderJob` calls `SessionChatService.sendDueReminders`. It only runs on the instance polling for updates, because a token can only have one.
-2. `SessionChatStore.dueReminders` finds sessions starting within the lead time, in a working chat, with no reminder sent.
-3. It skips any session announced after its reminder window opened, because the chat has only just heard about it.
-4. Each reminder is marked as sent first, then sent. If Telegram refuses, the mark is cleared and the next run tries again. If the app crashes in between, one reminder is lost, which is better than sending it twice.
+### The sweep and reminders
+Every 60 seconds `SessionCardJob` calls `SessionChatService.sweep`. This is the single answer to "how does the bot do things on time?". It only runs on the instance polling for updates, because a token can only have one.
+1. `SessionChatStore.cardsToRefresh` marks two kinds of session dirty: upcoming ones with no card, which covers failed posts and chats linked late, and ones whose saved phase no longer matches the clock, which is how buttons go at the start and the pin goes at the end.
+2. `sendDueReminders` finds sessions starting within the lead time, in a working chat, with a card and no reminder sent. It skips any whose card was posted or moved after the window opened, because the chat has only just heard about it.
+3. Each reminder is marked as sent first, then sent as a reply to the card. If Telegram refuses, the mark is cleared and the next run tries again. If the app crashes in between, one reminder is lost, which is better than sending it twice.
 
 ### When a video chat starts
 Telegram has no way for a bot to start a call or invite anyone to one. A chat admin starts it, Telegram sends a `video_chat_started` message, and `SessionChatService.videoChatStarted` tags the others going, if a video chat session is due within 30 minutes or is running.
@@ -92,7 +108,7 @@ Telegram has no way for a bot to start a call or invite anyone to one. A chat ad
 | `telegram_link_token` | A one-time link. Stored hashed, 10 minutes |
 | `group_chat` | A study group's chat, per bot |
 | `chat_membership` | One student's place in that chat |
-| `session_chat_card` | What the chat has been told about one session: its message, when it was announced and whether its reminder went out |
+| `session_chat_card` | One session's card: its message, when it was announced, whether its reminder went out, the phase it shows and whether it's pinned |
 
 A Telegram account can only be one student per chat: `chat_membership` has a unique constraint on chat and Telegram user. Several lookups rely on that to find one row.
 
@@ -115,6 +131,15 @@ Two ways, on purpose: through a personal invite, stored on `ChatMembership`, or 
 **Why is the reminder marked as sent before it's sent?**
 So that a crash can't cause a duplicate. The cost is that a crash at exactly the wrong moment loses one reminder.
 
+**Why edit one message rather than post updates?**
+It gives the chat something to look at without adding noise. Each session sends at most a few notifying messages, and the card always shows the current answer in one place.
+
+**Why a 3-second delay rather than updating at once?**
+It merges bursts and keeps edits on one thread, so they stay in order and inside Telegram's limits. Nobody notices 3 seconds, because the person pressing gets an instant notice.
+
+**Why does moving the start clear answers, but a new end time doesn't?**
+Someone who said yes to Wednesday hasn't said yes to Friday. A session running 30 minutes longer doesn't change whether they can come.
+
 **Why is `SessionChatCard` separate from `StudySession`?**
 A session shouldn't know Telegram exists, and the app must work with Telegram off. Keeping that state in `telegram/chat/` keeps the dependency pointing one way.
 
@@ -125,7 +150,7 @@ It's refused with a clear message, and the database has a unique constraint as a
 Because the two failures aren't equal. Saving first and failing leaves nobody in the chat. Approving first and failing to save leaves someone in the chat with no record, whom StudyBuddy could never remove.
 
 **What happens if Telegram is down?**
-The app carries on and the failure is logged. Reminders try again on the next run. Other posts are lost for now, which a later change fixes.
+The app carries on and the failure is logged. Cards and reminders try again by themselves. Only the short replies about a moved or cancelled session are lost, and the card still shows the change.
 
 ## Changes
 
@@ -157,3 +182,10 @@ Each of these was a real way for something to go wrong, found by reading the cod
 **Clean-up:** `ChatSender` now holds sending and following upgraded chats, so session code no longer depends on `GroupChatService`. Group messages no longer carry a `RemoveKeyboard` placeholder, because the plain `sendMessage` now returns the message id.
 
 **Left as it is on purpose:** `TelegramAccount.canMessage` is always true, but removing it means changing the API and dropping a column. The test-only constructors on `Update` would mean rewriting about 30 test lines for little benefit. `ChatStore` stays one class, because splitting it wouldn't make any single flow easier to follow.
+
+### The live card
+**Before:** every change posted a new message with live buttons, the chat couldn't see who was coming, and a save with no changes still posted.
+
+**After:** one card per session, updated in place, as described above.
+
+**Known limits:** a deleted account's name stays on a card until its next change. Sessions with old-style posts turn into cards the first time the sweep sees them, but older posts of the same session stay as they were, and their buttons still work.

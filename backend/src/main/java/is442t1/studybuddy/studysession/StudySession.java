@@ -5,6 +5,7 @@ import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -113,11 +114,28 @@ public class StudySession extends BaseEntity {
         return session;
     }
 
-    public void update(UUID callerId, SessionDetails details, Instant now) {
+    /** Says what changed. Saving without changes touches nothing, and moving the start clears answers given for the old time. */
+    public SessionChange update(UUID callerId, SessionDetails details, Instant now) {
         requireLeader(studyGroup, callerId);
         requireChangeable(now);
+        Instant oldStart = startsAt;
+        Instant oldUpdatedAt = updatedAt;
+        List<Object> before = detailValues();
         apply(details, now);
+        if (before.equals(detailValues())) {
+            updatedAt = oldUpdatedAt;
+            return SessionChange.NONE;
+        }
         icsSequence++;
+        if (startsAt.equals(oldStart)) {
+            return SessionChange.DETAILS;
+        }
+        rsvps.clear();
+        return SessionChange.START_MOVED;
+    }
+
+    private List<Object> detailValues() {
+        return Arrays.asList(title, startsAt, endsAt, meetingMode, location, note, meetingLink, groupVideoChat);
     }
 
     public void cancel(UUID callerId, Instant now) {

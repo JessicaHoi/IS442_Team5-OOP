@@ -19,7 +19,7 @@ final class SessionMessages {
 
     /** A session's details, read in a transaction and safe to use outside one. */
     record Details(String title, Instant startsAt, Instant endsAt, StudyMode meetingMode, String location, String note,
-            String meetingLink, boolean groupVideoChat, long goingCount) {
+            String meetingLink, boolean groupVideoChat, List<String> going, List<String> notGoing, List<String> noAnswer) {
     }
 
     /** Someone going to a session whom the bot can tag, because it knows their account in this chat. */
@@ -36,20 +36,54 @@ final class SessionMessages {
     private SessionMessages() {
     }
 
-    static String scheduled(Details session, ZoneId zone) {
-        return withDetails("📅 New study session: " + session.title(), session, zone);
+    /** The session's card: everything about it in one message, updated in place. */
+    static String card(Details session, CardPhase phase, ZoneId zone) {
+        List<String> lines = new ArrayList<>();
+        lines.add(switch (phase) {
+            case OPEN -> "📅 " + session.title();
+            case STARTED -> "🟢 Happening now: " + session.title();
+            case ENDED -> "✔️ Finished: " + session.title();
+            case CANCELLED -> "❌ Cancelled: " + session.title();
+        });
+        lines.add(when(session, zone) + " · " + where(session));
+        if (phase == CardPhase.CANCELLED) {
+            return String.join("\n", lines);
+        }
+        if (session.meetingLink() != null) {
+            lines.add("Join: " + session.meetingLink());
+        }
+        if (session.groupVideoChat()) {
+            lines.add("Video chat in this Telegram group");
+        }
+        if (session.note() != null) {
+            lines.add(session.note());
+        }
+        lines.add("");
+        lines.add(names("✅ Going", session.going()));
+        lines.add(names("❌ Can't", session.notGoing()));
+        if (phase != CardPhase.ENDED) {
+            lines.add(names("❓ No answer", session.noAnswer()));
+        }
+        return String.join("\n", lines);
     }
 
-    static String changed(Details session, ZoneId zone) {
-        return withDetails("✏️ Study session updated: " + session.title(), session, zone);
+    private static String names(String label, List<String> people) {
+        return label + " (" + people.size() + ")" + (people.isEmpty() ? "" : ": " + String.join(", ", people));
     }
 
-    static String cancelled(Details session, ZoneId zone) {
-        return "❌ Study session cancelled: " + session.title() + "\n" + when(session, zone);
+    /** A short reply to the card, so people who follow notifications hear about the new time. */
+    static String startMoved(Details session, ZoneId zone) {
+        return "🕒 " + session.title() + " has moved to " + when(session, zone) + ". Please answer again.";
+    }
+
+    static String cancelled(Details session) {
+        return "❌ " + session.title() + " has been cancelled.";
     }
 
     static String reminder(Details session, ZoneId zone) {
-        return withDetails("⏰ Starting soon: " + session.title(), session, zone) + "\n" + session.goingCount() + " going so far";
+        int silent = session.noAnswer().size();
+        return "⏰ Starting soon: " + session.title() + " at " + TIME.format(session.startsAt().atZone(zone)) + "\n"
+                + session.going().size() + " going, " + silent + (silent == 1 ? " hasn't" : " haven't") + " answered";
     }
 
     /** A video chat session's reminder tags the people going, because a bot can't invite them to the call itself. */
@@ -86,20 +120,6 @@ final class SessionMessages {
     /** The brief notice someone sees after pressing a button. */
     static String answered(RsvpResponse response, long goingCount) {
         return (response == RsvpResponse.GOING ? "Going" : "Can't make it") + " · " + goingCount + " going";
-    }
-
-    private static String withDetails(String heading, Details session, ZoneId zone) {
-        List<String> lines = new ArrayList<>(List.of(heading, when(session, zone), where(session)));
-        if (session.meetingLink() != null) {
-            lines.add("Join: " + session.meetingLink());
-        }
-        if (session.groupVideoChat()) {
-            lines.add("Video chat in this Telegram group");
-        }
-        if (session.note() != null) {
-            lines.add(session.note());
-        }
-        return String.join("\n", lines);
     }
 
     private static String when(Details session, ZoneId zone) {

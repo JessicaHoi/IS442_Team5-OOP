@@ -47,7 +47,17 @@ class DisabledTelegramClient implements TelegramClient {
     }
 
     @Override
-    public long sendMessage(long chatId, String text, List<MessageEntity> entities, ReplyMarkup markup) {
+    public long sendReply(long chatId, long replyToMessageId, String text, List<MessageEntity> entities) {
+        throw off();
+    }
+
+    @Override
+    public void editMessage(long chatId, long messageId, String text) {
+        throw off();
+    }
+
+    @Override
+    public void editMessage(long chatId, long messageId, String text, ReplyMarkup markup) {
         throw off();
     }
 
@@ -98,6 +108,11 @@ class DisabledTelegramClient implements TelegramClient {
 
     @Override
     public void setDescription(long chatId, String description) {
+        throw off();
+    }
+
+    @Override
+    public void unpinMessage(long chatId, long messageId) {
         throw off();
     }
 

@@ -5,7 +5,7 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.BiFunction;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +18,6 @@ import is442t1.studybuddy.model.enums.SessionStatus;
 import is442t1.studybuddy.studysession.RsvpRequest;
 import is442t1.studybuddy.studysession.StudySessionResponse;
 import is442t1.studybuddy.studysession.StudySessionService;
-import is442t1.studybuddy.telegram.api.ReplyMarkup;
 import is442t1.studybuddy.telegram.api.TelegramApiException;
 import is442t1.studybuddy.telegram.api.TelegramClient;
 import is442t1.studybuddy.telegram.chat.ChatStore.ChatRef;
@@ -27,9 +26,9 @@ import is442t1.studybuddy.telegram.chat.SessionChatStore.SessionRef;
 import is442t1.studybuddy.telegram.chat.SessionMessages.Tagged;
 
 /**
- * Study sessions in the group chat: announcements, Going and Can't buttons, and reminders. Like
- * {@link GroupChatService}, it isn't transactional, so no Telegram call holds a database connection. Posts read the
- * session's current state, because events can arrive after the session has moved on.
+ * Study sessions in the group chat, apart from the card itself: Going and Can't buttons, reminders and short replies to
+ * the card. {@link SessionCardRefresher} looks after the card. Like {@link GroupChatService}, it isn't transactional,
+ * so no Telegram call holds a database connection.
  */
 @Service
 @ConditionalOnProperty(prefix = "studybuddy.telegram", name = "enabled", havingValue = "true")
@@ -43,46 +42,46 @@ public class SessionChatService {
     private final SessionChatStore store;
     private final ChatStore chatStore;
     private final ChatSender sender;
+    private final SessionCardRefresher refresher;
     private final StudySessionService sessionService;
     private final TelegramClient client;
     private final ZoneId zone;
 
-    SessionChatService(SessionChatStore store, ChatStore chatStore, ChatSender sender, StudySessionService sessionService,
-            TelegramClient client, AppProperties appProperties) {
+    SessionChatService(SessionChatStore store, ChatStore chatStore, ChatSender sender, SessionCardRefresher refresher,
+            StudySessionService sessionService, TelegramClient client, AppProperties appProperties) {
         this.store = store;
         this.chatStore = chatStore;
         this.sender = sender;
+        this.refresher = refresher;
         this.sessionService = sessionService;
         this.client = client;
         this.zone = appProperties.timeZone();
     }
 
-    void postScheduled(UUID sessionId) {
-        post(SessionStatus.SCHEDULED, sessionId, SessionMessages::scheduled, withButtons(sessionId));
+    /** The chat needs to hear about a new time, and the reminder can go out again. Cleared first, so a failed reply can't cost it. */
+    void startMoved(UUID sessionId) {
+        store.startMoved(sessionId, Instant.now());
+        replyToCard(SessionStatus.SCHEDULED, sessionId, session -> SessionMessages.startMoved(session.details(), zone));
     }
 
-    /** Clears the reminder first, so a post that fails can't cost the session its reminder for the new time. */
-    void postChanged(UUID sessionId) {
-        store.clearReminder(sessionId);
-        post(SessionStatus.SCHEDULED, sessionId, SessionMessages::changed, withButtons(sessionId));
+    void cancelled(UUID sessionId) {
+        replyToCard(SessionStatus.CANCELLED, sessionId, session -> SessionMessages.cancelled(session.details()));
     }
 
-    void postCancelled(UUID sessionId) {
-        post(SessionStatus.CANCELLED, sessionId, SessionMessages::cancelled, sender::send);
-    }
-
-    private BiFunction<ChatRef, String, Long> withButtons(UUID sessionId) {
-        return (chat, text) -> sender.send(chat, text, SessionMessages.rsvpButtons(sessionId));
-    }
-
-    private void post(SessionStatus expected, UUID sessionId, BiFunction<SessionMessages.Details, ZoneId, String> wording,
-            BiFunction<ChatRef, String, Long> send) {
+    private void replyToCard(SessionStatus expected, UUID sessionId, Function<SessionRef, String> wording) {
         store.read(sessionId).filter(session -> session.status() == expected).ifPresent(session ->
-                activeChat(session).ifPresent(chat -> {
-                    long messageId = send.apply(chat, wording.apply(session.details(), zone));
-                    store.recordPost(sessionId, chat.id(), messageId, Instant.now());
-                    LOG.info("Posted to the chat of study group {} about session {}.", session.groupId(), sessionId);
-                }));
+                activeChat(session).ifPresent(chat -> store.messageId(sessionId).ifPresent(messageId ->
+                        sender.reply(chat, messageId, wording.apply(session), List.of()))));
+    }
+
+    void refreshUpcoming(UUID groupId) {
+        store.upcomingSessions(groupId, Instant.now()).forEach(refresher::markDirty);
+    }
+
+    /** Everything that happens because time has passed. */
+    public void sweep(Instant now) {
+        store.cardsToRefresh(now).forEach(refresher::markDirty);
+        sendDueReminders(now);
     }
 
     private Optional<ChatRef> activeChat(SessionRef session) {
@@ -142,16 +141,13 @@ public class SessionChatService {
 
     private void sendReminder(UUID sessionId, Instant now) {
         store.read(sessionId).filter(session -> session.status() == SessionStatus.SCHEDULED).ifPresent(session ->
-                activeChat(session).ifPresent(chat -> {
+                activeChat(session).ifPresent(chat -> store.messageId(sessionId).ifPresent(messageId -> {
                     store.markReminderSent(sessionId, chat.id(), now);
-                    ReplyMarkup buttons = SessionMessages.rsvpButtons(sessionId);
-                    if (session.details().groupVideoChat()) {
-                        Tagged reminder = SessionMessages.videoChatReminder(session.details(), zone, store.goingInChat(sessionId));
-                        sender.send(chat, reminder.text(), reminder.entities(), buttons);
-                    } else {
-                        sender.send(chat, SessionMessages.reminder(session.details(), zone), buttons);
-                    }
-                }));
+                    Tagged reminder = session.details().groupVideoChat()
+                            ? SessionMessages.videoChatReminder(session.details(), zone, store.goingInChat(sessionId))
+                            : new Tagged(SessionMessages.reminder(session.details(), zone), List.of());
+                    sender.reply(chat, messageId, reminder.text(), reminder.entities());
+                })));
     }
 
     /**

@@ -5,10 +5,11 @@ import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.after;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -47,6 +48,7 @@ import is442t1.studybuddy.telegram.api.ReplyMarkup;
 import is442t1.studybuddy.telegram.api.TelegramApiException;
 import is442t1.studybuddy.telegram.api.TelegramClient;
 import is442t1.studybuddy.telegram.api.Update;
+import is442t1.studybuddy.telegram.chat.SessionCardRefresher;
 import is442t1.studybuddy.telegram.chat.SessionChatService;
 
 /** Telegram on, with a fake client: session messages, answering with buttons, and reminders. */
@@ -54,7 +56,8 @@ import is442t1.studybuddy.telegram.chat.SessionChatService;
         "studybuddy.telegram.enabled=true",
         "studybuddy.telegram.bot-token=123456:TEST",
         "studybuddy.telegram.bot-username=study_test_bot",
-        "studybuddy.telegram.polling=false"
+        "studybuddy.telegram.polling=false",
+        "studybuddy.telegram.card-refresh=1h"
 })
 class SessionChatApiTest extends ApiTestSupport {
 
@@ -64,10 +67,12 @@ class SessionChatApiTest extends ApiTestSupport {
     private static final String BOT_LINK = "https://t.me/study_test_bot?start=";
     private static final String UNKNOWN_PERSON = "StudyBuddy doesn't know this Telegram account. Join the chat from your study group's page, or answer there.";
     private static final String STARTING_SOON = "Starting soon";
+    private static final long CARD = 77;
 
     @MockitoBean private TelegramClient client;
     @Autowired private TelegramUpdateRouter router;
     @Autowired private SessionChatService sessionChat;
+    @Autowired private SessionCardRefresher refresher;
     @Autowired private JdbcTemplate jdbc;
 
     private String leaderToken;
@@ -98,6 +103,7 @@ class SessionChatApiTest extends ApiTestSupport {
         when(client.getChatMember(anyLong(), eq(leaderTelegramId))).thenReturn(new ChatMember(null, "creator", true, false, false, false, false));
         when(client.createJoinRequestLink(anyLong(), anyString(), any())).thenAnswer(call ->
                 new ChatInviteLink("https://t.me/+" + call.getArgument(1), call.getArgument(1)));
+        when(client.sendMessage(anyLong(), anyString(), any(ReplyMarkup.ActionButtons.class))).thenReturn(CARD);
     }
 
     private String path(String suffix) {
@@ -150,58 +156,265 @@ class SessionChatApiTest extends ApiTestSupport {
         mockMvc.perform(as(token, get(path("/sessions")))).andExpect(status().isOk()).andExpect(jsonPath("$[0].myRsvp").value(expected));
     }
 
-    /** Posts happen on a background thread, and each records its card afterwards. */
+    /** The refresher runs on a timer, which these tests turn off so that they can say exactly when it happens. */
     private String posted(String sessionId) {
-        await().atMost(Duration.ofMillis(TIMEOUT_MS)).until(() -> jdbc.queryForObject(
-                "select count(*) from session_chat_card where study_session_id = ? and announced_at is not null", Integer.class, UUID.fromString(sessionId)) == 1);
+        refresher.flush();
         return sessionId;
     }
 
     private void verifyReminders(int count) {
-        verify(client, times(count)).sendMessage(eq(chatId), contains(STARTING_SOON), any(ReplyMarkup.class));
+        verify(client, times(count)).sendReply(eq(chatId), eq(CARD), contains(STARTING_SOON), any());
+    }
+
+    private void verifyCardsPosted(int count) {
+        verify(client, times(count)).sendMessage(eq(chatId), anyString(), any(ReplyMarkup.ActionButtons.class));
+    }
+
+    /** The text of the latest edit to the card, which must have its buttons. */
+    private String editedCard() {
+        ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
+        verify(client, atLeastOnce()).editMessage(eq(chatId), eq(CARD), text.capture(), any(ReplyMarkup.ActionButtons.class));
+        return text.getValue();
+    }
+
+    private void setTimes(String sessionId, Instant startsAt, Instant endsAt) {
+        jdbc.update("update study_session set starts_at = ?, ends_at = ? where id = ?", Timestamp.from(startsAt), Timestamp.from(endsAt), UUID.fromString(sessionId));
     }
 
     @Test
-    void schedulingPostsTheSessionWithAnswerButtons() throws Exception {
+    void schedulingPostsACardWithAnswerButtons() throws Exception {
         linkChat();
 
-        String sessionId = schedule(inHours(24));
+        String sessionId = posted(schedule(inHours(24)));
 
         ArgumentCaptor<ReplyMarkup> markup = ArgumentCaptor.forClass(ReplyMarkup.class);
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("New study session: Mock exam"), markup.capture());
+        verify(client).sendMessage(eq(chatId), contains("📅 Mock exam"), markup.capture());
         ReplyMarkup.ActionButtons buttons = (ReplyMarkup.ActionButtons) markup.getValue();
         assertThat(buttons.inlineKeyboard().getFirst()).extracting(ReplyMarkup.ActionButtons.Action::callbackData)
                 .containsExactly("rsvp:" + sessionId + ":G", "rsvp:" + sessionId + ":N");
     }
 
     @Test
-    void changingAndCancellingArePosted() throws Exception {
+    void aPressUpdatesTheSameCardAndPostsNothingNew() throws Exception {
         linkChat();
-        String sessionId = schedule(inHours(24));
+        String sessionId = posted(schedule(inHours(24)));
+
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        refresher.flush();
+
+        assertThat(editedCard()).contains("✅ Going (1): Session Leader").contains("❓ No answer (1): Session Member");
+        verifyCardsPosted(1);
+    }
+
+    @Test
+    void aBurstOfPressesBecomesOneEdit() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        long memberTelegramId = connectTelegram(memberToken);
+
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        press(memberTelegramId, "rsvp:" + sessionId + ":N");
+        press(leaderTelegramId, "rsvp:" + sessionId + ":N");
+        refresher.flush();
+
+        verify(client, times(1)).editMessage(eq(chatId), eq(CARD), anyString(), any(ReplyMarkup.class));
+        assertThat(editedCard()).contains("❌ Can't (2): Session Leader, Session Member");
+    }
+
+    @Test
+    void answeringInTheAppUpdatesTheCardToo() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+
+        mockMvc.perform(as(memberToken, put(path("/sessions/" + sessionId + "/rsvp"))).content("{\"response\":\"GOING\"}")).andExpect(status().isOk());
+        refresher.flush();
+
+        assertThat(editedCard()).contains("✅ Going (1): Session Member");
+    }
+
+    @Test
+    void anEditThatChangesNothingCountsAsDone() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        doThrow(new TelegramApiException(400, "editMessageText failed: Bad Request: message is not modified", null, null))
+                .when(client).editMessage(eq(chatId), eq(CARD), anyString(), any(ReplyMarkup.class));
+
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        refresher.flush();
+        refresher.flush();
+
+        verify(client, times(1)).editMessage(eq(chatId), eq(CARD), anyString(), any(ReplyMarkup.class));
+        verifyCardsPosted(1);
+    }
+
+    @Test
+    void aCardSomeoneDeletedIsPostedAgain() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        doThrow(new TelegramApiException(400, "editMessageText failed: Bad Request: message to edit not found", null, null))
+                .when(client).editMessage(eq(chatId), eq(CARD), anyString(), any(ReplyMarkup.class));
+
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        refresher.flush();
+        refresher.flush();
+
+        verifyCardsPosted(2);
+    }
+
+    @Test
+    void anEditDuringAnOutageIsTriedAgain() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        doThrow(new TelegramApiException(502, "down", null, null)).doNothing()
+                .when(client).editMessage(eq(chatId), eq(CARD), anyString(), any(ReplyMarkup.class));
+
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        refresher.flush();
+        refresher.flush();
+
+        verify(client, times(2)).editMessage(eq(chatId), eq(CARD), anyString(), any(ReplyMarkup.class));
+    }
+
+    @Test
+    void changingDetailsEditsTheCardQuietly() throws Exception {
+        linkChat();
+        Instant startsAt = inHours(24);
+        String sessionId = posted(schedule(startsAt));
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+
+        mockMvc.perform(as(leaderToken, put(path("/sessions/" + sessionId))).content(sessionBody("Mock exam", startsAt).replace("Bring notes", "Bring a calculator")))
+                .andExpect(status().isOk());
+        refresher.flush();
+
+        assertThat(editedCard()).contains("Bring a calculator").contains("✅ Going (1): Session Leader");
+        verifyCardsPosted(1);
+        verify(client, never()).sendReply(eq(chatId), anyLong(), anyString(), any());
+    }
+
+    @Test
+    void savingWithoutChangesDoesNothing() throws Exception {
+        linkChat();
+        Instant startsAt = inHours(24);
+        String sessionId = posted(schedule(startsAt));
+
+        reschedule(sessionId, startsAt);
+        refresher.flush();
+
+        verify(client, never()).editMessage(eq(chatId), anyLong(), anyString(), any(ReplyMarkup.class));
+        verify(client, after(300).never()).sendReply(eq(chatId), anyLong(), anyString(), any());
+    }
+
+    @Test
+    void movingTheStartClearsAnswersAndAsksPeopleAgain() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        refresher.flush();
 
         reschedule(sessionId, inHours(30));
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("updated: Mock exam"), any(ReplyMarkup.ActionButtons.class));
+        refresher.flush();
+
+        assertThat(editedCard()).contains("✅ Going (0)").contains("❓ No answer (2)");
+        verify(client, timeout(TIMEOUT_MS)).sendReply(eq(chatId), eq(CARD), contains("Please answer again"), any());
+        mockMvc.perform(as(leaderToken, get(path("/sessions")))).andExpect(jsonPath("$[0].goingCount").value(0));
+    }
+
+    @Test
+    void cancellingShowsOnTheCardRemovesItsButtonsAndNotifiesOnce() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
 
         mockMvc.perform(as(leaderToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isOk());
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("cancelled: Mock exam"));
+        refresher.flush();
+
+        verify(client).editMessage(eq(chatId), eq(CARD), contains("❌ Cancelled: Mock exam"));
+        verify(client, timeout(TIMEOUT_MS)).sendReply(eq(chatId), eq(CARD), contains("has been cancelled"), any());
+        verify(client).unpinMessage(chatId, CARD);
+    }
+
+    @Test
+    void theSoonestUpcomingSessionIsThePinnedOne() throws Exception {
+        linkChat();
+        when(client.sendMessage(eq(chatId), anyString(), any(ReplyMarkup.ActionButtons.class))).thenReturn(101L).thenReturn(102L);
+        schedule(inHours(48));
+        refresher.flush();
+        verify(client).pinMessage(chatId, 101);
+
+        schedule(inHours(24));
+        refresher.flush();
+
+        verify(client).pinMessage(chatId, 102);
+        verify(client).unpinMessage(chatId, 101);
+    }
+
+    @Test
+    void theButtonsGoWhenASessionStartsAndThePinWhenItEnds() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+
+        setTimes(sessionId, Instant.now().minusSeconds(60), Instant.now().plusSeconds(3600));
+        sessionChat.sweep(Instant.now());
+        refresher.flush();
+        verify(client).editMessage(eq(chatId), eq(CARD), contains("🟢 Happening now: Mock exam"));
+        verify(client, never()).unpinMessage(chatId, CARD);
+
+        setTimes(sessionId, Instant.now().minusSeconds(7200), Instant.now().minusSeconds(60));
+        sessionChat.sweep(Instant.now());
+        refresher.flush();
+        verify(client).editMessage(eq(chatId), eq(CARD), contains("✔️ Finished: Mock exam"));
+        verify(client).unpinMessage(chatId, CARD);
+
+        sessionChat.sweep(Instant.now());
+        refresher.flush();
+        verify(client, times(2)).editMessage(eq(chatId), eq(CARD), anyString());
+    }
+
+    @Test
+    void theSweepPostsACardThatFailedToPost() throws Exception {
+        linkChat();
+        doThrow(new TelegramApiException(400, "refused", null, null)).doReturn(CARD)
+                .when(client).sendMessage(eq(chatId), anyString(), any(ReplyMarkup.ActionButtons.class));
+        posted(schedule(inHours(24)));
+        verifyCardsPosted(1);
+
+        sessionChat.sweep(Instant.now());
+        refresher.flush();
+
+        verifyCardsPosted(2);
+        mockMvc.perform(as(leaderToken, get(path("/sessions")))).andExpect(jsonPath("$[0].title").value("Mock exam"));
+    }
+
+    @Test
+    void linkingAChatLatePostsCardsForUpcomingSessions() throws Exception {
+        schedule(inHours(24));
+        refresher.flush();
+        verify(client, never()).sendMessage(eq(chatId), anyString(), any(ReplyMarkup.ActionButtons.class));
+
+        linkChat();
+        sessionChat.sweep(Instant.now());
+        refresher.flush();
+
+        verifyCardsPosted(1);
+    }
+
+    @Test
+    void aMemberLeavingUpdatesTheCard() throws Exception {
+        linkChat();
+        posted(schedule(inHours(24)));
+
+        mockMvc.perform(as(memberToken, post(path("/leave")))).andExpect(status().isNoContent());
+
+        await().atMost(Duration.ofMillis(TIMEOUT_MS)).untilAsserted(() -> {
+            refresher.flush();
+            verify(client, atLeastOnce()).editMessage(eq(chatId), eq(CARD), argThat(text -> !text.contains("Session Member")), any(ReplyMarkup.class));
+        });
     }
 
     @Test
     void aGroupWithoutAChatStillSchedulesAndPostsNothing() throws Exception {
-        schedule(inHours(24));
+        String sessionId = posted(schedule(inHours(24)));
 
-        verify(client, after(300).never()).sendMessage(anyLong(), contains("New study session"), any(ReplyMarkup.class));
-    }
-
-    @Test
-    void aFailedPostDoesNotUndoTheSession() throws Exception {
-        linkChat();
-        doThrow(new TelegramApiException(500, "down", null, null)).when(client).sendMessage(eq(chatId), contains("New study session"), any(ReplyMarkup.class));
-
-        schedule(inHours(24));
-
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("New study session"), any(ReplyMarkup.class));
-        mockMvc.perform(as(leaderToken, get(path("/sessions")))).andExpect(jsonPath("$[0].title").value("Mock exam"));
+        assertThat(jdbc.queryForObject("select count(*) from session_chat_card where study_session_id = ?", Long.class, UUID.fromString(sessionId))).isZero();
     }
 
     @Test
@@ -353,7 +566,7 @@ class SessionChatApiTest extends ApiTestSupport {
         posted(schedule(startsAt));
         doThrow(new TelegramApiException(500, "down", null, null))
                 .doReturn(9L)
-                .when(client).sendMessage(eq(chatId), contains(STARTING_SOON), any(ReplyMarkup.class));
+                .when(client).sendReply(eq(chatId), eq(CARD), contains(STARTING_SOON), any());
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(40)));
         verifyReminders(1);
@@ -366,21 +579,23 @@ class SessionChatApiTest extends ApiTestSupport {
     }
 
     @Test
-    void aSessionTheChatNeverHeardAboutStillGetsAReminder() throws Exception {
-        doThrow(new TelegramApiException(500, "down", null, null))
-                .when(client).sendMessage(anyLong(), contains("New study session"), any(ReplyMarkup.class));
+    void aSessionWithNoCardYetWaitsForOneBeforeItsReminder() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
         schedule(startsAt);
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("New study session"), any(ReplyMarkup.class));
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
+        verifyReminders(0);
 
+        refresher.flush();
+        jdbc.update("update session_chat_card set announced_at = ? where group_chat_id = (select id from group_chat where chat_id = ?)",
+                Timestamp.from(startsAt.minus(Duration.ofHours(2))), chatId);
+        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
         verifyReminders(1);
     }
 
     @Test
-    void reschedulingAfterAReminderAllowsAnotherForTheNewTime() throws Exception {
+    void movingTheStartAfterAReminderAllowsAnotherForTheNewTime() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
         String sessionId = posted(schedule(startsAt));
@@ -389,40 +604,49 @@ class SessionChatApiTest extends ApiTestSupport {
 
         Instant newStart = inHours(8);
         reschedule(sessionId, newStart);
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("updated: Mock exam"), any(ReplyMarkup.class));
+        verify(client, timeout(TIMEOUT_MS)).sendReply(eq(chatId), eq(CARD), contains("Please answer again"), any());
         sessionChat.sendDueReminders(newStart.minus(Duration.ofMinutes(30)));
 
         verifyReminders(2);
     }
 
     @Test
-    void reschedulingWhileAReminderIsBeingSentKeepsTheNextOne() throws Exception {
+    void aSessionMovedInsideTheWindowGetsNoReminderAsWell() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        Instant newStart = Instant.now().plus(Duration.ofMinutes(30));
+
+        reschedule(sessionId, newStart);
+        verify(client, timeout(TIMEOUT_MS)).sendReply(eq(chatId), eq(CARD), contains("Please answer again"), any());
+        sessionChat.sendDueReminders(newStart.minus(Duration.ofMinutes(10)));
+
+        verifyReminders(0);
+    }
+
+    @Test
+    void changingOnlyDetailsAfterAReminderDoesNotSendAnother() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
         String sessionId = posted(schedule(startsAt));
-        Instant newStart = inHours(8);
-        doAnswer(call -> {
-            reschedule(sessionId, newStart);
-            return 9L;
-        }).doReturn(10L).when(client).sendMessage(eq(chatId), contains(STARTING_SOON), any(ReplyMarkup.class));
-
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("updated: Mock exam"), any(ReplyMarkup.class));
-        sessionChat.sendDueReminders(newStart.minus(Duration.ofMinutes(30)));
 
-        verifyReminders(2);
+        mockMvc.perform(as(leaderToken, put(path("/sessions/" + sessionId))).content(sessionBody("Mock exam", startsAt).replace("Bring notes", "Bring a calculator")))
+                .andExpect(status().isOk());
+        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(29)));
+
+        verifyReminders(1);
     }
 
     @Test
-    void anotherBotsChatGetsNoPostsOrReminders() throws Exception {
+    void anotherBotsChatGetsNoCardsOrReminders() throws Exception {
         linkChat();
         jdbc.update("update group_chat set bot_id = 999 where chat_id = ?", chatId);
         Instant startsAt = inHours(3);
-        schedule(startsAt);
+        posted(schedule(startsAt));
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
 
-        verify(client, after(300).never()).sendMessage(eq(chatId), contains("New study session"), any(ReplyMarkup.class));
+        verifyCardsPosted(0);
         verifyReminders(0);
     }
 
@@ -430,7 +654,7 @@ class SessionChatApiTest extends ApiTestSupport {
     void aChatTheBotWasRemovedFromGetsNoReminder() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        schedule(startsAt);
+        posted(schedule(startsAt));
         router.route(new Update(1, null, new Update.ChatMemberUpdated(new Update.Chat(chatId, "supergroup"), person(leaderTelegramId), null,
                 new ChatMember(null, "left", false, false, false, false, false), null), null, null));
 
@@ -440,16 +664,19 @@ class SessionChatApiTest extends ApiTestSupport {
     }
 
     @Test
-    void closingTheGroupStopsReminders() throws Exception {
+    void closingTheGroupCancelsTheCardsAndStopsReminders() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        schedule(startsAt);
-        mockMvc.perform(as(leaderToken, post(path("/close")))).andExpect(status().isOk());
+        posted(schedule(startsAt));
 
+        mockMvc.perform(as(leaderToken, post(path("/close")))).andExpect(status().isOk());
+        await().atMost(Duration.ofMillis(TIMEOUT_MS)).untilAsserted(() -> {
+            refresher.flush();
+            verify(client).editMessage(eq(chatId), eq(CARD), contains("❌ Cancelled: Mock exam"));
+        });
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
 
         verifyReminders(0);
-        verify(client, never()).sendMessage(eq(chatId), contains("cancelled: Mock exam"));
     }
 
     private static String videoChatBody(Instant startsAt) {
@@ -491,7 +718,8 @@ class SessionChatApiTest extends ApiTestSupport {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.meetingLink").value("https://meet.example.com/abc"));
 
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("Join: https://meet.example.com/abc"), any(ReplyMarkup.class));
+        refresher.flush();
+        verify(client).sendMessage(eq(chatId), contains("Join: https://meet.example.com/abc"), any(ReplyMarkup.class));
     }
 
     @Test
@@ -505,7 +733,7 @@ class SessionChatApiTest extends ApiTestSupport {
 
         ArgumentCaptor<List<MessageEntity>> entities = ArgumentCaptor.captor();
         ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
-        verify(client).sendMessage(eq(chatId), text.capture(), entities.capture(), any(ReplyMarkup.ActionButtons.class));
+        verify(client).sendReply(eq(chatId), eq(CARD), text.capture(), entities.capture());
         assertThat(text.getValue()).contains(STARTING_SOON).contains("Going: Session Member");
         MessageEntity tag = entities.getValue().getFirst();
         assertThat(tag.type()).isEqualTo("text_mention");
@@ -572,8 +800,9 @@ class SessionChatApiTest extends ApiTestSupport {
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
 
-        verify(client, never()).sendMessage(eq(chatId), anyString(), any(List.class), any(ReplyMarkup.class));
-        verifyReminders(1);
+        ArgumentCaptor<List<MessageEntity>> entities = ArgumentCaptor.captor();
+        verify(client).sendReply(eq(chatId), eq(CARD), contains(STARTING_SOON), entities.capture());
+        assertThat(entities.getValue()).isEmpty();
     }
 
     @Test

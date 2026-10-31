@@ -2,12 +2,15 @@ package is442t1.studybuddy.telegram.chat;
 
 import java.time.Instant;
 
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.DynamicUpdate;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -18,9 +21,9 @@ import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.studysession.StudySession;
 
 /**
- * What the group chat has been told about one study session. It lives here rather than on {@link StudySession} so that
- * sessions know nothing about Telegram. Only changed columns are written, because the reminder job and the background
- * posts can each change a different column of the same row at about the same time.
+ * The message in a group chat that shows one study session, and what the chat has been told about it. It lives here
+ * rather than on {@link StudySession} so that sessions know nothing about Telegram. Only changed columns are written,
+ * because the reminder job and the card refresher can each change a different column of the same row at about the same time.
  */
 @Entity
 @Table(name = "session_chat_card")
@@ -37,14 +40,22 @@ public class SessionChatCard extends BaseEntity {
     @OnDelete(action = OnDeleteAction.CASCADE)
     private GroupChat groupChat;
 
-    /** The chat message about this session, or null if only a reminder has gone out so far. */
+    /** The card's message in the chat, or null if it hasn't been posted or was deleted. */
     @Column
     private Long messageId;
 
-    /** When the chat was last told this session's details, or null if it never was. */
+    /** When the chat last learnt this session's start time, or null if it never did. */
     private Instant announcedAt;
 
     private Instant reminderSentAt;
+
+    /** The phase the message last showed, so the sweep can tell when time has moved it on. */
+    @Enumerated(EnumType.STRING)
+    private CardPhase shownPhase;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean pinned;
 
     protected SessionChatCard() {
     }
@@ -59,6 +70,22 @@ public class SessionChatCard extends BaseEntity {
         announcedAt = now;
     }
 
+    void recordShown(CardPhase phase) {
+        shownPhase = phase;
+    }
+
+    /** The message has gone, so the sweep will post a new one. */
+    void forgetMessage() {
+        messageId = null;
+        pinned = false;
+    }
+
+    /** A moved session counts as newly announced, and can have a reminder for its new time. */
+    void startMoved(Instant now) {
+        announcedAt = now;
+        reminderSentAt = null;
+    }
+
     /** A session just announced needs no reminder as well, so this says whether that has happened since {@code moment}. */
     boolean announcedAfter(Instant moment) {
         return announcedAt != null && announcedAt.isAfter(moment);
@@ -68,8 +95,28 @@ public class SessionChatCard extends BaseEntity {
         reminderSentAt = now;
     }
 
-    /** The session changed, or the send failed, so a reminder can go out again. */
+    /** The send failed, so the next run tries again. */
     void clearReminder() {
         reminderSentAt = null;
+    }
+
+    void setPinned(boolean nowPinned) {
+        pinned = nowPinned;
+    }
+
+    public StudySession getStudySession() {
+        return studySession;
+    }
+
+    public Long getMessageId() {
+        return messageId;
+    }
+
+    public CardPhase getShownPhase() {
+        return shownPhase;
+    }
+
+    public boolean isPinned() {
+        return pinned;
     }
 }

@@ -6,8 +6,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.enums.RsvpResponse;
 import is442t1.studybuddy.model.enums.SessionStatus;
+import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.studysession.StudySession;
 import is442t1.studybuddy.studysession.StudySessionRepository;
 import is442t1.studybuddy.telegram.TelegramProperties;
@@ -31,6 +34,14 @@ class SessionChatStore {
     private static final Duration VIDEO_CHAT_EARLY_START = Duration.ofMinutes(30);
 
     record SessionRef(UUID groupId, SessionStatus status, SessionMessages.Details details) {
+    }
+
+    /** A posted card's message. */
+    record PinnedCard(UUID sessionId, long messageId) {
+    }
+
+    /** What to pin and unpin so that the soonest upcoming session is the one pinned. @param pin null if nothing needs pinning */
+    record PinChange(PinnedCard pin, List<PinnedCard> unpin) {
     }
 
     /** The student a button press counts for. */
@@ -59,7 +70,25 @@ class SessionChatStore {
     public Optional<SessionRef> read(UUID sessionId) {
         return sessionRepository.findById(sessionId).map(session -> new SessionRef(session.getStudyGroup().getId(), session.getStatus(),
                 new SessionMessages.Details(session.getTitle(), session.getStartsAt(), session.getEndsAt(), session.getMeetingMode(),
-                        session.getLocation(), session.getNote(), session.getMeetingLink(), session.isGroupVideoChat(), session.goingCount())));
+                        session.getLocation(), session.getNote(), session.getMeetingLink(), session.isGroupVideoChat(),
+                        answered(session, RsvpResponse.GOING), answered(session, RsvpResponse.NOT_GOING), notAnswered(session))));
+    }
+
+    private static List<String> answered(StudySession session, RsvpResponse response) {
+        return session.getRsvps().stream()
+                .filter(rsvp -> rsvp.getResponse() == response)
+                .map(rsvp -> rsvp.getStudent().getName())
+                .sorted()
+                .toList();
+    }
+
+    private static List<String> notAnswered(StudySession session) {
+        Set<UUID> answered = session.getRsvps().stream().map(rsvp -> rsvp.getStudent().getId()).collect(Collectors.toSet());
+        return session.getStudyGroup().getMembers().stream()
+                .filter(student -> !answered.contains(student.getId()))
+                .map(Student::getName)
+                .sorted()
+                .toList();
     }
 
     /**
@@ -116,22 +145,84 @@ class SessionChatStore {
     }
 
     /**
-     * Sessions whose reminder should go out now. A session announced after its reminder window opened has only just
-     * been posted, so it gets no reminder as well. One the chat never heard about does, or the chat would get nothing.
+     * Sessions whose reminder should go out now. It's a reply to the card, so a session needs a card first. One whose
+     * card was posted or moved after the reminder window opened has only just been announced, so it gets no reminder as well.
      */
     @Transactional(readOnly = true)
     public List<UUID> dueReminders(Instant now) {
         Duration lead = properties.reminderLead();
         return chatRepository.findSessionsStartingSoon(properties.botId(), now, now.plus(lead)).stream()
                 .filter(session -> cardRepository.findByStudySession_Id(session.getId())
-                        .map(card -> !card.announcedAfter(session.getStartsAt().minus(lead)))
-                        .orElse(true))
+                        .filter(card -> card.getMessageId() != null)
+                        .filter(card -> !card.announcedAfter(session.getStartsAt().minus(lead)))
+                        .isPresent())
                 .map(StudySession::getId)
                 .toList();
     }
 
+    /**
+     * Sessions whose card needs attention without anything having changed: upcoming ones with no card, such as after a
+     * failed post or linking a chat late, and ones whose card shows a phase that time has moved on from.
+     */
+    @Transactional(readOnly = true)
+    public List<UUID> cardsToRefresh(Instant now) {
+        Stream<UUID> missing = chatRepository.findSessionsWithoutCard(properties.botId(), now).stream().map(StudySession::getId);
+        Stream<UUID> outOfDate = cardRepository.findUnfinished(properties.botId()).stream()
+                .filter(card -> {
+                    StudySession session = card.getStudySession();
+                    return CardPhase.of(session.getStatus(), session.getStartsAt(), session.getEndsAt(), now) != card.getShownPhase();
+                })
+                .map(card -> card.getStudySession().getId());
+        return Stream.concat(missing, outOfDate).toList();
+    }
+
+    /** Sessions still to start in this group, whose cards list its members. */
+    @Transactional(readOnly = true)
+    public List<UUID> upcomingSessions(UUID groupId, Instant now) {
+        return sessionRepository.findByStudyGroup_IdAndStartsAtAfter(groupId, now).stream().map(StudySession::getId).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Long> messageId(UUID sessionId) {
+        return cardRepository.findByStudySession_Id(sessionId).map(SessionChatCard::getMessageId);
+    }
+
     public void recordPost(UUID sessionId, UUID groupChatId, long messageId, Instant now) {
         cardFor(sessionId, groupChatId).recordPost(messageId, now);
+    }
+
+    public void recordShown(UUID sessionId, CardPhase phase) {
+        cardRepository.findByStudySession_Id(sessionId).ifPresent(card -> card.recordShown(phase));
+    }
+
+    public void forgetMessage(UUID sessionId) {
+        cardRepository.findByStudySession_Id(sessionId).ifPresent(SessionChatCard::forgetMessage);
+    }
+
+    public void startMoved(UUID sessionId, Instant now) {
+        cardRepository.findByStudySession_Id(sessionId).ifPresent(card -> card.startMoved(now));
+    }
+
+    @Transactional(readOnly = true)
+    public PinChange pinChange(UUID groupChatId, Instant now) {
+        List<SessionChatCard> cards = cardRepository.findPosted(groupChatId);
+        Optional<SessionChatCard> soonest = cards.stream()
+                .filter(card -> card.getStudySession().getStatus() == SessionStatus.SCHEDULED && card.getStudySession().getEndsAt().isAfter(now))
+                .min(Comparator.comparing(card -> card.getStudySession().getStartsAt()));
+        PinnedCard pin = soonest.filter(card -> !card.isPinned()).map(SessionChatStore::pinned).orElse(null);
+        List<PinnedCard> unpin = cards.stream()
+                .filter(card -> card.isPinned() && soonest.filter(card::equals).isEmpty())
+                .map(SessionChatStore::pinned)
+                .toList();
+        return new PinChange(pin, unpin);
+    }
+
+    private static PinnedCard pinned(SessionChatCard card) {
+        return new PinnedCard(card.getStudySession().getId(), card.getMessageId());
+    }
+
+    public void setPinned(UUID sessionId, boolean pinned) {
+        cardRepository.findByStudySession_Id(sessionId).ifPresent(card -> card.setPinned(pinned));
     }
 
     public void markReminderSent(UUID sessionId, UUID groupChatId, Instant now) {

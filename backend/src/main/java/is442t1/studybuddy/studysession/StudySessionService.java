@@ -20,6 +20,7 @@ import is442t1.studybuddy.group.StudyGroupRepository;
 import is442t1.studybuddy.model.enums.SessionStatus;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentService;
+import is442t1.studybuddy.studysession.event.SessionAnswered;
 import is442t1.studybuddy.studysession.event.SessionCancelled;
 import is442t1.studybuddy.studysession.event.SessionChanged;
 import is442t1.studybuddy.studysession.event.SessionScheduled;
@@ -78,8 +79,10 @@ public class StudySessionService {
         requireGroupForUpdate(groupId);
         requireActive(callerId);
         StudySession session = requireSession(groupId, sessionId);
-        session.update(callerId, details, Instant.now());
-        events.publishEvent(new SessionChanged(session.getId()));
+        SessionChange change = session.update(callerId, details, Instant.now());
+        if (change != SessionChange.NONE) {
+            events.publishEvent(new SessionChanged(session.getId(), change == SessionChange.START_MOVED));
+        }
         return StudySessionResponse.from(session, callerId);
     }
 
@@ -98,6 +101,7 @@ public class StudySessionService {
         Student student = studentService.requireStudent(callerId);
         session.respond(student, request.response(), Instant.now());
         sessionRepository.flush();
+        events.publishEvent(new SessionAnswered(session.getId()));
         return StudySessionResponse.from(session, callerId);
     }
 
