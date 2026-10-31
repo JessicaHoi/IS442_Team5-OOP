@@ -7,6 +7,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -43,11 +44,13 @@ public class UserAccountService {
     private final GroupLeadershipService leadershipService;
     private final MembershipRequestRepository membershipRequestRepository;
     private final MatchRequestRepository matchRequestRepository;
+    private final ApplicationEventPublisher events;
 
     public UserAccountService(UserRepository userRepository, StudyBuddyConnectionRepository connectionRepository,
             StudyGroupRepository groupRepository, PasswordEncoder passwordEncoder, SessionTokenService tokenService,
             GroupLeadershipService leadershipService, MembershipRequestRepository membershipRequestRepository,
-            MatchRequestRepository matchRequestRepository) {
+            MatchRequestRepository matchRequestRepository,
+            ApplicationEventPublisher events) {
         this.userRepository = userRepository;
         this.connectionRepository = connectionRepository;
         this.groupRepository = groupRepository;
@@ -56,6 +59,7 @@ public class UserAccountService {
         this.leadershipService = leadershipService;
         this.membershipRequestRepository = membershipRequestRepository;
         this.matchRequestRepository = matchRequestRepository;
+        this.events = events;
     }
 
     public List<UserAccountResponse> listAccounts() {
@@ -145,6 +149,7 @@ public class UserAccountService {
             throw new BusinessRuleException("Transfer leadership of every group before deleting this account.");
         }
         if (user instanceof Student) {
+            events.publishEvent(new AccountDeleting(userId));
             Stream.concat(groupRepository.findByMemberId(userId).stream(),
                     membershipRequestRepository.findByStudent_Id(userId).stream().map(request -> request.getStudyGroup()))
                     .distinct().forEach(group -> group.removeDeletedAccount(userId));

@@ -24,7 +24,7 @@ class TelegramUpdatePoller implements SmartLifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(TelegramUpdatePoller.class);
     private static final int CONFLICT = 409;
-    private static final List<String> ALLOWED_UPDATES = List.of("message");
+    private static final List<String> ALLOWED_UPDATES = List.of("message", "my_chat_member", "chat_member", "chat_join_request");
     private static final Duration CONFLICT_WAIT = Duration.ofSeconds(60);
     private static final Duration MAX_BACKOFF = Duration.ofSeconds(60);
     private static final Duration STOP_WAIT = Duration.ofSeconds(5);
@@ -110,6 +110,9 @@ class TelegramUpdatePoller implements SmartLifecycle {
             next = update.updateId() + 1;
             try {
                 router.route(update);
+            } catch (TelegramApiException exception) {
+                // Safe to log: these messages hold Telegram's error text, and never message text or the token.
+                LOG.error("Could not handle Telegram update {}: {}", update.updateId(), exception.getMessage());
             } catch (RuntimeException exception) {
                 LOG.error("Could not handle Telegram update {}: {}", update.updateId(), exception.getClass().getSimpleName());
             }

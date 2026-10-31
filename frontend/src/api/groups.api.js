@@ -22,4 +22,13 @@ export const groupsApi = {
 	leave: (id) => unwrap(http.post(`/groups/${id}/leave`)),
 	setChatLink: (id, url) => unwrap(http.put(`/groups/${id}/chat-link`, { url })),
 	clearChatLink: (id) => unwrap(http.delete(`/groups/${id}/chat-link`)),
+
+	/** The group's Telegram chat, as the signed-in member sees it. */
+	chat: (id) => unwrap(http.get(`/groups/${id}/chat`)),
+	/** Returns a link the leader opens in Telegram to choose or create the chat. */
+	startChatSetup: (id) => unwrap(http.post(`/groups/${id}/chat/setup`)),
+	verifyChat: (id) => unwrap(http.post(`/groups/${id}/chat/verify`)),
+	/** `renew` replaces the invite, or removes whoever joined with it ("Not you?"). */
+	chatInvite: (id, renew = false) => unwrap(http.post(`/groups/${id}/chat/invite`, { renew })),
+	unlinkChat: (id) => unwrap(http.delete(`/groups/${id}/chat`)),
 };

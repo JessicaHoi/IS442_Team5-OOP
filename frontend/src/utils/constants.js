@@ -109,3 +109,21 @@ export const SESSION_MEETING_MODES = MEETING_MODES.filter((mode) => mode.value !
 export function labelOf(options, value) {
 	return options.find((option) => option.value === value)?.label ?? value ?? '';
 }
+
+/** What a student's position in a group's Telegram chat looks like to the leader. */
+export const CHAT_MEMBER_STATES = {
+	NOT_INVITED: 'Not invited yet',
+	INVITED: 'Invited',
+	JOINED: 'In the chat',
+	LEFT: 'Left the chat',
+	REMOVED: 'Removed',
+	REMOVAL_FAILED: 'Could not be removed',
+};
+
+/** The admin settings the bot needs in a Telegram chat, as Telegram names them. */
+export const CHAT_RIGHTS = {
+	INVITE_USERS: 'Add Users (required)',
+	RESTRICT_MEMBERS: 'Ban Users (required)',
+	PIN_MESSAGES: 'Pin Messages (optional)',
+	CHANGE_INFO: 'Change Group Info (optional)',
+};

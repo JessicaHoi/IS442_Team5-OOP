@@ -20,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import is442t1.studybuddy.common.exception.AuthenticationException;
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.DomainException;
+import is442t1.studybuddy.common.exception.ExternalServiceException;
 import is442t1.studybuddy.common.exception.PermissionDeniedException;
 import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.common.exception.ValidationException;
@@ -92,6 +93,7 @@ public class GlobalExceptionHandler {
             case PermissionDeniedException ignored -> HttpStatus.FORBIDDEN;
             case ResourceNotFoundException ignored -> HttpStatus.NOT_FOUND;
             case BusinessRuleException ignored -> HttpStatus.CONFLICT;
+            case ExternalServiceException ignored -> HttpStatus.SERVICE_UNAVAILABLE;
             default -> HttpStatus.BAD_REQUEST;
         };
     }

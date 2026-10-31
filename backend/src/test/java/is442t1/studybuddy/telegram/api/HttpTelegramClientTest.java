@@ -3,6 +3,8 @@ package is442t1.studybuddy.telegram.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -94,6 +96,51 @@ class HttpTelegramClientTest {
         client.sendMessage(42, "Connected ✓");
 
         server.verify();
+    }
+
+    @Test
+    void sendsSetupButtonsTheWayTelegramExpects() {
+        server.expect(requestTo(BASE + "/sendMessage"))
+                .andExpect(content().json("""
+                        {"chat_id":42,"text":"Pick","reply_markup":{"is_persistent":true,"resize_keyboard":true,"one_time_keyboard":false,
+                         "keyboard":[[{"text":"Existing","request_chat":{"request_id":8,"chat_is_channel":false,"bot_is_member":true}}]]}}
+                        """))
+                .andExpect(content().string(not(containsString("administrator_rights"))))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":55}}", MediaType.APPLICATION_JSON));
+
+        long messageId = client.sendMessage(42, "Pick", new ReplyMarkup.Keyboard(List.of(List.of(new ReplyMarkup.ChatRequestButton("Existing",
+                new ReplyMarkup.ChatRequest(8, false, true, null, null)))), true, true, false));
+
+        assertThat(messageId).isEqualTo(55);
+        server.verify();
+    }
+
+    @Test
+    void readsAChatSharedAndAJoinRequestFromRealShapes() {
+        server.expect(requestTo(BASE + "/getUpdates"))
+                .andRespond(withSuccess("""
+                        {"ok":true,"result":[
+                         {"update_id":1,"message":{"message_id":6,"from":{"id":42,"is_bot":false,"first_name":"A"},
+                          "chat":{"id":42,"type":"private"},"date":1,"chat_shared":{"chat_id":-100,"title":"Bolt","request_id":8}}},
+                         {"update_id":2,"message":{"message_id":7,"from":{"id":42,"is_bot":false,"first_name":"A"},
+                          "chat":{"id":-5,"type":"group"},"date":1,"migrate_to_chat_id":-100}},
+                         {"update_id":3,"my_chat_member":{"chat":{"id":-100,"type":"supergroup"},"from":{"id":42,"is_bot":false,"first_name":"A"},
+                          "date":1,"old_chat_member":{"user":{"id":9,"is_bot":true,"first_name":"B"},"status":"member"},
+                          "new_chat_member":{"user":{"id":9,"is_bot":true,"first_name":"B"},"status":"administrator","can_invite_users":true,"can_restrict_members":true}}},
+                         {"update_id":4,"chat_join_request":{"chat":{"id":-100,"type":"supergroup"},"from":{"id":43,"is_bot":false,"first_name":"C"},
+                          "user_chat_id":43,"date":1,"invite_link":{"invite_link":"https://t.me/+x","name":"inv_1","creates_join_request":true}}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        List<Update> updates = client.getUpdates(0, Duration.ofSeconds(1), List.of("message"));
+
+        assertThat(updates.get(0).message().chatShared()).isEqualTo(new Update.ChatShared(-100, 8));
+        assertThat(updates.get(1).message().migrateToChatId()).isEqualTo(-100L);
+        ChatMember bot = updates.get(2).myChatMember().newChatMember();
+        assertThat(bot.isAdministrator()).isTrue();
+        assertThat(bot.canInviteUsers()).isTrue();
+        assertThat(bot.canPinMessages()).isFalse();
+        assertThat(updates.get(3).chatJoinRequest().userChatId()).isEqualTo(43);
+        assertThat(updates.get(3).chatJoinRequest().inviteLink().name()).isEqualTo("inv_1");
     }
 
     @Test

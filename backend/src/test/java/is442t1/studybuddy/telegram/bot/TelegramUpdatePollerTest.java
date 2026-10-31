@@ -25,7 +25,7 @@ class TelegramUpdatePollerTest {
     private final TelegramClient client = mock(TelegramClient.class);
     private final TelegramUpdateRouter router = mock(TelegramUpdateRouter.class);
     private final TelegramUpdatePoller poller = new TelegramUpdatePoller(client, router,
-            new TelegramProperties(true, "1:abc", "bot", true, Duration.ofSeconds(50), Duration.ofMinutes(10)));
+            new TelegramProperties(true, "1:abc", "bot", true, Duration.ofSeconds(50), Duration.ofMinutes(10), Duration.ofDays(7)));
 
     private static TelegramApiException failure(int code, Integer retryAfter) {
         return new TelegramApiException(code, "failed", retryAfter, null);
