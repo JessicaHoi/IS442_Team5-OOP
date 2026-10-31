@@ -102,4 +102,18 @@ describe('study sessions', () => {
 		await call('put', `${url}/${session.id}`, { token: leaderToken, data: details({ title: 'New title' }) });
 		expect((await call('get', calendarUrl, { token: memberToken })).data).toContain('SEQUENCE:1\r\n');
 	});
+
+	it('keeps a meeting link or video chat on online sessions only', async () => {
+		const create = (overrides) => call('post', url, { token: leaderToken, data: details({ meetingMode: 'ONLINE', ...overrides }) });
+
+		const linked = await create({ meetingLink: ' https://meet.example.com/abc ' });
+		expect(linked.status).toBe(201);
+		expect(linked.data).toMatchObject({ meetingLink: 'https://meet.example.com/abc', groupVideoChat: false });
+		expect((await create({ groupVideoChat: true })).data).toMatchObject({ meetingLink: null, groupVideoChat: true });
+
+		expect((await create({ meetingLink: 'javascript:alert(1)' })).status).toBe(400);
+		expect((await create({ meetingLink: 'meet.example.com' })).status).toBe(400);
+		expect((await create({ meetingLink: 'https://meet.example.com', groupVideoChat: true })).status).toBe(400);
+		expect((await create({ meetingMode: 'IN_PERSON', groupVideoChat: true })).status).toBe(400);
+	});
 });

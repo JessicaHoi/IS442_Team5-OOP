@@ -20,6 +20,9 @@ public interface TelegramClient {
     /** Returns the new message's id, so it can be pinned. */
     long sendMessage(long chatId, String text, ReplyMarkup markup);
 
+    /** The same, with people tagged in the text so that Telegram notifies them. */
+    long sendMessage(long chatId, String text, List<MessageEntity> entities, ReplyMarkup markup);
+
     ChatInfo getChat(long chatId);
 
     ChatMember getChatMember(long chatId, long userId);
@@ -48,4 +51,7 @@ public interface TelegramClient {
     void setMemberPermissions(long chatId, boolean canSendMessages);
 
     void leaveChat(long chatId);
+
+    /** Stops the spinner on a pressed button. {@code alert} shows the text as a pop-up instead of a brief notice. */
+    void answerButton(String callbackQueryId, String text, boolean alert);
 }

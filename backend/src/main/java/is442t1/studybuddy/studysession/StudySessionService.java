@@ -2,8 +2,12 @@ package is442t1.studybuddy.studysession;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +20,9 @@ import is442t1.studybuddy.group.StudyGroupRepository;
 import is442t1.studybuddy.model.enums.SessionStatus;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentService;
+import is442t1.studybuddy.studysession.event.SessionCancelled;
+import is442t1.studybuddy.studysession.event.SessionChanged;
+import is442t1.studybuddy.studysession.event.SessionScheduled;
 
 /**
  * Scheduling study sessions, answering them and exporting them to a calendar.
@@ -29,13 +36,15 @@ public class StudySessionService {
     private final StudyGroupRepository groupRepository;
     private final StudentService studentService;
     private final AppProperties appProperties;
+    private final ApplicationEventPublisher events;
 
     public StudySessionService(StudySessionRepository sessionRepository, StudyGroupRepository groupRepository,
-            StudentService studentService, AppProperties appProperties) {
+            StudentService studentService, AppProperties appProperties, ApplicationEventPublisher events) {
         this.sessionRepository = sessionRepository;
         this.groupRepository = groupRepository;
         this.studentService = studentService;
         this.appProperties = appProperties;
+        this.events = events;
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +70,7 @@ public class StudySessionService {
         StudyGroup group = requireGroupForUpdate(groupId);
         requireActive(callerId);
         StudySession session = sessionRepository.save(StudySession.schedule(group, callerId, details, Instant.now()));
+        events.publishEvent(new SessionScheduled(session.getId()));
         return StudySessionResponse.from(session, callerId);
     }
 
@@ -69,6 +79,7 @@ public class StudySessionService {
         requireActive(callerId);
         StudySession session = requireSession(groupId, sessionId);
         session.update(callerId, details, Instant.now());
+        events.publishEvent(new SessionChanged(session.getId()));
         return StudySessionResponse.from(session, callerId);
     }
 
@@ -77,6 +88,7 @@ public class StudySessionService {
         requireActive(callerId);
         StudySession session = requireSession(groupId, sessionId);
         session.cancel(callerId, Instant.now());
+        events.publishEvent(new SessionCancelled(session.getId()));
         return StudySessionResponse.from(session, callerId);
     }
 
@@ -94,13 +106,20 @@ public class StudySessionService {
         StudyGroup group = requireGroup(groupId);
         requireMember(group, callerId);
         StudySession session = requireSession(groupId, sessionId);
-        String description = session.getNote() == null
-                ? "Study group: " + group.getGroupName()
-                : "Study group: " + group.getGroupName() + "\n" + session.getNote();
+        String description = Stream.of("Study group: " + group.getGroupName(), howToJoin(session), session.getNote())
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining("\n"));
         IcsWriter.Event event = new IcsWriter.Event(session.getId() + "@studybuddy", session.getIcsSequence(),
                 session.getTitle(), description, session.getLocation(), session.getStartsAt(), session.getEndsAt(),
                 session.getStatus() == SessionStatus.CANCELLED, groupPageUrl(groupId));
         return IcsWriter.write(event, Instant.now());
+    }
+
+    private static String howToJoin(StudySession session) {
+        if (session.getMeetingLink() != null) {
+            return "Join: " + session.getMeetingLink();
+        }
+        return session.isGroupVideoChat() ? "Video chat in the group's Telegram chat" : null;
     }
 
     private String groupPageUrl(UUID groupId) {

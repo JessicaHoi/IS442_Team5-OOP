@@ -89,6 +89,11 @@ class HttpTelegramClient implements TelegramClient {
     }
 
     @Override
+    public long sendMessage(long chatId, String text, List<MessageEntity> entities, ReplyMarkup markup) {
+        return call("sendMessage", Map.of("chat_id", chatId, "text", text, "entities", entities, "reply_markup", markup)).path("message_id").asLong();
+    }
+
+    @Override
     public ChatInfo getChat(long chatId) {
         return read(call("getChat", Map.of("chat_id", chatId)), mapper.constructType(ChatInfo.class));
     }
@@ -166,6 +171,11 @@ class HttpTelegramClient implements TelegramClient {
     @Override
     public void leaveChat(long chatId) {
         call("leaveChat", Map.of("chat_id", chatId));
+    }
+
+    @Override
+    public void answerButton(String callbackQueryId, String text, boolean alert) {
+        call("answerCallbackQuery", Map.of("callback_query_id", callbackQueryId, "text", text, "show_alert", alert));
     }
 
     /** Returns the reply's {@code result}. Telegram's error replies have 4xx statuses, so the body is read whatever the status. */

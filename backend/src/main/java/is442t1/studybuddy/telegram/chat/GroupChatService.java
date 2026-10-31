@@ -17,6 +17,7 @@ import is442t1.studybuddy.common.exception.ExternalServiceException;
 import is442t1.studybuddy.telegram.TelegramProperties;
 import is442t1.studybuddy.telegram.api.ChatInviteLink;
 import is442t1.studybuddy.telegram.api.ChatMember;
+import is442t1.studybuddy.telegram.api.MessageEntity;
 import is442t1.studybuddy.telegram.api.ReplyMarkup;
 import is442t1.studybuddy.telegram.api.TelegramApiException;
 import is442t1.studybuddy.telegram.api.TelegramClient;
@@ -239,7 +240,15 @@ public class GroupChatService {
     }
 
     long send(ChatRef chat, String text) {
-        return onChat(chat, chatId -> client.sendMessage(chatId, text, new ReplyMarkup.RemoveKeyboard(true)));
+        return send(chat, text, new ReplyMarkup.RemoveKeyboard(true));
+    }
+
+    long send(ChatRef chat, String text, ReplyMarkup markup) {
+        return onChat(chat, chatId -> client.sendMessage(chatId, text, markup));
+    }
+
+    long send(ChatRef chat, String text, List<MessageEntity> entities, ReplyMarkup markup) {
+        return entities.isEmpty() ? send(chat, text, markup) : onChat(chat, chatId -> client.sendMessage(chatId, text, entities, markup));
     }
 
     /** Runs a call on the chat. If the group has since been upgraded, Telegram says so: save the new id and try once more. */

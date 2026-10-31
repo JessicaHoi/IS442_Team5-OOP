@@ -14,6 +14,10 @@ final class UpdateClassifier {
         if (update.chatJoinRequest() != null) {
             return new BotEvent.JoinRequested(update.chatJoinRequest());
         }
+        if (update.callbackQuery() != null) {
+            Update.CallbackQuery press = update.callbackQuery();
+            return new BotEvent.ButtonPressed(press.id(), press.from().id(), press.data());
+        }
         if (update.myChatMember() != null) {
             return new BotEvent.BotChanged(update.myChatMember().chat().id(), update.myChatMember().newChatMember());
         }
@@ -27,6 +31,9 @@ final class UpdateClassifier {
         }
         if (message != null && message.migrateFromChatId() != null) {
             return new BotEvent.ChatMigrated(message.migrateFromChatId(), message.chat().id());
+        }
+        if (message != null && message.videoChatStarted() != null) {
+            return new BotEvent.VideoChatStarted(message.chat().id(), message.from() == null ? null : message.from().id());
         }
         if (message == null || message.from() == null || message.from().isBot() || message.chat() == null
                 || !message.chat().isPrivate()) {

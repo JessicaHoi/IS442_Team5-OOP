@@ -144,6 +144,75 @@ class HttpTelegramClientTest {
     }
 
     @Test
+    void sendsActionButtonsTheWayTelegramExpects() {
+        server.expect(requestTo(BASE + "/sendMessage"))
+                .andExpect(content().json("""
+                        {"chat_id":42,"text":"Session","reply_markup":{"inline_keyboard":[[{"text":"Going","callback_data":"rsvp:1:G"}]]}}
+                        """))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":55}}", MediaType.APPLICATION_JSON));
+
+        client.sendMessage(42, "Session", ReplyMarkup.ActionButtons.inARow(new ReplyMarkup.ActionButtons.Action("Going", "rsvp:1:G")));
+
+        server.verify();
+    }
+
+    @Test
+    void answersAPressedButton() {
+        server.expect(requestTo(BASE + "/answerCallbackQuery"))
+                .andExpect(content().json("""
+                        {"callback_query_id":"abc","text":"Going","show_alert":false}
+                        """))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":true}", MediaType.APPLICATION_JSON));
+
+        client.answerButton("abc", "Going", false);
+
+        server.verify();
+    }
+
+    @Test
+    void readsAPressedButtonFromARealShape() {
+        server.expect(requestTo(BASE + "/getUpdates"))
+                .andRespond(withSuccess("""
+                        {"ok":true,"result":[{"update_id":7,"callback_query":{"id":"4382","chat_instance":"-99",
+                         "from":{"id":42,"is_bot":false,"first_name":"Lee"},"data":"rsvp:1:G",
+                         "message":{"message_id":5,"date":1,"chat":{"id":-100,"type":"supergroup"},"text":"Session"}}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        Update.CallbackQuery press = client.getUpdates(0, Duration.ofSeconds(1), List.of("callback_query")).getFirst().callbackQuery();
+
+        assertThat(press.id()).isEqualTo("4382");
+        assertThat(press.from().id()).isEqualTo(42);
+        assertThat(press.data()).isEqualTo("rsvp:1:G");
+    }
+
+    @Test
+    void sendsTagsTheWayTelegramExpects() {
+        server.expect(requestTo(BASE + "/sendMessage"))
+                .andExpect(content().json("""
+                        {"chat_id":42,"text":"Going: Lee","entities":[{"type":"text_mention","offset":7,"length":3,
+                         "user":{"id":9,"is_bot":false,"first_name":"Lee"}}],"reply_markup":{"remove_keyboard":true}}
+                        """))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":1}}", MediaType.APPLICATION_JSON));
+
+        client.sendMessage(42, "Going: Lee", List.of(MessageEntity.mention(7, 3, 9, "Lee")), new ReplyMarkup.RemoveKeyboard(true));
+
+        server.verify();
+    }
+
+    @Test
+    void readsAVideoChatStartingFromARealShape() {
+        server.expect(requestTo(BASE + "/getUpdates"))
+                .andRespond(withSuccess("""
+                        {"ok":true,"result":[{"update_id":8,"message":{"message_id":6,"date":1,"video_chat_started":{},
+                         "from":{"id":42,"is_bot":false,"first_name":"Lee"},"chat":{"id":-100,"type":"supergroup"}}}]}
+                        """, MediaType.APPLICATION_JSON));
+
+        Update.Message message = client.getUpdates(0, Duration.ofSeconds(1), List.of("message")).getFirst().message();
+
+        assertThat(message.videoChatStarted()).isNotNull();
+    }
+
+    @Test
     void reportsTelegramsErrorCodeAndText() {
         replyWith("sendMessage", HttpStatus.BAD_REQUEST, """
                 {"ok":false,"error_code":400,"description":"Bad Request: can't remove chat owner"}

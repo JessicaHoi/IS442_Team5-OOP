@@ -34,6 +34,14 @@ sealed interface BotEvent {
     record ChatMigrated(long oldChatId, long newChatId) implements BotEvent {
     }
 
+    /** Someone pressed a button attached to one of the bot's messages. */
+    record ButtonPressed(String callbackQueryId, long telegramUserId, String data) implements BotEvent {
+    }
+
+    /** @param startedBy null when Telegram doesn't say who started it */
+    record VideoChatStarted(long chatId, Long startedBy) implements BotEvent {
+    }
+
     /** Everything else. Group messages end up here, and their text is never logged or stored. */
     record Ignored() implements BotEvent {
     }

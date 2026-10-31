@@ -24,7 +24,7 @@ class TelegramUpdatePoller implements SmartLifecycle {
 
     private static final Logger LOG = LoggerFactory.getLogger(TelegramUpdatePoller.class);
     private static final int CONFLICT = 409;
-    private static final List<String> ALLOWED_UPDATES = List.of("message", "my_chat_member", "chat_member", "chat_join_request");
+    private static final List<String> ALLOWED_UPDATES = List.of("message", "my_chat_member", "chat_member", "chat_join_request", "callback_query");
     private static final Duration CONFLICT_WAIT = Duration.ofSeconds(60);
     private static final Duration MAX_BACKOFF = Duration.ofSeconds(60);
     private static final Duration STOP_WAIT = Duration.ofSeconds(5);

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { groupsApi } from '../../api/groups.api';
 import { sessionsApi } from '../../api/sessions.api';
 import { useConfirm } from '../../composables/useConfirm';
 import { useToast } from '../../composables/useToast';
@@ -33,6 +34,7 @@ const formOpen = ref(false);
 const editing = ref(null);
 const formDefaults = ref(null);
 const saving = ref(false);
+const chatActive = ref(false);
 
 const isEmpty = computed(() => !upcoming.value.length && !past.value.length);
 
@@ -48,7 +50,16 @@ async function load() {
 	}
 }
 
-watch(() => props.groupId, load, { immediate: true });
+/** Only decides whether to offer the video chat, so a failure just leaves it out. */
+async function loadChatStatus() {
+	if (!props.canManage) return;
+	chatActive.value = await groupsApi.chat(props.groupId).then((chat) => chat.status === 'ACTIVE').catch(() => false);
+}
+
+watch(() => props.groupId, () => {
+	load();
+	loadChatStatus();
+}, { immediate: true });
 watch(() => props.prefill, (slot) => {
 	if (!slot) return;
 	openForm(null, sessionTimesFromSlot(slot));
@@ -154,6 +165,7 @@ async function act(session, action) {
 									</div>
 									<div class="small text-muted">{{ formatSessionTime(session.startsAt, session.endsAt) }}</div>
 									<div class="small text-muted">{{ labelOf(MEETING_MODES, session.meetingMode) }}<template v-if="session.location"> · {{ session.location }}</template></div>
+									<div v-if="session.groupVideoChat" class="small text-muted"><i class="bi bi-camera-video me-1"></i>Video chat in the group's Telegram chat</div>
 									<div v-if="session.note" class="small mt-1">{{ session.note }}</div>
 									<div class="small text-muted mt-1">
 										{{ session.goingCount }} going · {{ session.notGoingCount }} can't make it
@@ -161,6 +173,7 @@ async function act(session, action) {
 									</div>
 								</div>
 								<div class="d-flex flex-wrap align-items-start gap-2">
+									<a v-if="session.meetingLink && session.status === 'SCHEDULED' && section.title === 'Upcoming'" class="btn btn-sm btn-primary" :href="session.meetingLink" target="_blank" rel="noopener noreferrer"><i class="bi bi-camera-video me-1"></i>Join</a>
 									<template v-if="canAnswer(session)">
 										<button type="button" class="btn btn-sm" :class="session.myRsvp === 'GOING' ? 'btn-success' : 'btn-outline-success'" :aria-pressed="session.myRsvp === 'GOING'" :disabled="busyId === session.id" @click="respond(session, 'GOING')">Going</button>
 										<button type="button" class="btn btn-sm" :class="session.myRsvp === 'NOT_GOING' ? 'btn-secondary' : 'btn-outline-secondary'" :aria-pressed="session.myRsvp === 'NOT_GOING'" :disabled="busyId === session.id" @click="respond(session, 'NOT_GOING')">Can't make it</button>
@@ -186,6 +199,6 @@ async function act(session, action) {
 			</template>
 		</template>
 
-		<SessionFormModal v-model="formOpen" :session="editing" :defaults="formDefaults" :saving="saving" @submit="save" />
+		<SessionFormModal v-model="formOpen" :session="editing" :defaults="formDefaults" :saving="saving" :can-use-video-chat="chatActive" @submit="save" />
 	</section>
 </template>

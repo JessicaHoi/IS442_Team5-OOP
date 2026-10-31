@@ -131,7 +131,8 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 | `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:9090` |
 | `BUILD_OUT_DIR` | Where `npm run build` writes the bundle | `../backend/src/main/resources/static` |
 | `APP_URL` | Backend setting: where students open the app, used for links in calendar files. Blank leaves the links out. | blank |
-| `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_POLLING` | Backend settings for the optional bot. See [Telegram (optional)](#telegram-optional). | off |
+| `APP_TIME_ZONE` | The zone for times written out in Telegram messages. | `Asia/Singapore` |
+| `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_POLLING`, `TELEGRAM_REMINDER_LEAD` | Backend settings for the optional bot. See [Telegram (optional)](#telegram-optional). | off |
 
 To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 9090 (see [Quick start](#quick-start)).
 
@@ -153,6 +154,8 @@ The app works fully with Telegram off, which is the default. Turning it on lets 
 - **Seed script.** `backend/supabase/seed-demo-data.sql` wipes every table, including Telegram connections.
 - **No public URL needed.** The bot polls Telegram, so it works from a laptop.
 - **Group chats.** A leader sets up the chat from the group's **Group chat** tab. Members join through a personal invite link that the bot approves. Anyone who leaves the study group is removed from the chat, except the chat's owner or an admin the bot didn't promote: Telegram refuses, so the leader sees a warning and removes them by hand. Telegram can't move ownership, so a new leader needs the old one to make them an admin.
+- **Study sessions in the chat.** Scheduling, changing or cancelling a session posts to the group's chat, with **Going** and **Can't** buttons that save the same answer as the app. Telegram accounts are matched through the chat invite or the student's connected account; anyone else gets a pop-up and nothing is saved. A reminder goes out once, `TELEGRAM_REMINDER_LEAD` (default `60m`) before the start, unless the session was created or changed inside that window. Times in these messages use `APP_TIME_ZONE` (default `Asia/Singapore`). Reminders only go out while a backend with this bot is running.
+- **Video chat sessions.** Telegram gives bots no way to start a call or invite anyone to one, so a chat admin starts it. The session's reminder tags the people going, and when a call starts within 30 minutes before the session or while it runs, the bot tags the others going. Only people the bot knows are in the chat can be tagged.
 - **Privacy.** As a group admin the bot receives every chat message. It ignores them and never logs or stores their text. Joining a chat shows a student's Telegram profile to the other members, which the join card says before they tap.
 
 ## Monolith packaging
@@ -313,7 +316,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `PUT /groups/{id}/chat-link` | Leader only. Body `{url}`, which must start with `https://t.me/`. Returns the group. |
 | | `DELETE /groups/{id}/chat-link` | Leader only. `204`. |
 | | `GET /groups/{id}/sessions?scope=upcoming\|past` | Members only. `upcoming` is the default: sessions not yet finished, including cancelled ones, soonest first. `past` is newest first. |
-| | `POST /groups/{id}/sessions` | Leader only. `201`. Body `{title, startsAt, endsAt, meetingMode, location?, note?}`. `meetingMode` is `IN_PERSON` or `ONLINE`; the start must be in the future and the length at most 8 hours. `409` if the group is closed. |
+| | `POST /groups/{id}/sessions` | Leader only. `201`. Body `{title, startsAt, endsAt, meetingMode, location?, note?, meetingLink?, groupVideoChat?}`. `meetingLink` (an `http` or `https` address) and `groupVideoChat` are for `ONLINE` sessions only, and a session can't have both. StudyBuddy doesn't create calls: the leader pastes the link. `meetingMode` is `IN_PERSON` or `ONLINE`; the start must be in the future and the length at most 8 hours. `409` if the group is closed. |
 | | `PUT /groups/{id}/sessions/{sid}` | Leader only. Same body. `409` once the session has started or been cancelled. |
 | | `POST /groups/{id}/sessions/{sid}/cancel` | Leader only. Returns the session. Same `409`. |
 | | `PUT /groups/{id}/sessions/{sid}/rsvp` | Members only. Body `{response}`, `GOING` or `NOT_GOING`. Same `409`. |
@@ -417,7 +420,9 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 {
   "id": 1, "groupId": 2, "groupName": "…", "title": "…",
   "startsAt": "ISO-8601", "endsAt": "ISO-8601", "meetingMode": "IN_PERSON",
-  "location": "… or null", "note": "… or null", "status": "SCHEDULED",
+  "location": "… or null", "note": "… or null",
+  "meetingLink": "https://… or null", "groupVideoChat": false,  // only for ONLINE sessions, and never both
+  "status": "SCHEDULED",
   "myRsvp": "GOING",                                          // null if the caller has not answered
   "goingCount": 1, "notGoingCount": 0,
   "attendees": [ { "id": 3, "name": "…", "response": "GOING" } ]
