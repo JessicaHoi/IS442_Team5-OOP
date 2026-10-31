@@ -44,6 +44,15 @@ studybuddy:
   auth:
     # How long a sign-in token stays valid. Tokens are held in memory, so a restart also signs everyone out.
     token-ttl: 12h
+  telegram:
+    # Optional. Off by default; see "Telegram (optional)" in the README. One bot per developer.
+    enabled: ${TELEGRAM_ENABLED:false}
+    bot-token: ${TELEGRAM_BOT_TOKEN:}
+    bot-username: ${TELEGRAM_BOT_USERNAME:}
+    # Only one running instance may poll per bot token.
+    polling: ${TELEGRAM_POLLING:true}
+    poll-timeout: 50s
+    link-token-ttl: 10m
   group:
     # Range a leader may choose for a group's maximum size (the front end uses the same limits).
     min-size: 2

@@ -12,6 +12,7 @@ import PageHeader from '../../components/ui/PageHeader.vue';
 import FormField from '../../components/ui/FormField.vue';
 import ChipSelect from '../../components/ui/ChipSelect.vue';
 import PreferenceEditor from '../../components/profile/PreferenceEditor.vue';
+import TelegramConnect from '../../components/profile/TelegramConnect.vue';
 import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 
@@ -208,6 +209,8 @@ async function save() {
 					<div v-if="errors.courses" class="invalid-feedback d-block">{{ errors.courses }}</div>
 				</div>
 			</section>
+
+			<TelegramConnect />
 
 			<section class="card-flat p-4 mb-4">
 				<h2 class="h6 mb-1">Study preferences</h2>

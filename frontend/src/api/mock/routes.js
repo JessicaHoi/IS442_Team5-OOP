@@ -6,6 +6,7 @@ import './handlers/connections';
 import './handlers/groups';
 import './handlers/groupAvailability';
 import './handlers/studySessions';
+import './handlers/integrations';
 import './handlers/admin';
 import './handlers/strategyPreview';
 
