@@ -37,6 +37,12 @@ watch(() => props.modelValue, (open) => {
 }, { immediate: true });
 
 const isOnline = computed(() => draft.value.meetingMode === 'ONLINE');
+/** Moving the start clears everyone's answers, because they were for the old time. */
+const startMoved = computed(() => {
+	if (!props.session || !draft.value.startsAt) return false;
+	return new Date(draft.value.startsAt).getTime() !== new Date(toLocalInput(props.session.startsAt)).getTime();
+});
+const answersToClear = computed(() => (props.session?.goingCount ?? 0) + (props.session?.notGoingCount ?? 0));
 /** Stays visible for a session already using it, even if the chat has since gone, so the leader can change it. */
 const showVideoChat = computed(() => isOnline.value && (props.canUseVideoChat || draft.value.groupVideoChat));
 
@@ -89,6 +95,7 @@ function submit() {
 				</FormField>
 			</div>
 		</div>
+		<p v-if="startMoved && answersToClear" class="alert alert-warning small" role="status">Moving the start clears the {{ answersToClear }} {{ answersToClear === 1 ? 'answer' : 'answers' }} so far, and everyone is asked again.</p>
 		<FormField v-slot="{ id }" label="Meeting mode" required>
 			<select :id="id" v-model="draft.meetingMode" class="form-select">
 				<option v-for="mode in SESSION_MEETING_MODES" :key="mode.value" :value="mode.value">{{ mode.label }}</option>

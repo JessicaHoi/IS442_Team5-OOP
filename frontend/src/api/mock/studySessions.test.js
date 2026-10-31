@@ -92,6 +92,20 @@ describe('study sessions', () => {
 		expect(stored().rsvps).toEqual([]);
 	});
 
+	it('clears answers when the start moves, keeps them for other changes, and ignores a save with no changes', async () => {
+		const session = await schedule();
+		const answer = () => call('put', `${url}/${session.id}/rsvp`, { token: memberToken, data: { response: 'GOING' } });
+		const save = (overrides) => call('put', `${url}/${session.id}`, { token: leaderToken, data: { ...session, note: '', ...overrides } });
+		await answer();
+
+		expect((await save({ note: 'Bring notes' })).data.goingCount).toBe(1);
+		const unchanged = await save({ note: 'Bring notes' });
+		expect(unchanged.data.goingCount).toBe(1);
+		expect(getDb().studySessions.find((item) => item.id === session.id).icsSequence).toBe(1);
+
+		expect((await save({ note: 'Bring notes', startsAt: hoursFromNow(25), endsAt: hoursFromNow(27) })).data.goingCount).toBe(0);
+	});
+
 	it('serves a calendar file whose sequence goes up with changes', async () => {
 		const session = await schedule();
 		const calendarUrl = `${url}/${session.id}/calendar.ics`;

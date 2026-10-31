@@ -89,6 +89,9 @@ function toSession(db, session, viewerId) {
 	};
 }
 
+/** Times can be written differently and still be the same moment. */
+const sameMoment = (key, a, b) => ['startsAt', 'endsAt'].includes(key) && new Date(a).getTime() === new Date(b).getTime();
+
 const byStart = (a, b) => new Date(a.startsAt) - new Date(b.startsAt);
 const hasEnded = (session) => new Date(session.endsAt) <= new Date();
 const compactUtc = (iso) => new Date(iso).toISOString().replace(/[-:]|\.\d{3}/g, '');
@@ -141,7 +144,11 @@ route('PUT', '/groups/:id/sessions/:sid', ({ db, user, params, body }) => {
 	const group = ledGroup(db, user, params.id);
 	const session = loadSession(db, group, params.sid);
 	requireChangeable(session);
-	Object.assign(session, validFields(body));
+	const fields = validFields(body);
+	const changed = Object.keys(fields).some((key) => (session[key] ?? null) !== fields[key] && !sameMoment(key, session[key], fields[key]));
+	if (!changed) return toSession(db, session, user.id);
+	if (!sameMoment('startsAt', session.startsAt, fields.startsAt)) session.rsvps = [];
+	Object.assign(session, fields);
 	session.icsSequence += 1;
 	return toSession(db, session, user.id);
 }, STUDENT_ONLY);

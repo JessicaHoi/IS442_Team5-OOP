@@ -4,6 +4,7 @@ import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -94,8 +95,23 @@ class HttpTelegramClient implements TelegramClient {
     }
 
     @Override
-    public long sendMessage(long chatId, String text, List<MessageEntity> entities, ReplyMarkup markup) {
-        return call("sendMessage", Map.of("chat_id", chatId, "text", text, "entities", entities, "reply_markup", markup)).path("message_id").asLong();
+    public long sendReply(long chatId, long replyToMessageId, String text, List<MessageEntity> entities) {
+        Map<String, Object> body = new HashMap<>(Map.of("chat_id", chatId, "text", text,
+                "reply_parameters", Map.of("message_id", replyToMessageId, "allow_sending_without_reply", true)));
+        if (!entities.isEmpty()) {
+            body.put("entities", entities);
+        }
+        return call("sendMessage", body).path("message_id").asLong();
+    }
+
+    @Override
+    public void editMessage(long chatId, long messageId, String text) {
+        call("editMessageText", Map.of("chat_id", chatId, "message_id", messageId, "text", text));
+    }
+
+    @Override
+    public void editMessage(long chatId, long messageId, String text, ReplyMarkup markup) {
+        call("editMessageText", Map.of("chat_id", chatId, "message_id", messageId, "text", text, "reply_markup", markup));
     }
 
     @Override
@@ -153,6 +169,11 @@ class HttpTelegramClient implements TelegramClient {
     @Override
     public void pinMessage(long chatId, long messageId) {
         call("pinChatMessage", Map.of("chat_id", chatId, "message_id", messageId, "disable_notification", true));
+    }
+
+    @Override
+    public void unpinMessage(long chatId, long messageId) {
+        call("unpinChatMessage", Map.of("chat_id", chatId, "message_id", messageId));
     }
 
     @Override

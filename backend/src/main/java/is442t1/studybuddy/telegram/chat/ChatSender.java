@@ -36,8 +36,8 @@ class ChatSender {
         return entities.isEmpty() ? send(chat, text) : onChat(chat, chatId -> client.sendMessage(chatId, text, entities));
     }
 
-    long send(ChatRef chat, String text, List<MessageEntity> entities, ReplyMarkup markup) {
-        return entities.isEmpty() ? send(chat, text, markup) : onChat(chat, chatId -> client.sendMessage(chatId, text, entities, markup));
+    long reply(ChatRef chat, long messageId, String text, List<MessageEntity> entities) {
+        return onChat(chat, chatId -> client.sendReply(chatId, messageId, text, entities));
     }
 
     /** Runs a call on the chat, using its latest saved id. */

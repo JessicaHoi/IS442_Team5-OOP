@@ -56,9 +56,11 @@ studybuddy:
     poll-timeout: 50s
     link-token-ttl: 10m
     invite-ttl: 7d
-    # How long before a study session its reminder goes to the group chat, and how often to look for due reminders.
+    # How long before a study session its reminder goes to the group chat.
     reminder-lead: ${TELEGRAM_REMINDER_LEAD:60m}
-    reminder-check: 60s
+    # How often session cards are updated after a change, and how often to check for anything that's due.
+    card-refresh: 3s
+    card-check: 60s
   group:
     # Range a leader may choose for a group's maximum size (the front end uses the same limits).
     min-size: 2

@@ -97,12 +97,57 @@ class StudySessionTest {
     void updatingAndCancellingBumpTheCalendarSequence() {
         StudySession session = schedule(valid());
 
-        session.update(leader.getId(), valid(), NOW);
+        session.update(leader.getId(), withNote("Bring a calculator"), NOW);
         assertThat(session.getIcsSequence()).isEqualTo(1);
 
         session.cancel(leader.getId(), NOW);
         assertThat(session.getIcsSequence()).isEqualTo(2);
         assertThat(session.getStatus()).isEqualTo(SessionStatus.CANCELLED);
+    }
+
+    @Test
+    void savingWithoutChangesChangesNothing() {
+        StudySession session = schedule(valid());
+        session.respond(member, RsvpResponse.GOING, NOW);
+
+        assertThat(session.update(leader.getId(), valid(), NOW.plusSeconds(60))).isEqualTo(SessionChange.NONE);
+
+        assertThat(session.getIcsSequence()).isZero();
+        assertThat(session.goingCount()).isEqualTo(1);
+    }
+
+    @Test
+    void changingDetailsKeepsAnswers() {
+        StudySession session = schedule(valid());
+        session.respond(member, RsvpResponse.GOING, NOW);
+
+        assertThat(session.update(leader.getId(), withNote("Bring a calculator"), NOW)).isEqualTo(SessionChange.DETAILS);
+
+        assertThat(session.goingCount()).isEqualTo(1);
+    }
+
+    @Test
+    void endingLaterKeepsAnswers() {
+        StudySession session = schedule(valid());
+        session.respond(member, RsvpResponse.GOING, NOW);
+
+        SessionDetails longer = new SessionDetails("Paper drill", START, START.plus(Duration.ofHours(3)), StudyMode.IN_PERSON, "SCIS GSR 2-1", "Bring notes", null, false);
+
+        assertThat(session.update(leader.getId(), longer, NOW)).isEqualTo(SessionChange.DETAILS);
+        assertThat(session.goingCount()).isEqualTo(1);
+    }
+
+    @Test
+    void movingTheStartClearsAnswers() {
+        StudySession session = schedule(valid());
+        session.respond(member, RsvpResponse.GOING, NOW);
+        Instant later = START.plus(Duration.ofDays(1));
+
+        SessionDetails moved = new SessionDetails("Paper drill", later, later.plus(Duration.ofHours(2)), StudyMode.IN_PERSON, "SCIS GSR 2-1", "Bring notes", null, false);
+
+        assertThat(session.update(leader.getId(), moved, NOW)).isEqualTo(SessionChange.START_MOVED);
+        assertThat(session.getRsvps()).isEmpty();
+        assertThat(session.getIcsSequence()).isEqualTo(1);
     }
 
     @Test
@@ -156,6 +201,10 @@ class StudySessionTest {
 
     private void assertInvalid(SessionDetails details) {
         assertThatThrownBy(() -> schedule(details)).isInstanceOf(ValidationException.class);
+    }
+
+    private static SessionDetails withNote(String note) {
+        return new SessionDetails("Paper drill", START, START.plus(Duration.ofHours(2)), StudyMode.IN_PERSON, "SCIS GSR 2-1", note, null, false);
     }
 
     private static SessionDetails valid() {

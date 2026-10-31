@@ -190,11 +190,47 @@ class HttpTelegramClientTest {
         server.expect(requestTo(BASE + "/sendMessage"))
                 .andExpect(content().json("""
                         {"chat_id":42,"text":"Going: Lee","entities":[{"type":"text_mention","offset":7,"length":3,
-                         "user":{"id":9,"is_bot":false,"first_name":"Lee"}}],"reply_markup":{"remove_keyboard":true}}
+                         "user":{"id":9,"is_bot":false,"first_name":"Lee"}}],
+                         "reply_parameters":{"message_id":5,"allow_sending_without_reply":true}}
                         """))
                 .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":1}}", MediaType.APPLICATION_JSON));
 
-        client.sendMessage(42, "Going: Lee", List.of(MessageEntity.mention(7, 3, 9, "Lee")), new ReplyMarkup.RemoveKeyboard(true));
+        assertThat(client.sendReply(42, 5, "Going: Lee", List.of(MessageEntity.mention(7, 3, 9, "Lee")))).isEqualTo(1);
+
+        server.verify();
+    }
+
+    @Test
+    void anEditWithoutButtonsSendsNoMarkup() {
+        server.expect(requestTo(BASE + "/editMessageText"))
+                .andExpect(content().json("{\"chat_id\":42,\"message_id\":5,\"text\":\"Done\"}", org.springframework.test.json.JsonCompareMode.STRICT))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":5}}", MediaType.APPLICATION_JSON));
+
+        client.editMessage(42, 5, "Done");
+
+        server.verify();
+    }
+
+    @Test
+    void anEditCanKeepButtons() {
+        server.expect(requestTo(BASE + "/editMessageText"))
+                .andExpect(content().json("""
+                        {"chat_id":42,"message_id":5,"text":"Card","reply_markup":{"inline_keyboard":[[{"text":"Going","callback_data":"g"}]]}}
+                        """))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":5}}", MediaType.APPLICATION_JSON));
+
+        client.editMessage(42, 5, "Card", ReplyMarkup.ActionButtons.inARow(new ReplyMarkup.ActionButtons.Action("Going", "g")));
+
+        server.verify();
+    }
+
+    @Test
+    void unpinsOneMessage() {
+        server.expect(requestTo(BASE + "/unpinChatMessage"))
+                .andExpect(content().json("{\"chat_id\":42,\"message_id\":5}"))
+                .andRespond(withSuccess("{\"ok\":true,\"result\":true}", MediaType.APPLICATION_JSON));
+
+        client.unpinMessage(42, 5);
 
         server.verify();
     }

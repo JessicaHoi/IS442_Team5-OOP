@@ -23,7 +23,13 @@ public interface TelegramClient {
     /** With people tagged in the text, so that Telegram notifies them. */
     long sendMessage(long chatId, String text, List<MessageEntity> entities);
 
-    long sendMessage(long chatId, String text, List<MessageEntity> entities, ReplyMarkup markup);
+    /** A reply to one of the bot's messages. It's still sent if that message has since been deleted. */
+    long sendReply(long chatId, long replyToMessageId, String text, List<MessageEntity> entities);
+
+    /** Changes a message's text and removes its buttons. Editing never notifies anyone. */
+    void editMessage(long chatId, long messageId, String text);
+
+    void editMessage(long chatId, long messageId, String text, ReplyMarkup markup);
 
     ChatInfo getChat(long chatId);
 
@@ -48,6 +54,8 @@ public interface TelegramClient {
     void setDescription(long chatId, String description);
 
     void pinMessage(long chatId, long messageId);
+
+    void unpinMessage(long chatId, long messageId);
 
     /** Sets what ordinary members may do. Admins aren't affected. */
     void setMemberPermissions(long chatId, boolean canSendMessages);
