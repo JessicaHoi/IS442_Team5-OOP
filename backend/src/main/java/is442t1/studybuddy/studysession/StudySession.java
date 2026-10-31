@@ -1,5 +1,7 @@
 package is442t1.studybuddy.studysession;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -8,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -44,6 +47,7 @@ public class StudySession extends BaseEntity {
     private static final int MAX_TITLE = 80;
     private static final int MAX_LOCATION = 200;
     private static final int MAX_NOTE = 500;
+    private static final int MAX_MEETING_LINK = 500;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "study_group_id", nullable = false)
@@ -67,6 +71,13 @@ public class StudySession extends BaseEntity {
 
     @Column(length = MAX_NOTE)
     private String note;
+
+    @Column(length = MAX_MEETING_LINK)
+    private String meetingLink;
+
+    @ColumnDefault("false")
+    @Column(nullable = false)
+    private boolean groupVideoChat;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -174,6 +185,14 @@ public class StudySession extends BaseEntity {
         return note;
     }
 
+    public String getMeetingLink() {
+        return meetingLink;
+    }
+
+    public boolean isGroupVideoChat() {
+        return groupVideoChat;
+    }
+
     public SessionStatus getStatus() {
         return status;
     }
@@ -235,12 +254,41 @@ public class StudySession extends BaseEntity {
         if (newNote != null && newNote.length() > MAX_NOTE) {
             throw new ValidationException("Note must be at most " + MAX_NOTE + " characters.");
         }
+        String newLink = trimToNull(details.meetingLink());
+        requireValidOnlineOption(details.meetingMode(), newLink, details.groupVideoChat());
         title = newTitle;
         startsAt = details.startsAt();
         endsAt = details.endsAt();
         meetingMode = details.meetingMode();
         location = newLocation;
         note = newNote;
+        meetingLink = newLink;
+        groupVideoChat = details.groupVideoChat();
+    }
+
+    private static void requireValidOnlineOption(StudyMode mode, String link, boolean videoChat) {
+        if (link == null && !videoChat) {
+            return;
+        }
+        if (mode != StudyMode.ONLINE) {
+            throw new ValidationException("Only online sessions can have a meeting link or video chat.");
+        }
+        if (link != null && videoChat) {
+            throw new ValidationException("Choose a meeting link or the group's video chat, not both.");
+        }
+        if (link != null && (link.length() > MAX_MEETING_LINK || !isWebAddress(link))) {
+            throw new ValidationException("Enter a full meeting link starting with https://.");
+        }
+    }
+
+    /** The link becomes a button members press, so only real web addresses get through. */
+    private static boolean isWebAddress(String link) {
+        try {
+            URI uri = new URI(link);
+            return ("https".equalsIgnoreCase(uri.getScheme()) || "http".equalsIgnoreCase(uri.getScheme())) && uri.getHost() != null;
+        } catch (URISyntaxException exception) {
+            return false;
+        }
     }
 
     private static void requireLeader(StudyGroup group, UUID callerId) {

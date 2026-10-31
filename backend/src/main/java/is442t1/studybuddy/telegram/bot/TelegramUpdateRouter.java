@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import is442t1.studybuddy.telegram.api.TelegramClient;
 import is442t1.studybuddy.telegram.api.Update;
 import is442t1.studybuddy.telegram.chat.ChatBotHandler;
+import is442t1.studybuddy.telegram.chat.SessionChatService;
 import is442t1.studybuddy.telegram.link.TelegramLinkService;
 
 /**
@@ -25,11 +26,14 @@ public class TelegramUpdateRouter {
     private final TelegramClient client;
     private final TelegramLinkService linkService;
     private final ChatBotHandler chatHandler;
+    private final SessionChatService sessionChat;
 
-    TelegramUpdateRouter(TelegramClient client, TelegramLinkService linkService, ChatBotHandler chatHandler) {
+    TelegramUpdateRouter(TelegramClient client, TelegramLinkService linkService, ChatBotHandler chatHandler,
+            SessionChatService sessionChat) {
         this.client = client;
         this.linkService = linkService;
         this.chatHandler = chatHandler;
+        this.sessionChat = sessionChat;
     }
 
     public void route(Update update) {
@@ -42,6 +46,8 @@ public class TelegramUpdateRouter {
             case BotEvent.BotChanged changed -> chatHandler.botChanged(changed.chatId(), changed.now());
             case BotEvent.MemberChanged changed -> chatHandler.memberChanged(changed.chatId(), changed.telegramUserId(), changed.inChat());
             case BotEvent.ChatMigrated migrated -> chatHandler.chatMigrated(migrated.oldChatId(), migrated.newChatId());
+            case BotEvent.ButtonPressed pressed -> sessionChat.buttonPressed(pressed.callbackQueryId(), pressed.telegramUserId(), pressed.data());
+            case BotEvent.VideoChatStarted started -> sessionChat.videoChatStarted(started.chatId(), started.startedBy());
             case BotEvent.Ignored ignored -> {
             }
         }

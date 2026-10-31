@@ -34,6 +34,17 @@ function requireChangeable(session) {
 	if (new Date(session.startsAt) <= new Date()) throw conflict('This session has already started.');
 }
 
+/** How an online session meets, checked the way the backend's StudySession checks it. */
+function validOnlineOption(body) {
+	const meetingLink = body.meetingLink?.trim() || null;
+	const groupVideoChat = body.groupVideoChat === true;
+	if (!meetingLink && !groupVideoChat) return { meetingLink, groupVideoChat };
+	if (body.meetingMode !== 'ONLINE') throw badRequest('Only online sessions can have a meeting link or video chat.');
+	if (meetingLink && groupVideoChat) throw badRequest('Choose a meeting link or the group\'s video chat, not both.');
+	if (meetingLink && (meetingLink.length > 500 || !/^https?:\/\/[^\s/]+\S*$/i.test(meetingLink))) throw badRequest('Enter a full meeting link starting with https://.');
+	return { meetingLink, groupVideoChat };
+}
+
 /** The editable fields, checked the way the backend's StudySession checks them. */
 function validFields(body) {
 	const title = body.title?.trim();
@@ -50,7 +61,7 @@ function validFields(body) {
 	if (location?.length > 200) throw badRequest('Location must be at most 200 characters.');
 	const note = body.note?.trim() || null;
 	if (note?.length > 500) throw badRequest('Note must be at most 500 characters.');
-	return { title, startsAt: body.startsAt, endsAt: body.endsAt, meetingMode: body.meetingMode, location, note };
+	return { title, startsAt: body.startsAt, endsAt: body.endsAt, meetingMode: body.meetingMode, location, note, ...validOnlineOption(body) };
 }
 
 function toSession(db, session, viewerId) {
@@ -68,6 +79,8 @@ function toSession(db, session, viewerId) {
 		meetingMode: session.meetingMode,
 		location: session.location,
 		note: session.note,
+		meetingLink: session.meetingLink ?? null,
+		groupVideoChat: session.groupVideoChat ?? false,
 		status: session.status,
 		myRsvp: session.rsvps.find((rsvp) => rsvp.studentId === viewerId)?.response ?? null,
 		goingCount: attendees.filter((attendee) => attendee.response === 'GOING').length,

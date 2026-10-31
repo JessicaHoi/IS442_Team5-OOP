@@ -31,7 +31,11 @@ export function sessionTimesFromSlot(slot, now = new Date()) {
 }
 
 const compactUtc = (iso) => new Date(iso).toISOString().replace(/[-:]|\.\d{3}/g, '');
-const calendarDetails = (session) => [`Study group: ${session.groupName}`, session.note].filter(Boolean).join('\n');
+const howToJoin = (session) => {
+	if (session.meetingLink) return `Join: ${session.meetingLink}`;
+	return session.groupVideoChat ? 'Video chat in the group\'s Telegram chat' : null;
+};
+const calendarDetails = (session) => [`Study group: ${session.groupName}`, howToJoin(session), session.note].filter(Boolean).join('\n');
 
 export function googleCalendarUrl(session) {
 	const params = new URLSearchParams({

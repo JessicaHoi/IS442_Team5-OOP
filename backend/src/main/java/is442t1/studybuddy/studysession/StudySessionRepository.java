@@ -29,4 +29,14 @@ public interface StudySessionRepository extends JpaRepository<StudySession, UUID
              order by s.startsAt asc
             """)
     List<StudySession> findUpcomingForStudent(@Param("studentId") UUID studentId, @Param("now") Instant now);
+
+    /** Video chat sessions in this group that are running or about to, soonest first. */
+    @Query("""
+            select s from StudySession s
+             where s.studyGroup.id = :groupId and s.groupVideoChat = true
+               and s.status = is442t1.studybuddy.model.enums.SessionStatus.SCHEDULED
+               and s.startsAt <= :startingBy and s.endsAt > :now
+             order by s.startsAt asc
+            """)
+    List<StudySession> findVideoChatSessions(@Param("groupId") UUID groupId, @Param("startingBy") Instant startingBy, @Param("now") Instant now);
 }

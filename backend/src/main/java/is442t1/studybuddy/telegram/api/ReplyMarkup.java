@@ -28,6 +28,18 @@ public sealed interface ReplyMarkup {
         }
     }
 
+    /** Buttons attached to the message that send StudyBuddy {@code callbackData} when pressed. */
+    record ActionButtons(List<List<Action>> inlineKeyboard) implements ReplyMarkup {
+
+        public static ActionButtons inARow(Action... actions) {
+            return new ActionButtons(List.of(List.of(actions)));
+        }
+
+        /** @param callbackData at most 64 bytes */
+        public record Action(String text, String callbackData) {
+        }
+    }
+
     record ChatRequestButton(String text, ChatRequest requestChat) {
     }
 

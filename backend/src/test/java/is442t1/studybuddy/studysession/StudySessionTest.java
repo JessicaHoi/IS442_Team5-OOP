@@ -61,7 +61,7 @@ class StudySessionTest {
 
     @Test
     void aNonLeaderIsRefusedBeforeTheValuesAreChecked() {
-        SessionDetails invalid = new SessionDetails(" ", null, null, null, null, null);
+        SessionDetails invalid = new SessionDetails(" ", null, null, null, null, null, null, false);
 
         assertThatThrownBy(() -> StudySession.schedule(group, member.getId(), invalid, NOW))
                 .isInstanceOf(PermissionDeniedException.class);
@@ -69,21 +69,21 @@ class StudySessionTest {
 
     @Test
     void refusesInvalidDetails() {
-        assertInvalid(new SessionDetails(" ", START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, null));
-        assertInvalid(new SessionDetails("x".repeat(81), START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, null));
-        assertInvalid(new SessionDetails("Title", null, START, StudyMode.ONLINE, null, null));
-        assertInvalid(new SessionDetails("Title", START, START, StudyMode.ONLINE, null, null));
-        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(8)).plusSeconds(1), StudyMode.ONLINE, null, null));
-        assertInvalid(new SessionDetails("Title", NOW, NOW.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, null));
-        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), StudyMode.EITHER, null, null));
-        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), null, null, null));
-        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, "x".repeat(201), null));
-        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, "x".repeat(501)));
+        assertInvalid(new SessionDetails(" ", START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, null, null, false));
+        assertInvalid(new SessionDetails("x".repeat(81), START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, null, null, false));
+        assertInvalid(new SessionDetails("Title", null, START, StudyMode.ONLINE, null, null, null, false));
+        assertInvalid(new SessionDetails("Title", START, START, StudyMode.ONLINE, null, null, null, false));
+        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(8)).plusSeconds(1), StudyMode.ONLINE, null, null, null, false));
+        assertInvalid(new SessionDetails("Title", NOW, NOW.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, null, null, false));
+        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), StudyMode.EITHER, null, null, null, false));
+        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), null, null, null, null, false));
+        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, "x".repeat(201), null, null, false));
+        assertInvalid(new SessionDetails("Title", START, START.plus(Duration.ofHours(1)), StudyMode.ONLINE, null, "x".repeat(501), null, false));
     }
 
     @Test
     void anEightHourSessionIsAllowed() {
-        schedule(new SessionDetails("Title", START, START.plus(Duration.ofHours(8)), StudyMode.ONLINE, null, null));
+        schedule(new SessionDetails("Title", START, START.plus(Duration.ofHours(8)), StudyMode.ONLINE, null, null, null, false));
     }
 
     @Test
@@ -159,7 +159,7 @@ class StudySessionTest {
     }
 
     private static SessionDetails valid() {
-        return new SessionDetails(" Paper drill ", START, START.plus(Duration.ofHours(2)), StudyMode.IN_PERSON, "SCIS GSR 2-1", "Bring notes");
+        return new SessionDetails(" Paper drill ", START, START.plus(Duration.ofHours(2)), StudyMode.IN_PERSON, "SCIS GSR 2-1", "Bring notes", null, false);
     }
 
     private static Student student(String name) {

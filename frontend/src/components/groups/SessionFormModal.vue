@@ -11,6 +11,8 @@ const props = defineProps({
 	session: { type: Object, default: null },
 	defaults: { type: Object, default: null },
 	saving: Boolean,
+	/** The group has a working Telegram chat, so its video chat can be offered. */
+	canUseVideoChat: Boolean,
 });
 const emit = defineEmits(['update:modelValue', 'submit']);
 
@@ -28,17 +30,24 @@ watch(() => props.modelValue, (open) => {
 			meetingMode: props.session.meetingMode,
 			location: props.session.location ?? '',
 			note: props.session.note ?? '',
+			meetingLink: props.session.meetingLink ?? '',
+			groupVideoChat: props.session.groupVideoChat,
 		}
-		: { title: '', startsAt: '', endsAt: '', meetingMode: 'IN_PERSON', location: '', note: '', ...props.defaults };
+		: { title: '', startsAt: '', endsAt: '', meetingMode: 'IN_PERSON', location: '', note: '', meetingLink: '', groupVideoChat: false, ...props.defaults };
 }, { immediate: true });
+
+const isOnline = computed(() => draft.value.meetingMode === 'ONLINE');
+/** Stays visible for a session already using it, even if the chat has since gone, so the leader can change it. */
+const showVideoChat = computed(() => isOnline.value && (props.canUseVideoChat || draft.value.groupVideoChat));
 
 const errors = computed(() => {
 	if (!submitted.value) return {};
-	const { title, startsAt, endsAt } = draft.value;
+	const { title, startsAt, endsAt, meetingLink, groupVideoChat } = draft.value;
 	return {
 		title: title?.trim() ? '' : 'Give the session a title.',
 		startsAt: startsAt ? '' : 'Choose a start time.',
 		endsAt: !endsAt ? 'Choose an end time.' : startsAt && new Date(endsAt) <= new Date(startsAt) ? 'The session must end after it starts.' : '',
+		meetingLink: isOnline.value && !groupVideoChat && meetingLink?.trim() && !/^https?:\/\/\S+$/i.test(meetingLink.trim()) ? 'Enter a full meeting link starting with https://.' : '',
 	};
 });
 
@@ -50,6 +59,8 @@ function submit() {
 		title: draft.value.title.trim(),
 		startsAt: new Date(draft.value.startsAt).toISOString(),
 		endsAt: new Date(draft.value.endsAt).toISOString(),
+		meetingLink: isOnline.value && !draft.value.groupVideoChat ? draft.value.meetingLink.trim() : '',
+		groupVideoChat: isOnline.value && draft.value.groupVideoChat,
 	});
 }
 </script>
@@ -83,7 +94,17 @@ function submit() {
 				<option v-for="mode in SESSION_MEETING_MODES" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
 			</select>
 		</FormField>
-		<FormField v-slot="{ id }" label="Location" hint="A room, or a meeting link for online sessions.">
+		<template v-if="isOnline">
+			<div v-if="showVideoChat" class="form-check mb-3">
+				<input id="session-video-chat" v-model="draft.groupVideoChat" class="form-check-input" type="checkbox" />
+				<label class="form-check-label" for="session-video-chat">Use the group's Telegram video chat</label>
+				<div class="form-text">A chat admin starts the call in Telegram. The bot then tags everyone going who is in the chat, because Telegram doesn't let bots start a call or invite people to one.</div>
+			</div>
+			<FormField v-if="!draft.groupVideoChat" v-slot="{ id, invalidClass }" label="Meeting link" hint="Create the call in Zoom, Meet or Teams, then paste its link." :error="errors.meetingLink">
+				<input :id="id" v-model="draft.meetingLink" type="url" class="form-control" :class="invalidClass" maxlength="500" placeholder="https://" />
+			</FormField>
+		</template>
+		<FormField v-slot="{ id }" label="Location" :hint="isOnline ? 'Optional.' : 'A room or place to meet.'">
 			<input :id="id" v-model="draft.location" type="text" class="form-control" maxlength="200" />
 		</FormField>
 		<FormField v-slot="{ id }" label="Note">

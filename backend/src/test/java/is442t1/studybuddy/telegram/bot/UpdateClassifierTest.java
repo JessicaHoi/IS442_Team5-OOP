@@ -78,4 +78,18 @@ class UpdateClassifierTest {
         assertThat(UpdateClassifier.classify(new Update(1, new Update.Message(2, PERSON, new Update.Chat(-100, "supergroup"), null, null, null, -5L))))
                 .isEqualTo(new BotEvent.ChatMigrated(-5, -100));
     }
+
+    @Test
+    void readsAPressedButton() {
+        Update update = new Update(1, null, null, null, null, new Update.CallbackQuery("abc", PERSON, "rsvp:1:G"));
+
+        assertThat(UpdateClassifier.classify(update)).isEqualTo(new BotEvent.ButtonPressed("abc", PERSON.id(), "rsvp:1:G"));
+    }
+
+    @Test
+    void readsAVideoChatStartingInAGroup() {
+        Update update = new Update(1, new Update.Message(2, PERSON, new Update.Chat(-100, "supergroup"), null, null, null, null, new Update.VideoChatStarted()));
+
+        assertThat(UpdateClassifier.classify(update)).isEqualTo(new BotEvent.VideoChatStarted(-100, PERSON.id()));
+    }
 }

@@ -24,6 +24,9 @@ import is442t1.studybuddy.group.event.LeadershipTransferred;
 import is442t1.studybuddy.group.event.MemberJoined;
 import is442t1.studybuddy.group.event.MemberLeft;
 import is442t1.studybuddy.student.StudentRepository;
+import is442t1.studybuddy.studysession.event.SessionCancelled;
+import is442t1.studybuddy.studysession.event.SessionChanged;
+import is442t1.studybuddy.studysession.event.SessionScheduled;
 import is442t1.studybuddy.telegram.chat.ChatStore.Removal;
 import is442t1.studybuddy.telegram.link.TelegramAccountRepository;
 import is442t1.studybuddy.telegram.TelegramProperties;
@@ -44,15 +47,17 @@ class ChatSyncListener {
     }
 
     private final GroupChatService chatService;
+    private final SessionChatService sessionChat;
     private final ChatStore store;
     private final StudentRepository studentRepository;
     private final TelegramAccountRepository accountRepository;
     private final TelegramProperties properties;
     private final ApplicationEventPublisher events;
 
-    ChatSyncListener(GroupChatService chatService, ChatStore store, StudentRepository studentRepository,
+    ChatSyncListener(GroupChatService chatService, SessionChatService sessionChat, ChatStore store, StudentRepository studentRepository,
             TelegramAccountRepository accountRepository, TelegramProperties properties, ApplicationEventPublisher events) {
         this.chatService = chatService;
+        this.sessionChat = sessionChat;
         this.store = store;
         this.studentRepository = studentRepository;
         this.accountRepository = accountRepository;
@@ -96,6 +101,24 @@ class ChatSyncListener {
     void on(LeadershipTransferred event) {
         logFailure("a new leader", () -> studentRepository.findById(event.newLeaderId())
                 .ifPresent(leader -> chatService.onLeadershipTransferred(event.groupId(), leader.getName())));
+    }
+
+    @TransactionalEventListener
+    @Async("telegramExecutor")
+    void on(SessionScheduled event) {
+        logFailure("a new session", () -> sessionChat.postScheduled(event.sessionId()));
+    }
+
+    @TransactionalEventListener
+    @Async("telegramExecutor")
+    void on(SessionChanged event) {
+        logFailure("a changed session", () -> sessionChat.postChanged(event.sessionId()));
+    }
+
+    @TransactionalEventListener
+    @Async("telegramExecutor")
+    void on(SessionCancelled event) {
+        logFailure("a cancelled session", () -> sessionChat.postCancelled(event.sessionId()));
     }
 
     /** Runs inside the deleting transaction, while the rows can still be read. */

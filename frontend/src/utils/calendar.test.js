@@ -56,3 +56,12 @@ describe('calendar links', () => {
 		expect(calendarFileName('复习')).toBe('study-session.ics');
 	});
 });
+
+describe('how to join', () => {
+	it('puts the meeting link or video chat in the calendar details', () => {
+		const details = (extra) => new URL(googleCalendarUrl({ ...session, ...extra })).searchParams.get('details');
+		expect(details({ meetingLink: 'https://meet.example.com/abc' })).toContain('Join: https://meet.example.com/abc');
+		expect(details({ groupVideoChat: true })).toContain('Telegram chat');
+		expect(details({})).toBe('Study group: IS442 Crew\nBring notes');
+	});
+});
