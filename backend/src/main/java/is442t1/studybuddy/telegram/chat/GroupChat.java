@@ -59,6 +59,9 @@ public class GroupChat extends BaseEntity {
     @Column(nullable = false)
     private Instant linkedAt;
 
+    /** When setup first ran, so getting rights back later doesn't rename the chat and pin another message. */
+    private Instant setupFinishedAt;
+
     @Version
     private long version;
 
@@ -74,17 +77,24 @@ public class GroupChat extends BaseEntity {
         this.title = title;
         this.linkedByStudentId = linkedByStudentId;
         this.linkedAt = now;
-        applyRights(rights);
+        applyRights(rights, now);
     }
 
-    /** Updates what's missing. Returns true if this made the chat usable, so setup can finish. */
-    boolean applyRights(ChatRights rights) {
-        boolean wasReady = status == GroupChatStatus.ACTIVE;
+    /** Updates what's missing. Returns true the first time this makes the chat usable, when setup should run. */
+    boolean applyRights(ChatRights rights, Instant now) {
         missingRights = rights.missingNames();
         if (status != GroupChatStatus.CLOSED) {
             status = rights.hasRequired() ? GroupChatStatus.ACTIVE : GroupChatStatus.NEEDS_ATTENTION;
         }
-        return !wasReady && status == GroupChatStatus.ACTIVE;
+        if (status != GroupChatStatus.ACTIVE || setupFinishedAt != null) {
+            return false;
+        }
+        setupFinishedAt = now;
+        return true;
+    }
+
+    void rename(String newTitle) {
+        title = newTitle;
     }
 
     /** A basic group becomes a supergroup with a new id when it's upgraded. */

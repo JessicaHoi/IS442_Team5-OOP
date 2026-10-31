@@ -10,8 +10,7 @@ public sealed interface ReplyMarkup {
      * Buttons under the message box. {@code isPersistent} stops Telegram tucking them away behind the keyboard icon,
      * and they stay until {@link RemoveKeyboard}, so a leader who backs out can try again.
      */
-    record Keyboard(List<List<ChatRequestButton>> keyboard, boolean isPersistent, boolean resizeKeyboard,
-            boolean oneTimeKeyboard) implements ReplyMarkup {
+    record Keyboard(List<List<ChatRequestButton>> keyboard, boolean isPersistent, boolean resizeKeyboard) implements ReplyMarkup {
     }
 
     record RemoveKeyboard(boolean removeKeyboard) implements ReplyMarkup {

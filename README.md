@@ -156,7 +156,7 @@ The app works fully with Telegram off, which is the default. Turning it on lets 
 - **Group chats.** A leader sets up the chat from the group's **Group chat** tab. Members join through a personal invite link that the bot approves. Anyone who leaves the study group is removed from the chat, except the chat's owner or an admin the bot didn't promote: Telegram refuses, so the leader sees a warning and removes them by hand. Telegram can't move ownership, so a new leader needs the old one to make them an admin.
 - **Study sessions in the chat.** Scheduling, changing or cancelling a session posts to the group's chat, with **Going** and **Can't** buttons that save the same answer as the app. Telegram accounts are matched through the chat invite or the student's connected account; anyone else gets a pop-up and nothing is saved. A reminder goes out once, `TELEGRAM_REMINDER_LEAD` (default `60m`) before the start, unless the session was created or changed inside that window. Times in these messages use `APP_TIME_ZONE` (default `Asia/Singapore`). Reminders only go out while a backend with this bot is running, and only from the instance polling for updates.
 - **Video chat sessions.** Telegram gives bots no way to start a call or invite anyone to one, so a chat admin starts it. The session's reminder tags the people going, and when a call starts within 30 minutes before the session or while it runs, the bot tags the others going. Only people the bot knows are in the chat can be tagged.
-- **Privacy.** As a group admin the bot receives every chat message. It ignores them and never logs or stores their text. Joining a chat shows a student's Telegram profile to the other members, which the join card says before they tap.
+- **Privacy.** As a group admin the bot receives every chat message. It ignores them and never logs or stores their text. Joining a chat shows a student's Telegram profile to the other members, which the join card says before they tap. In an existing group linked to StudyBuddy, everyone already there can see session details such as the note and meeting link, which the setup message says before the leader chooses.
 
 ## Monolith packaging
 
@@ -341,7 +341,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | Group chat | `GET /groups/{id}/chat` | Members only. See shape below. `NOT_LINKED` when Telegram is off. |
 | | `POST /groups/{id}/chat/setup` | Leader only, open group with no chat. Returns `{url, expiresAt}`, a link to open in Telegram. `409` when Telegram is off. |
 | | `POST /groups/{id}/chat/verify` | Leader only. Re-checks the bot's rights and returns the chat. |
-| | `POST /groups/{id}/chat/invite` | Active members of an open group. Optional body `{renew}`. Returns the chat with `me.inviteUrl`. `renew` replaces the link, or removes whoever joined with it ("Not you?"). `409` if the chat isn't usable, `503` if Telegram fails. |
+| | `POST /groups/{id}/chat/invite` | Active members of an open group. Optional body `{renew}`. Returns the chat with `me.inviteUrl`. `renew` replaces the link, or removes whoever joined with it ("Not you?"). `409` if the chat isn't usable, or if the student's connected Telegram account is already in it as another student, `503` if Telegram fails. |
 | | `DELETE /groups/{id}/chat` | Leader only. Revokes invites and the bot leaves; the chat stays on Telegram. `204`. |
 
 ### Enums

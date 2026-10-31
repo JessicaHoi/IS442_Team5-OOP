@@ -15,12 +15,14 @@ public interface TelegramClient {
     /** Waits up to {@code timeout} for updates. An {@code offset} confirms every earlier update. */
     List<Update> getUpdates(long offset, Duration timeout, List<String> allowedUpdates);
 
-    void sendMessage(long chatId, String text);
-
     /** Returns the new message's id, so it can be pinned. */
+    long sendMessage(long chatId, String text);
+
     long sendMessage(long chatId, String text, ReplyMarkup markup);
 
-    /** The same, with people tagged in the text so that Telegram notifies them. */
+    /** With people tagged in the text, so that Telegram notifies them. */
+    long sendMessage(long chatId, String text, List<MessageEntity> entities);
+
     long sendMessage(long chatId, String text, List<MessageEntity> entities, ReplyMarkup markup);
 
     ChatInfo getChat(long chatId);

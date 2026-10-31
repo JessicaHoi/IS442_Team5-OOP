@@ -2,7 +2,6 @@ package is442t1.studybuddy.telegram.chat;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.Executor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,9 +10,9 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -141,17 +140,26 @@ class ChatSyncListener {
         }
     }
 
-    /** At most two at a time, because each one also needs a database connection and the shared pool is small. */
+    /**
+     * At most two at a time, because each one also needs a database connection and the shared pool is small. The rest
+     * wait in a queue, so a slow Telegram never slows the web request that caused the work. If even the queue is full,
+     * the update is dropped and logged rather than failing that request.
+     */
     @Configuration(proxyBeanMethods = false)
     @EnableAsync
     @ConditionalOnProperty(prefix = "studybuddy.telegram", name = "enabled", havingValue = "true")
     static class AsyncConfig {
 
+        static final int QUEUE_CAPACITY = 200;
+
         @Bean("telegramExecutor")
-        Executor telegramExecutor() {
-            SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("telegram-sync-");
-            executor.setVirtualThreads(true);
-            executor.setConcurrencyLimit(2);
+        ThreadPoolTaskExecutor telegramExecutor() {
+            ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+            executor.setThreadNamePrefix("telegram-sync-");
+            executor.setCorePoolSize(2);
+            executor.setMaxPoolSize(2);
+            executor.setQueueCapacity(QUEUE_CAPACITY);
+            executor.setRejectedExecutionHandler((task, pool) -> LOG.warn("Too many Telegram updates are waiting, so one was dropped."));
             return executor;
         }
     }

@@ -32,12 +32,17 @@ class DisabledTelegramClient implements TelegramClient {
     }
 
     @Override
-    public void sendMessage(long chatId, String text) {
+    public long sendMessage(long chatId, String text) {
         throw off();
     }
 
     @Override
     public long sendMessage(long chatId, String text, ReplyMarkup markup) {
+        throw off();
+    }
+
+    @Override
+    public long sendMessage(long chatId, String text, List<MessageEntity> entities) {
         throw off();
     }
 

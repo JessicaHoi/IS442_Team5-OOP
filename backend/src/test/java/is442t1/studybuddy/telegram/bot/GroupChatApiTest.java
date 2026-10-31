@@ -1,11 +1,12 @@
 package is442t1.studybuddy.telegram.bot;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.after;
@@ -15,6 +16,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -24,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -141,7 +144,6 @@ class GroupChatApiTest extends ApiTestSupport {
         verify(client, atLeastOnce()).sendMessage(eq(userId), anyString(), markup.capture());
         ReplyMarkup.Keyboard keyboard = (ReplyMarkup.Keyboard) markup.getValue();
         assertThat(keyboard.isPersistent()).isTrue();
-        assertThat(keyboard.oneTimeKeyboard()).isFalse();
         return keyboard.keyboard().getFirst().getFirst().requestChat().requestId();
     }
 
@@ -281,7 +283,7 @@ class GroupChatApiTest extends ApiTestSupport {
 
         router.route(message(leaderTelegramId, "Leah", "/start " + payload));
 
-        verify(client).sendMessage(leaderTelegramId, "This setup link has expired or belongs to someone else. Open your group in StudyBuddy and start again.");
+        verify(client).sendMessage(leaderTelegramId, "This setup link is no longer valid. Open your group in StudyBuddy and start again.");
     }
 
     private String leaderEmailFromGroup() {
@@ -543,7 +545,7 @@ class GroupChatApiTest extends ApiTestSupport {
         acceptIntoGroup(newToken);
 
         verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(telegramId), anyString(),
-                argThat(markup -> markup instanceof ReplyMarkup.LinkButton));
+                any(ReplyMarkup.LinkButton.class));
     }
 
     @Test
@@ -576,7 +578,7 @@ class GroupChatApiTest extends ApiTestSupport {
         mockMvc.perform(as(leaderToken, put(path("/leader"))).content("{\"studentId\":\"" + idOf(memberEmail) + "\"}"))
                 .andExpect(status().isOk());
 
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("is now the leader"), any());
+        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("is now the leader"));
         mockMvc.perform(as(memberToken, get(path("/chat")))).andExpect(jsonPath("$.ownedByFormerLeader").value(true));
     }
 
@@ -663,5 +665,113 @@ class GroupChatApiTest extends ApiTestSupport {
         jdbc.update("update users set status = 'SUSPENDED' where id = ?", idOf(memberEmail));
 
         mockMvc.perform(as(memberToken, post(path("/chat/invite")))).andExpect(status().is4xxClientError());
+    }
+
+    @Test
+    void aConnectedAccountAlreadyInTheChatAsAnotherStudentIsRefusedClearly() throws Exception {
+        linkChat();
+        String secondToken = login(createStudent("Second Member", "IS442"));
+        acceptIntoGroup(secondToken);
+        long sameTelegram = NEXT_ID.incrementAndGet();
+        askToJoin(sameTelegram, inviteUrl(memberToken));
+        connectTelegram(secondToken, sameTelegram);
+        when(client.getChatMember(chatId, sameTelegram)).thenReturn(plainMember());
+
+        mockMvc.perform(as(secondToken, post(path("/chat/invite"))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("already in this chat as another student")));
+
+        assertThat(jdbc.queryForObject("select count(*) from chat_membership where telegram_user_id = ?", Long.class, sameTelegram)).isEqualTo(1);
+    }
+
+    @Test
+    void theDatabaseRefusesOneTelegramAccountOnTwoStudentsInAChat() throws Exception {
+        linkChat();
+        inviteUrl(memberToken);
+
+        assertThatThrownBy(() -> jdbc.update("update chat_membership set telegram_user_id = ? where student_id = ?", leaderTelegramId, idOf(memberEmail)))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void choosingAChatLinkedElsewhereLeavesTheSetupLinkUsable() throws Exception {
+        linkChat();
+        String otherLeaderToken = login(createStudent("Other Leader", "IS442"));
+        String otherGroup = read(mockMvc.perform(as(otherLeaderToken, post("/api/groups")).content("""
+                        {"courseCode":"IS442","name":"Other Crew","description":"x",
+                         "goals":["EXAM_PREPARATION"],"meetingMode":"ONLINE","maxSize":4,
+                         "availability":[{"day":"TUE","start":"19:00","end":"21:00"}]}"""))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        String url = read(mockMvc.perform(as(otherLeaderToken, post("/api/groups/" + otherGroup + "/chat/setup")))
+                .andReturn().getResponse().getContentAsString(), "$.url");
+        long other = NEXT_ID.incrementAndGet();
+        when(client.getChatMember(anyLong(), eq(other))).thenReturn(owner());
+        int requestId = openSetup(other, url.substring(SETUP_PREFIX.length()));
+
+        choose(other, requestId, chatId);
+        verify(client).sendMessage(eq(other), contains("Your setup link still works"));
+
+        choose(other, requestId, -NEXT_ID.incrementAndGet());
+        mockMvc.perform(as(otherLeaderToken, get("/api/groups/" + otherGroup + "/chat"))).andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void gettingRightsBackDoesNotSetTheChatUpAgain() throws Exception {
+        linkChat();
+
+        router.route(new Update(1, null, new Update.ChatMemberUpdated(new Update.Chat(chatId, "supergroup"), null, admin(), plainMember(), null), null, null));
+        expectChatStatus(leaderToken, "NEEDS_ATTENTION");
+        router.route(new Update(2, null, new Update.ChatMemberUpdated(new Update.Chat(chatId, "supergroup"), null, plainMember(), admin(), null), null, null));
+
+        expectChatStatus(leaderToken, "ACTIVE");
+        verify(client, times(1)).setTitle(anyLong(), anyString());
+        verify(client, times(1)).pinMessage(anyLong(), anyLong());
+    }
+
+    @Test
+    void aFailedApprovalStartsTheStudentAgainAndTellsThem() throws Exception {
+        linkChat();
+        long telegramId = NEXT_ID.incrementAndGet();
+        String url = inviteUrl(memberToken);
+        doThrow(new TelegramApiException(500, "down", null, null)).when(client).approveJoinRequest(chatId, telegramId);
+
+        assertThatThrownBy(() -> askToJoin(telegramId, url)).isInstanceOf(TelegramApiException.class);
+
+        expectMyState(memberToken, "NOT_INVITED");
+        verify(client).sendMessage(eq(telegramId), contains("couldn't let you into the chat"));
+    }
+
+    @Test
+    void aRemovalFollowsAnUpgradedChat() throws Exception {
+        linkChat();
+        long telegramId = NEXT_ID.incrementAndGet();
+        askToJoin(telegramId, inviteUrl(memberToken));
+        long newId = -NEXT_ID.incrementAndGet();
+        doThrow(new TelegramApiException(400, "upgraded", null, newId)).when(client).banMember(chatId, telegramId);
+
+        mockMvc.perform(as(memberToken, post(path("/leave")))).andExpect(status().isNoContent());
+
+        verify(client, timeout(TIMEOUT_MS)).unbanMember(newId, telegramId);
+        verify(client).banMember(newId, telegramId);
+        await().atMost(Duration.ofMillis(TIMEOUT_MS)).until(() -> "REMOVED".equals(jdbc.queryForObject(
+                "select state from chat_membership where student_id = ?", String.class, idOf(memberEmail))));
+    }
+
+    @Test
+    void theAppShowsTheNameTheBotGaveTheChat() throws Exception {
+        linkChat();
+
+        mockMvc.perform(as(leaderToken, get(path("/chat")))).andExpect(jsonPath("$.title").value("Exam Crew · IS442"));
+    }
+
+    @Test
+    void aGroupClosedDuringSetupCannotBeLinked() throws Exception {
+        int requestId = openSetup(leaderTelegramId, setupPayload());
+        mockMvc.perform(as(leaderToken, post(path("/close")))).andExpect(status().isOk());
+
+        choose(leaderTelegramId, requestId, chatId);
+
+        expectChatStatus(leaderToken, "NOT_LINKED");
+        verify(client, never()).setMemberPermissions(anyLong(), anyBoolean());
     }
 }

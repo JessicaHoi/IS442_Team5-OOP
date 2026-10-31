@@ -79,13 +79,18 @@ class HttpTelegramClient implements TelegramClient {
     }
 
     @Override
-    public void sendMessage(long chatId, String text) {
-        call("sendMessage", Map.of("chat_id", chatId, "text", text));
+    public long sendMessage(long chatId, String text) {
+        return call("sendMessage", Map.of("chat_id", chatId, "text", text)).path("message_id").asLong();
     }
 
     @Override
     public long sendMessage(long chatId, String text, ReplyMarkup markup) {
         return call("sendMessage", Map.of("chat_id", chatId, "text", text, "reply_markup", markup)).path("message_id").asLong();
+    }
+
+    @Override
+    public long sendMessage(long chatId, String text, List<MessageEntity> entities) {
+        return call("sendMessage", Map.of("chat_id", chatId, "text", text, "entities", entities)).path("message_id").asLong();
     }
 
     @Override

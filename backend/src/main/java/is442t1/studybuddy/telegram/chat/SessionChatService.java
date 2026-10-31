@@ -37,43 +37,49 @@ public class SessionChatService {
 
     static final String UNKNOWN_PERSON = "StudyBuddy doesn't know this Telegram account. Join the chat from your study group's page, or answer there.";
     static final String BUTTON_NOT_VALID = "This button no longer works.";
+    static final String BUTTON_FAILED = "That didn't save. Please try again, or answer in StudyBuddy.";
     private static final Logger LOG = LoggerFactory.getLogger(SessionChatService.class);
 
     private final SessionChatStore store;
     private final ChatStore chatStore;
-    private final GroupChatService chatService;
+    private final ChatSender sender;
     private final StudySessionService sessionService;
     private final TelegramClient client;
     private final ZoneId zone;
 
-    SessionChatService(SessionChatStore store, ChatStore chatStore, GroupChatService chatService, StudySessionService sessionService,
+    SessionChatService(SessionChatStore store, ChatStore chatStore, ChatSender sender, StudySessionService sessionService,
             TelegramClient client, AppProperties appProperties) {
         this.store = store;
         this.chatStore = chatStore;
-        this.chatService = chatService;
+        this.sender = sender;
         this.sessionService = sessionService;
         this.client = client;
         this.zone = appProperties.timeZone();
     }
 
     void postScheduled(UUID sessionId) {
-        postIf(SessionStatus.SCHEDULED, sessionId, SessionMessages::scheduled, SessionMessages.rsvpButtons(sessionId));
+        post(SessionStatus.SCHEDULED, sessionId, SessionMessages::scheduled, withButtons(sessionId));
     }
 
     /** Clears the reminder first, so a post that fails can't cost the session its reminder for the new time. */
     void postChanged(UUID sessionId) {
         store.clearReminder(sessionId);
-        postIf(SessionStatus.SCHEDULED, sessionId, SessionMessages::changed, SessionMessages.rsvpButtons(sessionId));
+        post(SessionStatus.SCHEDULED, sessionId, SessionMessages::changed, withButtons(sessionId));
     }
 
     void postCancelled(UUID sessionId) {
-        postIf(SessionStatus.CANCELLED, sessionId, SessionMessages::cancelled, new ReplyMarkup.RemoveKeyboard(true));
+        post(SessionStatus.CANCELLED, sessionId, SessionMessages::cancelled, sender::send);
     }
 
-    private void postIf(SessionStatus expected, UUID sessionId, BiFunction<SessionMessages.Details, ZoneId, String> wording, ReplyMarkup markup) {
+    private BiFunction<ChatRef, String, Long> withButtons(UUID sessionId) {
+        return (chat, text) -> sender.send(chat, text, SessionMessages.rsvpButtons(sessionId));
+    }
+
+    private void post(SessionStatus expected, UUID sessionId, BiFunction<SessionMessages.Details, ZoneId, String> wording,
+            BiFunction<ChatRef, String, Long> send) {
         store.read(sessionId).filter(session -> session.status() == expected).ifPresent(session ->
                 activeChat(session).ifPresent(chat -> {
-                    long messageId = chatService.send(chat, wording.apply(session.details(), zone), markup);
+                    long messageId = send.apply(chat, wording.apply(session.details(), zone));
                     store.recordPost(sessionId, chat.id(), messageId, Instant.now());
                     LOG.info("Posted to the chat of study group {} about session {}.", session.groupId(), sessionId);
                 }));
@@ -83,8 +89,22 @@ public class SessionChatService {
         return chatStore.findByGroup(session.groupId()).filter(chat -> chat.status() == GroupChatStatus.ACTIVE);
     }
 
-    /** Saves the answer with the same rules as the app, then tells the person how it went. */
+    /** Every press gets an answer, even after an unexpected error, or the button keeps spinning. */
     public void buttonPressed(String callbackQueryId, long telegramUserId, String data) {
+        try {
+            answerPress(callbackQueryId, telegramUserId, data);
+        } catch (RuntimeException exception) {
+            LOG.warn("Could not handle a button press: {}", exception.getClass().getSimpleName());
+            try {
+                client.answerButton(callbackQueryId, BUTTON_FAILED, true);
+            } catch (TelegramApiException answerFailure) {
+                LOG.warn("Could not answer a button press: {}", answerFailure.getMessage());
+            }
+        }
+    }
+
+    /** Saves the answer with the same rules as the app, then tells the person how it went. */
+    private void answerPress(String callbackQueryId, long telegramUserId, String data) {
         Optional<RsvpPress> press = RsvpPress.parse(data);
         if (press.isEmpty()) {
             client.answerButton(callbackQueryId, BUTTON_NOT_VALID, true);
@@ -127,9 +147,9 @@ public class SessionChatService {
                     ReplyMarkup buttons = SessionMessages.rsvpButtons(sessionId);
                     if (session.details().groupVideoChat()) {
                         Tagged reminder = SessionMessages.videoChatReminder(session.details(), zone, store.goingInChat(sessionId));
-                        chatService.send(chat, reminder.text(), reminder.entities(), buttons);
+                        sender.send(chat, reminder.text(), reminder.entities(), buttons);
                     } else {
-                        chatService.send(chat, SessionMessages.reminder(session.details(), zone), buttons);
+                        sender.send(chat, SessionMessages.reminder(session.details(), zone), buttons);
                     }
                 }));
     }
@@ -146,7 +166,7 @@ public class SessionChatService {
                                     .filter(attendee -> startedBy == null || attendee.telegramUserId() != startedBy)
                                     .toList();
                             Tagged notice = SessionMessages.videoChatStarted(session.details().title(), others);
-                            chatService.send(chat, notice.text(), notice.entities(), new ReplyMarkup.RemoveKeyboard(true));
+                            sender.send(chat, notice.text(), notice.entities());
                         })));
     }
 }

@@ -183,7 +183,7 @@ class SessionChatApiTest extends ApiTestSupport {
         verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("updated: Mock exam"), any(ReplyMarkup.ActionButtons.class));
 
         mockMvc.perform(as(leaderToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isOk());
-        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("cancelled: Mock exam"), any(ReplyMarkup.RemoveKeyboard.class));
+        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("cancelled: Mock exam"));
     }
 
     @Test
@@ -449,7 +449,7 @@ class SessionChatApiTest extends ApiTestSupport {
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
 
         verifyReminders(0);
-        verify(client, never()).sendMessage(eq(chatId), contains("cancelled: Mock exam"), any(ReplyMarkup.class));
+        verify(client, never()).sendMessage(eq(chatId), contains("cancelled: Mock exam"));
     }
 
     private static String videoChatBody(Instant startsAt) {
@@ -523,7 +523,7 @@ class SessionChatApiTest extends ApiTestSupport {
         callStartedBy(leaderTelegramId);
 
         ArgumentCaptor<List<MessageEntity>> entities = ArgumentCaptor.captor();
-        verify(client).sendMessage(eq(chatId), contains("video chat for Mock exam has started"), entities.capture(), any(ReplyMarkup.class));
+        verify(client).sendMessage(eq(chatId), contains("video chat for Mock exam has started"), entities.capture());
         assertThat(entities.getValue()).extracting(entity -> entity.user().id()).containsExactly(memberTelegramId);
     }
 
@@ -535,8 +535,8 @@ class SessionChatApiTest extends ApiTestSupport {
 
         callStartedBy(leaderTelegramId);
 
-        verify(client, never()).sendMessage(eq(chatId), contains("has started"), any(ReplyMarkup.class));
-        verify(client, never()).sendMessage(eq(chatId), contains("has started"), any(List.class), any(ReplyMarkup.class));
+        verify(client, never()).sendMessage(eq(chatId), contains("has started"));
+        verify(client, never()).sendMessage(eq(chatId), contains("has started"), any(List.class));
     }
 
     @Test
@@ -546,7 +546,20 @@ class SessionChatApiTest extends ApiTestSupport {
 
         callStartedBy(leaderTelegramId);
 
-        verify(client, never()).sendMessage(eq(chatId), contains("has started"), any(ReplyMarkup.class));
+        verify(client, never()).sendMessage(eq(chatId), contains("has started"));
+        verify(client, never()).sendMessage(eq(chatId), contains("has started"), any(List.class));
+    }
+
+    @Test
+    void anUnexpectedErrorStillAnswersThePress() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        long memberTelegramId = joinChatAndAnswerGoing(sessionId);
+        doThrow(new IllegalStateException("boom")).when(client).answerButton(anyString(), anyString(), eq(false));
+
+        press(memberTelegramId, "rsvp:" + sessionId + ":N");
+
+        verify(client).answerButton("press-1", "That didn't save. Please try again, or answer in StudyBuddy.", true);
     }
 
     @Test

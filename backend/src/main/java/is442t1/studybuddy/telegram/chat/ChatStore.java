@@ -39,18 +39,14 @@ public class ChatStore {
                     group.getGroupName(), group.getCourse().getCourseCode(), group.getDescription(), chat.getMissingRights());
         }
 
-        boolean isSupergroup() {
-            return "supergroup".equals(chatType);
-        }
-
         boolean lacks(String right) {
             return Arrays.asList(missingRights.split(",")).contains(right);
         }
     }
 
     /** One student's position, read before asking Telegram for an invite. */
-    record InviteState(ChatRef chat, ChatMemberState state, String inviteLink, Instant inviteExpiresAt, Long telegramUserId,
-            String telegramName, Long linkedTelegramUserId, boolean inviteStillValid) {
+    record InviteState(ChatRef chat, ChatMemberState state, String inviteLink, Long telegramUserId, Long linkedTelegramUserId,
+            boolean linkedAccountTaken, boolean inviteStillValid) {
     }
 
     /** A join request and what to do about it. */
@@ -129,17 +125,17 @@ public class ChatStore {
         return linkService.createGroupSetupLink(group.getLeader(), group);
     }
 
-    /**
-     * Saves the chat a leader chose, replacing a chat the bot was removed from. Returns empty if it's already linked
-     * to another study group.
-     */
-    public Optional<ChatRef> saveLinkedChat(UUID groupId, long chatId, String chatType, String title, long leaderTelegramUserId,
+    @Transactional(readOnly = true)
+    public boolean linkedToAnotherGroup(long chatId, UUID groupId) {
+        return chatRepository.findByBotIdAndChatId(properties.botId(), chatId)
+                .filter(chat -> !chat.getStudyGroup().getId().equals(groupId))
+                .isPresent();
+    }
+
+    /** Saves the chat a leader chose, replacing a chat the bot was removed from. */
+    public ChatRef saveLinkedChat(UUID groupId, long chatId, String chatType, String title, long leaderTelegramUserId,
             String leaderName, ChatRights rights) {
         long botId = properties.botId();
-        Optional<GroupChat> sameChat = chatRepository.findByBotIdAndChatId(botId, chatId);
-        if (sameChat.isPresent() && !sameChat.get().getStudyGroup().getId().equals(groupId)) {
-            return Optional.empty();
-        }
         chatRepository.findByStudyGroup_Id(groupId).ifPresent(existing -> {
             chatRepository.delete(existing);
             // Hibernate runs inserts before deletes, which would break the unique constraint.
@@ -152,7 +148,7 @@ public class ChatStore {
         ChatMembership membership = new ChatMembership(chat, leader, now);
         membership.markJoined(leaderTelegramUserId, leaderName, now);
         membershipRepository.save(membership);
-        return Optional.of(ChatRef.of(chat));
+        return ChatRef.of(chat);
     }
 
     @Transactional(readOnly = true)
@@ -177,11 +173,15 @@ public class ChatStore {
         chatRepository.findByBotIdAndChatId(properties.botId(), oldChatId).ifPresent(chat -> chat.migrateTo(newChatId));
     }
 
-    /** Stores the bot's rights. Returns the chat if this made it usable, so setup can finish. */
+    /** Stores the bot's rights. Returns the chat if it's now usable and has never been set up. */
     public Optional<ChatRef> updateRights(long chatId, ChatRights rights) {
         return chatRepository.findByBotIdAndChatId(properties.botId(), chatId)
-                .filter(chat -> chat.applyRights(rights))
+                .filter(chat -> chat.applyRights(rights, Instant.now()))
                 .map(ChatRef::of);
+    }
+
+    public void saveTitle(UUID groupChatId, String title) {
+        chatRepository.findById(groupChatId).ifPresent(chat -> chat.rename(title));
     }
 
     public void markDetached(long chatId) {
@@ -204,11 +204,13 @@ public class ChatStore {
                 .filter(found -> found.getBotId() == properties.botId() && found.getStatus() == GroupChatStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessRuleException("This group's chat isn't available right now."));
         Long linked = linkService.linkedTelegramUserId(studentId).orElse(null);
+        boolean taken = linked != null && membershipRepository.findByGroupChat_IdAndTelegramUserId(chat.getId(), linked)
+                .filter(other -> !other.getStudent().getId().equals(studentId))
+                .isPresent();
         return membershipRepository.findByGroupChat_IdAndStudent_Id(chat.getId(), studentId)
                 .map(membership -> new InviteState(ChatRef.of(chat), membership.getState(), membership.getInviteLink(),
-                        membership.getInviteExpiresAt(), membership.getTelegramUserId(), membership.getTelegramName(), linked,
-                        membership.hasValidInvite(Instant.now())))
-                .orElseGet(() -> new InviteState(ChatRef.of(chat), ChatMemberState.NOT_INVITED, null, null, null, null, linked, false));
+                        membership.getTelegramUserId(), linked, taken, membership.hasValidInvite(Instant.now())))
+                .orElseGet(() -> new InviteState(ChatRef.of(chat), ChatMemberState.NOT_INVITED, null, null, linked, taken, false));
     }
 
     public void saveInvite(UUID groupChatId, UUID studentId, String link, String name, Instant expiresAt) {
@@ -217,6 +219,11 @@ public class ChatStore {
 
     public void saveJoined(UUID groupChatId, UUID studentId, long telegramUserId, String telegramName) {
         membershipFor(groupChatId, studentId).markJoined(telegramUserId, telegramName, Instant.now());
+    }
+
+    /** Telegram refused to let them in after all, so they start again with a new invite. */
+    public void saveJoinFailed(UUID groupChatId, UUID studentId) {
+        membershipFor(groupChatId, studentId).reset(Instant.now());
     }
 
     public void saveRemoved(UUID groupChatId, UUID studentId) {
