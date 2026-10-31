@@ -27,8 +27,6 @@ import is442t1.studybuddy.telegram.link.TelegramAccountRepository;
 @ConditionalOnProperty(prefix = "studybuddy.telegram", name = "enabled", havingValue = "true")
 class SessionChatStore {
 
-    /** How long an instance has to send a reminder before another may try. */
-    private static final Duration CLAIM_EXPIRES_AFTER = Duration.ofMinutes(10);
     /** How early a call can start and still count as being for the next session. */
     private static final Duration VIDEO_CHAT_EARLY_START = Duration.ofMinutes(30);
 
@@ -42,14 +40,17 @@ class SessionChatStore {
     private final StudySessionRepository sessionRepository;
     private final GroupChatRepository chatRepository;
     private final ChatMembershipRepository membershipRepository;
+    private final SessionChatCardRepository cardRepository;
     private final TelegramAccountRepository accountRepository;
     private final TelegramProperties properties;
 
     SessionChatStore(StudySessionRepository sessionRepository, GroupChatRepository chatRepository,
-            ChatMembershipRepository membershipRepository, TelegramAccountRepository accountRepository, TelegramProperties properties) {
+            ChatMembershipRepository membershipRepository, SessionChatCardRepository cardRepository,
+            TelegramAccountRepository accountRepository, TelegramProperties properties) {
         this.sessionRepository = sessionRepository;
         this.chatRepository = chatRepository;
         this.membershipRepository = membershipRepository;
+        this.cardRepository = cardRepository;
         this.accountRepository = accountRepository;
         this.properties = properties;
     }
@@ -115,21 +116,35 @@ class SessionChatStore {
                 .map(StudySession::getId);
     }
 
+    /**
+     * Sessions whose reminder should go out now. A session announced after its reminder window opened has only just
+     * been posted, so it gets no reminder as well. One the chat never heard about does, or the chat would get nothing.
+     */
     @Transactional(readOnly = true)
     public List<UUID> dueReminders(Instant now) {
         Duration lead = properties.reminderLead();
         return chatRepository.findSessionsStartingSoon(properties.botId(), now, now.plus(lead)).stream()
-                .filter(session -> session.isDueForReminder(lead, now))
+                .filter(session -> cardRepository.findByStudySession_Id(session.getId())
+                        .map(card -> !card.announcedAfter(session.getStartsAt().minus(lead)))
+                        .orElse(true))
                 .map(StudySession::getId)
                 .toList();
     }
 
-    /** Whether this instance should send the reminder. Another instance on the same bot may have got there first. */
-    public boolean claimReminder(UUID sessionId, Instant now) {
-        return sessionRepository.claimReminder(sessionId, now, now.minus(CLAIM_EXPIRES_AFTER)) == 1;
+    public void recordPost(UUID sessionId, UUID groupChatId, long messageId, Instant now) {
+        cardFor(sessionId, groupChatId).recordPost(messageId, now);
     }
 
-    public void markReminderSent(UUID sessionId, Instant claimedAt) {
-        sessionRepository.markReminderSent(sessionId, claimedAt, Instant.now());
+    public void markReminderSent(UUID sessionId, UUID groupChatId, Instant now) {
+        cardFor(sessionId, groupChatId).markReminderSent(now);
+    }
+
+    public void clearReminder(UUID sessionId) {
+        cardRepository.findByStudySession_Id(sessionId).ifPresent(SessionChatCard::clearReminder);
+    }
+
+    private SessionChatCard cardFor(UUID sessionId, UUID groupChatId) {
+        return cardRepository.findByStudySession_Id(sessionId).orElseGet(() -> cardRepository.save(
+                new SessionChatCard(sessionRepository.getReferenceById(sessionId), chatRepository.getReferenceById(groupChatId))));
     }
 }

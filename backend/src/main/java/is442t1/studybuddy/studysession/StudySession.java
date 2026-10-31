@@ -95,11 +95,6 @@ public class StudySession extends BaseEntity {
     @Column(nullable = false)
     private Instant updatedAt;
 
-    /** Set while an instance is sending the chat reminder, so two instances can't both send it. */
-    private Instant reminderClaimedAt;
-
-    private Instant reminderSentAt;
-
     @OneToMany(mappedBy = "session", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SessionRsvp> rsvps = new ArrayList<>();
 
@@ -123,8 +118,6 @@ public class StudySession extends BaseEntity {
         requireChangeable(now);
         apply(details, now);
         icsSequence++;
-        reminderClaimedAt = null;
-        reminderSentAt = null;
     }
 
     public void cancel(UUID callerId, Instant now) {
@@ -162,16 +155,6 @@ public class StudySession extends BaseEntity {
     /** A student who left the group no longer counts towards this session. */
     void removeRsvp(UUID studentId) {
         rsvps.removeIf(rsvp -> rsvp.getStudent().hasId(studentId));
-    }
-
-    /**
-     * Whether a chat reminder should go out now. A session created or changed once the reminder window had opened has
-     * just been announced, so it gets no reminder as well.
-     */
-    public boolean isDueForReminder(Duration lead, Instant now) {
-        Instant windowOpens = startsAt.minus(lead);
-        return status == SessionStatus.SCHEDULED && reminderSentAt == null && now.isBefore(startsAt)
-                && !now.isBefore(windowOpens) && !updatedAt.isAfter(windowOpens);
     }
 
     public StudyGroup getStudyGroup() {

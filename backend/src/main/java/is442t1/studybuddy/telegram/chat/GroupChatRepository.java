@@ -19,13 +19,14 @@ public interface GroupChatRepository extends JpaRepository<GroupChat, UUID> {
 
     Optional<GroupChat> findByBotIdAndChatId(long botId, long chatId);
 
-    /** Scheduled sessions starting soon, without a reminder yet, whose group has a working chat with this bot. */
+    /** Scheduled sessions starting soon, with no reminder sent, whose group has a working chat with this bot. */
     @Query("""
             select s from StudySession s, GroupChat c
              where c.studyGroup = s.studyGroup and c.botId = :botId
                and c.status = is442t1.studybuddy.telegram.chat.GroupChatStatus.ACTIVE
                and s.status = is442t1.studybuddy.model.enums.SessionStatus.SCHEDULED
-               and s.reminderSentAt is null and s.startsAt > :now and s.startsAt <= :until
+               and s.startsAt > :now and s.startsAt <= :until
+               and not exists (select 1 from SessionChatCard card where card.studySession = s and card.reminderSentAt is not null)
             """)
     List<StudySession> findSessionsStartingSoon(@Param("botId") long botId, @Param("now") Instant now, @Param("until") Instant until);
 }

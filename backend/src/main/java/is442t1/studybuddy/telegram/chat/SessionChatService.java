@@ -2,7 +2,6 @@ package is442t1.studybuddy.telegram.chat;
 
 import java.time.Instant;
 import java.time.ZoneId;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -61,7 +60,9 @@ public class SessionChatService {
         postIf(SessionStatus.SCHEDULED, sessionId, SessionMessages::scheduled, SessionMessages.rsvpButtons(sessionId));
     }
 
+    /** Clears the reminder first, so a post that fails can't cost the session its reminder for the new time. */
     void postChanged(UUID sessionId) {
+        store.clearReminder(sessionId);
         postIf(SessionStatus.SCHEDULED, sessionId, SessionMessages::changed, SessionMessages.rsvpButtons(sessionId));
     }
 
@@ -71,7 +72,11 @@ public class SessionChatService {
 
     private void postIf(SessionStatus expected, UUID sessionId, BiFunction<SessionMessages.Details, ZoneId, String> wording, ReplyMarkup markup) {
         store.read(sessionId).filter(session -> session.status() == expected).ifPresent(session ->
-                activeChat(session).ifPresent(chat -> chatService.send(chat, wording.apply(session.details(), zone), markup)));
+                activeChat(session).ifPresent(chat -> {
+                    long messageId = chatService.send(chat, wording.apply(session.details(), zone), markup);
+                    store.recordPost(sessionId, chat.id(), messageId, Instant.now());
+                    LOG.info("Posted to the chat of study group {} about session {}.", session.groupId(), sessionId);
+                }));
     }
 
     private Optional<ChatRef> activeChat(SessionRef session) {
@@ -99,25 +104,26 @@ public class SessionChatService {
         }
     }
 
-    /** Posts every reminder now due. One failure doesn't stop the rest, and that reminder is tried again later. */
-    public void sendDueReminders(Instant at) {
-        // The claim is compared with its stored value, and the database keeps less precision than an Instant.
-        Instant now = at.truncatedTo(ChronoUnit.MILLIS);
+    /**
+     * Posts every reminder now due. Each is marked as sent first, so a crash can't send it twice, and unmarked if
+     * Telegram refuses, so the next run tries again. One failure doesn't stop the rest.
+     */
+    public void sendDueReminders(Instant now) {
         for (UUID sessionId : store.dueReminders(now)) {
-            if (store.claimReminder(sessionId, now)) {
-                try {
-                    sendReminder(sessionId);
-                    store.markReminderSent(sessionId, now);
-                } catch (TelegramApiException exception) {
-                    LOG.warn("Could not send a session reminder: {}", exception.getMessage());
-                }
+            try {
+                sendReminder(sessionId, now);
+                LOG.info("Sent the reminder for session {}.", sessionId);
+            } catch (TelegramApiException exception) {
+                store.clearReminder(sessionId);
+                LOG.warn("Could not send a session reminder: {}", exception.getMessage());
             }
         }
     }
 
-    private void sendReminder(UUID sessionId) {
+    private void sendReminder(UUID sessionId, Instant now) {
         store.read(sessionId).filter(session -> session.status() == SessionStatus.SCHEDULED).ifPresent(session ->
                 activeChat(session).ifPresent(chat -> {
+                    store.markReminderSent(sessionId, chat.id(), now);
                     ReplyMarkup buttons = SessionMessages.rsvpButtons(sessionId);
                     if (session.details().groupVideoChat()) {
                         Tagged reminder = SessionMessages.videoChatReminder(session.details(), zone, store.goingInChat(sessionId));

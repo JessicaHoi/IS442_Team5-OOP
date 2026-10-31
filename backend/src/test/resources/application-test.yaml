@@ -13,5 +13,3 @@ studybuddy:
   # Stays off even if backend/.env turns it on, so tests never reach a real bot.
   telegram:
     enabled: false
-    # Tests send reminders themselves, so the timer can't interfere with them.
-    reminder-check: 1h

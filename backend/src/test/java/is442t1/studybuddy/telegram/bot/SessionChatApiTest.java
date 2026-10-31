@@ -1,6 +1,7 @@
 package is442t1.studybuddy.telegram.bot;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -147,6 +148,13 @@ class SessionChatApiTest extends ApiTestSupport {
 
     private void expectMyRsvp(String token, String expected) throws Exception {
         mockMvc.perform(as(token, get(path("/sessions")))).andExpect(status().isOk()).andExpect(jsonPath("$[0].myRsvp").value(expected));
+    }
+
+    /** Posts happen on a background thread, and each records its card afterwards. */
+    private String posted(String sessionId) {
+        await().atMost(Duration.ofMillis(TIMEOUT_MS)).until(() -> jdbc.queryForObject(
+                "select count(*) from session_chat_card where study_session_id = ? and announced_at is not null", Integer.class, UUID.fromString(sessionId)) == 1);
+        return sessionId;
     }
 
     private void verifyReminders(int count) {
@@ -302,7 +310,7 @@ class SessionChatApiTest extends ApiTestSupport {
     void aReminderGoesOutOnceInsideTheWindow() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        schedule(startsAt);
+        posted(schedule(startsAt));
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(61)));
         verifyReminders(0);
@@ -319,7 +327,7 @@ class SessionChatApiTest extends ApiTestSupport {
     void aSessionScheduledInsideTheWindowGetsNoReminderAsWell() throws Exception {
         linkChat();
         Instant startsAt = Instant.now().plus(Duration.ofMinutes(30));
-        schedule(startsAt);
+        posted(schedule(startsAt));
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(10)));
 
@@ -339,35 +347,49 @@ class SessionChatApiTest extends ApiTestSupport {
     }
 
     @Test
-    void aFailedReminderIsTriedAgainOnceItsClaimExpires() throws Exception {
+    void aFailedReminderIsTriedAgainOnTheNextRun() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        schedule(startsAt);
+        posted(schedule(startsAt));
         doThrow(new TelegramApiException(500, "down", null, null))
                 .doReturn(9L)
                 .when(client).sendMessage(eq(chatId), contains(STARTING_SOON), any(ReplyMarkup.class));
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(40)));
-        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(35)));
         verifyReminders(1);
 
-        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(29)));
+        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(39)));
         verifyReminders(2);
 
-        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(10)));
+        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(38)));
         verifyReminders(2);
+    }
+
+    @Test
+    void aSessionTheChatNeverHeardAboutStillGetsAReminder() throws Exception {
+        doThrow(new TelegramApiException(500, "down", null, null))
+                .when(client).sendMessage(anyLong(), contains("New study session"), any(ReplyMarkup.class));
+        linkChat();
+        Instant startsAt = inHours(3);
+        schedule(startsAt);
+        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("New study session"), any(ReplyMarkup.class));
+
+        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
+
+        verifyReminders(1);
     }
 
     @Test
     void reschedulingAfterAReminderAllowsAnotherForTheNewTime() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        String sessionId = schedule(startsAt);
+        String sessionId = posted(schedule(startsAt));
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
         verifyReminders(1);
 
         Instant newStart = inHours(8);
         reschedule(sessionId, newStart);
+        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("updated: Mock exam"), any(ReplyMarkup.class));
         sessionChat.sendDueReminders(newStart.minus(Duration.ofMinutes(30)));
 
         verifyReminders(2);
@@ -377,7 +399,7 @@ class SessionChatApiTest extends ApiTestSupport {
     void reschedulingWhileAReminderIsBeingSentKeepsTheNextOne() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        String sessionId = schedule(startsAt);
+        String sessionId = posted(schedule(startsAt));
         Instant newStart = inHours(8);
         doAnswer(call -> {
             reschedule(sessionId, newStart);
@@ -385,21 +407,10 @@ class SessionChatApiTest extends ApiTestSupport {
         }).doReturn(10L).when(client).sendMessage(eq(chatId), contains(STARTING_SOON), any(ReplyMarkup.class));
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
+        verify(client, timeout(TIMEOUT_MS)).sendMessage(eq(chatId), contains("updated: Mock exam"), any(ReplyMarkup.class));
         sessionChat.sendDueReminders(newStart.minus(Duration.ofMinutes(30)));
 
         verifyReminders(2);
-    }
-
-    @Test
-    void claimingAReminderDoesNotCountAsChangingTheSession() throws Exception {
-        linkChat();
-        Instant startsAt = inHours(3);
-        String sessionId = schedule(startsAt);
-        Timestamp before = jdbc.queryForObject("select updated_at from study_session where id = ?", Timestamp.class, UUID.fromString(sessionId));
-
-        sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
-
-        assertThat(jdbc.queryForObject("select updated_at from study_session where id = ?", Timestamp.class, UUID.fromString(sessionId))).isEqualTo(before);
     }
 
     @Test
@@ -487,7 +498,7 @@ class SessionChatApiTest extends ApiTestSupport {
     void aVideoChatReminderTagsThoseGoing() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        String sessionId = scheduleVideoChat(startsAt);
+        String sessionId = posted(scheduleVideoChat(startsAt));
         long memberTelegramId = joinChatAndAnswerGoing(sessionId);
 
         sessionChat.sendDueReminders(startsAt.minus(Duration.ofMinutes(30)));
@@ -542,7 +553,7 @@ class SessionChatApiTest extends ApiTestSupport {
     void someoneNotGoingIsNotTagged() throws Exception {
         linkChat();
         Instant startsAt = inHours(3);
-        String sessionId = scheduleVideoChat(startsAt);
+        String sessionId = posted(scheduleVideoChat(startsAt));
         long memberTelegramId = joinChatAndAnswerGoing(sessionId);
         press(memberTelegramId, "rsvp:" + sessionId + ":N");
 

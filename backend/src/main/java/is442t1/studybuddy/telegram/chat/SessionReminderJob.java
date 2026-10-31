@@ -8,9 +8,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** Looks for study sessions starting soon. Instances sharing a bot can all run this: each reminder is claimed first. */
+/** Looks for study sessions starting soon. Only the instance reading the bot's updates runs this, so nothing is sent twice. */
 @Component
-@ConditionalOnProperty(prefix = "studybuddy.telegram", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "studybuddy.telegram", name = {"enabled", "polling"}, havingValue = "true")
 class SessionReminderJob {
 
     private final SessionChatService sessionChat;
@@ -26,7 +26,7 @@ class SessionReminderJob {
 
     @Configuration(proxyBeanMethods = false)
     @EnableScheduling
-    @ConditionalOnProperty(prefix = "studybuddy.telegram", name = "enabled", havingValue = "true")
+    @ConditionalOnProperty(prefix = "studybuddy.telegram", name = {"enabled", "polling"}, havingValue = "true")
     static class SchedulingConfig {
     }
 }
