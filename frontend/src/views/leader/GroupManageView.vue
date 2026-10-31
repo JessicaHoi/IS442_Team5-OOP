@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
 import { groupsApi } from '../../api/groups.api';
+import { integrationsApi } from '../../api/integrations.api';
 import { useLookupsStore } from '../../stores/lookups';
 import { useToast } from '../../composables/useToast';
 import { useConfirm } from '../../composables/useConfirm';
@@ -16,6 +17,7 @@ import GroupBestTimes from '../../components/groups/GroupBestTimes.vue';
 import JoinRequestList from '../../components/groups/JoinRequestList.vue';
 import MemberList from '../../components/groups/MemberList.vue';
 import GroupChatLink from '../../components/groups/GroupChatLink.vue';
+import GroupChatCard from '../../components/groups/GroupChatCard.vue';
 import SessionList from '../../components/groups/SessionList.vue';
 import LeadershipTransferModal from '../../components/admin/LeadershipTransferModal.vue';
 
@@ -34,6 +36,8 @@ const busyRequestId = ref(null);
 const saving = ref(false);
 const leadershipOpen = ref(false);
 const sessionPrefill = ref(null);
+/** The chat tab only exists when this server has Telegram on. */
+const telegramEnabled = ref(false);
 const isLeader = computed(() => group.value?.myRole === 'LEADER');
 const viewOnly = computed(() => route.name === 'group-view');
 const readonly = computed(() => viewOnly.value || !isLeader.value || group.value?.status === 'CLOSED');
@@ -56,6 +60,8 @@ const { loading, error, run: load } = useAsync(async () => {
 });
 
 watch(() => props.id, load, { immediate: true });
+
+integrationsApi.get().then(({ telegram }) => { telegramEnabled.value = telegram.enabled; }).catch(() => {});
 
 function scheduleFromSuggestion(slot) {
 	sessionPrefill.value = slot;
@@ -223,6 +229,9 @@ async function closeGroup() {
 				<li class="nav-item" role="presentation">
 					<button type="button" class="nav-link" :class="{ active: activeTab === 'sessions' }" role="tab" @click="activeTab = 'sessions'">Sessions</button>
 				</li>
+				<li v-if="telegramEnabled" class="nav-item" role="presentation">
+					<button type="button" class="nav-link" :class="{ active: activeTab === 'chat' }" role="tab" @click="activeTab = 'chat'">Group chat</button>
+				</li>
 				<li class="nav-item" role="presentation">
 					<button type="button" class="nav-link" :class="{ active: activeTab === 'details' }" role="tab" @click="activeTab = 'details'">Details</button>
 				</li>
@@ -244,6 +253,13 @@ async function closeGroup() {
 					:can-manage="!readonly"
 					:prefill="sessionPrefill"
 					@prefill-used="sessionPrefill = null"
+				/>
+				<GroupChatCard
+					v-else-if="activeTab === 'chat'"
+					:group-id="id"
+					:can-manage="!readonly"
+					:group-open="group.status === 'OPEN'"
+					:chat-link="group.chatLink ?? null"
 				/>
 				<div v-else-if="activeTab === 'details'" class="py-3">
 					<GroupDetails v-if="readonly" :group="group" />

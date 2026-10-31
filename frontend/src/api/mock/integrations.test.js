@@ -49,4 +49,19 @@ describe('Telegram with the mock (behaves like a server with it off)', () => {
 	it('keeps the student endpoints away from admins', async () => {
 		expect((await call('get', '/students/me/telegram', adminToken)).status).toBe(403);
 	});
+
+	it('shows a member an unlinked chat and refuses the rest, with the same member check as the backend', async () => {
+		const { groups, users } = getDb();
+		const group = groups[0];
+		const leader = users.find((user) => user.id === group.leaderId);
+		const stranger = users.find((user) => user.role === 'STUDENT' && user.status === 'ACTIVE' && !group.memberIds.includes(user.id));
+		const leaderToken = await login(leader);
+
+		expect((await call('get', `/groups/${group.id}/chat`, leaderToken)).data.status).toBe('NOT_LINKED');
+		for (const [method, path] of [['post', 'setup'], ['post', 'verify'], ['post', 'invite']]) {
+			expect((await call(method, `/groups/${group.id}/chat/${path}`, leaderToken)).status).toBe(409);
+		}
+		expect((await call('delete', `/groups/${group.id}/chat`, leaderToken)).status).toBe(409);
+		expect((await call('get', `/groups/${group.id}/chat`, await login(stranger))).status).toBe(403);
+	});
 });
