@@ -152,6 +152,8 @@ The app works fully with Telegram off, which is the default. Turning it on lets 
 - **Shared database.** Connections are stored per bot, so teammates' bots don't affect each other. A student connected through one bot shows as not connected on another.
 - **Seed script.** `backend/supabase/seed-demo-data.sql` wipes every table, including Telegram connections.
 - **No public URL needed.** The bot polls Telegram, so it works from a laptop.
+- **Group chats.** A leader sets up the chat from the group's **Group chat** tab. Members join through a personal invite link that the bot approves. Anyone who leaves the study group is removed from the chat, except the chat's owner or an admin the bot didn't promote: Telegram refuses, so the leader sees a warning and removes them by hand. Telegram can't move ownership, so a new leader needs the old one to make them an admin.
+- **Privacy.** As a group admin the bot receives every chat message. It ignores them and never logs or stores their text. Joining a chat shows a student's Telegram profile to the other members, which the join card says before they tap.
 
 ## Monolith packaging
 
@@ -333,6 +335,11 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `GET` and `PUT /admin/matching-config` | See shape below. |
 | | `GET /admin/matching-config/preview/students` | Sample students for the preview: `[{id, name, courses:[code]}]`. |
 | | `POST /admin/matching-config/preview` | Body `{studentId, course?, proposed:<matching configuration>}`. Ranks the student's matches under the saved and the proposed settings without saving. |
+| Group chat | `GET /groups/{id}/chat` | Members only. See shape below. `NOT_LINKED` when Telegram is off. |
+| | `POST /groups/{id}/chat/setup` | Leader only, open group with no chat. Returns `{url, expiresAt}`, a link to open in Telegram. `409` when Telegram is off. |
+| | `POST /groups/{id}/chat/verify` | Leader only. Re-checks the bot's rights and returns the chat. |
+| | `POST /groups/{id}/chat/invite` | Active members of an open group. Optional body `{renew}`. Returns the chat with `me.inviteUrl`. `renew` replaces the link, or removes whoever joined with it ("Not you?"). `409` if the chat isn't usable, `503` if Telegram fails. |
+| | `DELETE /groups/{id}/chat` | Leader only. Revokes invites and the bot leaves; the chat stays on Telegram. `204`. |
 
 ### Enums
 
@@ -418,6 +425,17 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 
 // Telegram connection (GET /students/me/telegram). Only the student themselves can read it.
 { "linked": true, "username": "aisha_r", "firstName": "Aisha", "canMessage": true, "linkedAt": "ISO-8601" }  // all null or false when not linked; username is null if they have none
+
+// Group chat (GET /groups/{id}/chat)
+{
+  "status": "ACTIVE",            // NOT_LINKED | ACTIVE | NEEDS_ATTENTION | DETACHED | CLOSED | MANAGED_BY_OTHER_BOT
+  "title": "Exam Crew · IS442", "chatType": "supergroup",
+  "missingRights": [],           // leader only, else null: INVITE_USERS, RESTRICT_MEMBERS, PIN_MESSAGES, CHANGE_INFO
+  "ownedByFormerLeader": false,  // leader only: someone else set the chat up, and Telegram can't move ownership
+  "me": { "state": "INVITED", "telegramName": null, "inviteUrl": "https://t.me/+AbC", "inviteExpiresAt": "ISO-8601" },
+                                 // null when not linked. state: NOT_INVITED | INVITED | JOINED | LEFT | REMOVED | REMOVAL_FAILED
+  "members": [ { "studentId": 2, "name": "…", "state": "JOINED", "telegramName": "@aisha_r" } ]  // leader only, else null
+}
 
 // Join request (GET /groups/{id}/join-requests)
 { "id": 1, "student": { "id": 3, "name": "…", "programme": "…", "yearOfStudy": 2 }, "message": "…", "createdAt": "ISO-8601" }

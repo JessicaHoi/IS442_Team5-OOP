@@ -2,6 +2,7 @@ package is442t1.studybuddy.group;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -14,6 +15,7 @@ import is442t1.studybuddy.common.exception.ValidationException;
 import is442t1.studybuddy.course.Course;
 import is442t1.studybuddy.course.CourseService;
 import is442t1.studybuddy.group.event.GroupClosed;
+import is442t1.studybuddy.group.event.GroupRenamed;
 import is442t1.studybuddy.model.enums.GroupStatus;
 import is442t1.studybuddy.student.StudentRepository;
 
@@ -86,7 +88,12 @@ public class StudyGroupService {
             throw new PermissionDeniedException(StudyGroupLeader.NOT_LEADER);
         }
         requireAllowedSize(request.maxSize());
+        String oldName = group.getGroupName();
+        String oldDescription = group.getDescription();
         leader.updateGroup(group, request.toDetails());
+        if (!Objects.equals(oldName, group.getGroupName()) || !Objects.equals(oldDescription, group.getDescription())) {
+            events.publishEvent(new GroupRenamed(groupId));
+        }
         return mapper.toDetail(group, studentId);
     }
 

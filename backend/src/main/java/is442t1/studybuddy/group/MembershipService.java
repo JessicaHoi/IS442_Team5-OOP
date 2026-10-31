@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.PermissionDeniedException;
+import is442t1.studybuddy.group.event.MemberJoined;
 import is442t1.studybuddy.group.event.MemberLeft;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentService;
@@ -67,6 +68,7 @@ public class MembershipService {
             throw new BusinessRuleException("The student and group leader must have active accounts to accept membership.");
         }
         leader.acceptMember(request);
+        events.publishEvent(new MemberJoined(groupId, request.getStudent().getId()));
         return mapper.toDetail(group, studentId);
     }
 

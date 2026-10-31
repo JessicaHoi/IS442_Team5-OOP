@@ -11,9 +11,32 @@ final class UpdateClassifier {
     }
 
     static BotEvent classify(Update update) {
+        if (update.chatJoinRequest() != null) {
+            return new BotEvent.JoinRequested(update.chatJoinRequest());
+        }
+        if (update.myChatMember() != null) {
+            return new BotEvent.BotChanged(update.myChatMember().chat().id(), update.myChatMember().newChatMember());
+        }
+        if (update.chatMember() != null) {
+            Update.ChatMemberUpdated change = update.chatMember();
+            return new BotEvent.MemberChanged(change.chat().id(), change.newChatMember().user().id(), change.newChatMember().isInChat());
+        }
         Update.Message message = update.message();
+        if (message != null && message.migrateToChatId() != null) {
+            return new BotEvent.ChatMigrated(message.chat().id(), message.migrateToChatId());
+        }
+        if (message != null && message.migrateFromChatId() != null) {
+            return new BotEvent.ChatMigrated(message.migrateFromChatId(), message.chat().id());
+        }
         if (message == null || message.from() == null || message.from().isBot() || message.chat() == null
-                || !message.chat().isPrivate() || message.text() == null) {
+                || !message.chat().isPrivate()) {
+            return new BotEvent.Ignored();
+        }
+        if (message.chatShared() != null) {
+            return new BotEvent.ChatChosen(message.chat().id(), message.from().id(), message.from().firstName(),
+                    message.chatShared().requestId(), message.chatShared().chatId());
+        }
+        if (message.text() == null) {
             return new BotEvent.Ignored();
         }
         String text = message.text();

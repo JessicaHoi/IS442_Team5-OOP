@@ -3,12 +3,14 @@ package is442t1.studybuddy.group;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import is442t1.studybuddy.common.exception.PermissionDeniedException;
 import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.common.exception.ValidationException;
+import is442t1.studybuddy.group.event.LeadershipTransferred;
 import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.UserRepository;
 import is442t1.studybuddy.student.Student;
@@ -20,12 +22,14 @@ public class GroupLeadershipService {
     private final UserRepository userRepository;
     private final StudyGroupRepository groupRepository;
     private final StudyGroupLeaderRepository leaderRepository;
+    private final ApplicationEventPublisher events;
 
     public GroupLeadershipService(UserRepository userRepository, StudyGroupRepository groupRepository,
-            StudyGroupLeaderRepository leaderRepository) {
+            StudyGroupLeaderRepository leaderRepository, ApplicationEventPublisher events) {
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
         this.leaderRepository = leaderRepository;
+        this.events = events;
     }
 
     public LedGroupResponse transfer(UUID leaderId, UUID groupId, UUID successorId, boolean byAdministrator) {
@@ -55,6 +59,7 @@ public class GroupLeadershipService {
         group.transferLeadershipTo(leaderRepository.findById(successorId).orElseThrow());
         groupRepository.flush();
         leaderRepository.demoteIfNoGroups(leaderId);
+        events.publishEvent(new LeadershipTransferred(groupId, successorId));
         return LedGroupResponse.from(groupRepository.findById(groupId).orElseThrow());
     }
 }

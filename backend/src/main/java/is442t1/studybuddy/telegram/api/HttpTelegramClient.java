@@ -3,6 +3,7 @@ package is442t1.studybuddy.telegram.api;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +16,10 @@ import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JavaType;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.PropertyNamingStrategies;
@@ -36,6 +40,9 @@ class HttpTelegramClient implements TelegramClient {
     private final RestClient restClient;
     private final JsonMapper mapper = JsonMapper.builder()
             .propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
+            // Telegram leaves out what doesn't apply, such as an ordinary member's rights: missing means false.
+            .disable(DeserializationFeature.FAIL_ON_NULL_FOR_PRIMITIVES)
+            .changeDefaultPropertyInclusion(inclusion -> inclusion.withValueInclusion(JsonInclude.Include.NON_NULL))
             .build();
 
     @Autowired
@@ -74,6 +81,91 @@ class HttpTelegramClient implements TelegramClient {
     @Override
     public void sendMessage(long chatId, String text) {
         call("sendMessage", Map.of("chat_id", chatId, "text", text));
+    }
+
+    @Override
+    public long sendMessage(long chatId, String text, ReplyMarkup markup) {
+        return call("sendMessage", Map.of("chat_id", chatId, "text", text, "reply_markup", markup)).path("message_id").asLong();
+    }
+
+    @Override
+    public ChatInfo getChat(long chatId) {
+        return read(call("getChat", Map.of("chat_id", chatId)), mapper.constructType(ChatInfo.class));
+    }
+
+    @Override
+    public ChatMember getChatMember(long chatId, long userId) {
+        return read(call("getChatMember", Map.of("chat_id", chatId, "user_id", userId)), mapper.constructType(ChatMember.class));
+    }
+
+    @Override
+    public ChatInviteLink createJoinRequestLink(long chatId, String name, Instant expiresAt) {
+        JsonNode result = call("createChatInviteLink", Map.of("chat_id", chatId, "name", name,
+                "creates_join_request", true, "expire_date", expiresAt.getEpochSecond()));
+        return read(result, mapper.constructType(ChatInviteLink.class));
+    }
+
+    @Override
+    public void revokeInviteLink(long chatId, String inviteLink) {
+        call("revokeChatInviteLink", Map.of("chat_id", chatId, "invite_link", inviteLink));
+    }
+
+    @Override
+    public void approveJoinRequest(long chatId, long userId) {
+        call("approveChatJoinRequest", Map.of("chat_id", chatId, "user_id", userId));
+    }
+
+    @Override
+    public void declineJoinRequest(long chatId, long userId) {
+        call("declineChatJoinRequest", Map.of("chat_id", chatId, "user_id", userId));
+    }
+
+    @Override
+    public void banMember(long chatId, long userId) {
+        call("banChatMember", Map.of("chat_id", chatId, "user_id", userId));
+    }
+
+    @Override
+    public void unbanMember(long chatId, long userId) {
+        call("unbanChatMember", Map.of("chat_id", chatId, "user_id", userId, "only_if_banned", true));
+    }
+
+    @Override
+    public void setTitle(long chatId, String title) {
+        call("setChatTitle", Map.of("chat_id", chatId, "title", title));
+    }
+
+    @Override
+    public void setDescription(long chatId, String description) {
+        call("setChatDescription", Map.of("chat_id", chatId, "description", description));
+    }
+
+    @Override
+    public void pinMessage(long chatId, long messageId) {
+        call("pinChatMessage", Map.of("chat_id", chatId, "message_id", messageId, "disable_notification", true));
+    }
+
+    @Override
+    public void setMemberPermissions(long chatId, boolean canSendMessages) {
+        call("setChatPermissions", Map.of("chat_id", chatId, "use_independent_chat_permissions", true, "permissions", Map.ofEntries(
+                Map.entry("can_send_messages", canSendMessages),
+                Map.entry("can_send_audios", canSendMessages),
+                Map.entry("can_send_documents", canSendMessages),
+                Map.entry("can_send_photos", canSendMessages),
+                Map.entry("can_send_videos", canSendMessages),
+                Map.entry("can_send_video_notes", canSendMessages),
+                Map.entry("can_send_voice_notes", canSendMessages),
+                Map.entry("can_send_polls", canSendMessages),
+                Map.entry("can_send_other_messages", canSendMessages),
+                Map.entry("can_add_web_page_previews", canSendMessages),
+                Map.entry("can_change_info", false),
+                Map.entry("can_invite_users", false),
+                Map.entry("can_pin_messages", false))));
+    }
+
+    @Override
+    public void leaveChat(long chatId) {
+        call("leaveChat", Map.of("chat_id", chatId));
     }
 
     /** Returns the reply's {@code result}. Telegram's error replies have 4xx statuses, so the body is read whatever the status. */

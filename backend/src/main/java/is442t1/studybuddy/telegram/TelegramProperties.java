@@ -13,11 +13,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param botUsername  the bot's username, without the @
  * @param polling      whether this instance reads updates; only one instance may poll per token
  * @param pollTimeout  how long one {@code getUpdates} call waits for an update
- * @param linkTokenTtl how long a link to connect a Telegram account stays valid
+ * @param linkTokenTtl how long a link to connect a Telegram account or set up a chat stays valid
+ * @param inviteTtl    how long a student's personal invite to a group chat stays valid
  */
 @ConfigurationProperties(prefix = "studybuddy.telegram")
 public record TelegramProperties(boolean enabled, String botToken, String botUsername, boolean polling,
-        Duration pollTimeout, Duration linkTokenTtl) {
+        Duration pollTimeout, Duration linkTokenTtl, Duration inviteTtl) {
+
+    /** What students see if they ask for something Telegram-related while it's off. */
+    public static final String OFF_MESSAGE = "Telegram isn't set up on this StudyBuddy server.";
 
     private static final String TOKEN_FORMAT = "\\d+:[A-Za-z0-9_-]+";
 

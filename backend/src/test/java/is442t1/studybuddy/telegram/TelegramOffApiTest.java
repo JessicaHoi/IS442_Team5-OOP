@@ -20,8 +20,9 @@ class TelegramOffApiTest extends ApiTestSupport {
     @Autowired private ApplicationContext context;
 
     @Test
-    void noTelegramClientExists() {
-        assertThat(context.getBeansOfType(TelegramClient.class)).isEmpty();
+    void onlyTheDisabledClientExists() {
+        assertThat(context.getBeansOfType(TelegramClient.class).values())
+                .singleElement().satisfies(client -> assertThat(client.getClass().getSimpleName()).isEqualTo("DisabledTelegramClient"));
     }
 
     @Test
@@ -59,5 +60,22 @@ class TelegramOffApiTest extends ApiTestSupport {
         mockMvc.perform(as(token, get("/api/students/me/telegram"))).andExpect(status().isForbidden());
         mockMvc.perform(as(token, post("/api/students/me/telegram/link"))).andExpect(status().isForbidden());
         mockMvc.perform(as(token, delete("/api/students/me/telegram"))).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void groupChatEndpointsSayItIsOff() throws Exception {
+        String token = login(createStudent("Off Leader", "IS442"));
+        String groupId = read(mockMvc.perform(as(token, post("/api/groups")).content("""
+                        {"courseCode":"IS442","name":"Off Crew","description":"x","goals":["EXAM_PREPARATION"],
+                         "meetingMode":"ONLINE","maxSize":4,"availability":[{"day":"TUE","start":"19:00","end":"21:00"}]}"""))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString(), "$.id");
+
+        mockMvc.perform(as(token, get("/api/groups/" + groupId + "/chat")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("NOT_LINKED"));
+        mockMvc.perform(as(token, post("/api/groups/" + groupId + "/chat/setup"))).andExpect(status().isConflict());
+        mockMvc.perform(as(token, post("/api/groups/" + groupId + "/chat/invite"))).andExpect(status().isConflict());
+        mockMvc.perform(as(token, post("/api/groups/" + groupId + "/chat/verify"))).andExpect(status().isConflict());
+        mockMvc.perform(as(token, delete("/api/groups/" + groupId + "/chat"))).andExpect(status().isConflict());
     }
 }

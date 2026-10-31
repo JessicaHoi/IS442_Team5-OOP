@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import is442t1.studybuddy.common.exception.BusinessRuleException;
+import is442t1.studybuddy.group.StudyGroup;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentService;
 import is442t1.studybuddy.telegram.TelegramProperties;
@@ -44,13 +45,19 @@ public class TelegramLinkService {
         return findAccount(studentId).map(TelegramStatusResponse::of).orElseGet(TelegramStatusResponse::notLinked);
     }
 
+    /** The Telegram user connected to this student through this bot, if any. */
+    @Transactional(readOnly = true)
+    public Optional<Long> linkedTelegramUserId(UUID studentId) {
+        return findAccount(studentId).map(TelegramAccount::getTelegramUserId);
+    }
+
     public TelegramLinkResponse createLink(UUID studentId) {
         if (!properties.enabled()) {
-            throw new BusinessRuleException("Telegram isn't set up on this StudyBuddy server.");
+            throw new BusinessRuleException(TelegramProperties.OFF_MESSAGE);
         }
         Student student = studentService.requireStudent(studentId);
         Instant now = Instant.now();
-        tokenRepository.deleteReplacedOrExpired(properties.botId(), studentId, now);
+        tokenRepository.deleteReplacedOrExpired(properties.botId(), studentId, TelegramLinkPurpose.ACCOUNT, now);
 
         byte[] bytes = new byte[TOKEN_BYTES];
         random.nextBytes(bytes);
@@ -73,7 +80,8 @@ public class TelegramLinkService {
         long botId = properties.botId();
         String tokenHash = hash(token);
         Instant now = Instant.now();
-        Optional<TelegramLinkToken> found = tokenRepository.findByTokenHashAndBotId(tokenHash, botId);
+        Optional<TelegramLinkToken> found = tokenRepository.findByTokenHashAndBotId(tokenHash, botId)
+                .filter(candidate -> candidate.getStudyGroup() == null);
         if (found.isEmpty() || tokenRepository.claim(tokenHash, botId, now) == 0) {
             return false;
         }
@@ -93,6 +101,43 @@ public class TelegramLinkService {
         account.linkTo(telegramUserId, username, firstName, now);
         accountRepository.save(account);
         return true;
+    }
+
+    /** A link the leader opens in Telegram to set up their group's chat. A new one replaces any earlier one. */
+    public TelegramLinkResponse createGroupSetupLink(Student leader, StudyGroup group) {
+        Instant now = Instant.now();
+        tokenRepository.deleteReplacedOrExpired(properties.botId(), leader.getId(), TelegramLinkPurpose.GROUP_SETUP, now);
+        byte[] bytes = new byte[TOKEN_BYTES];
+        random.nextBytes(bytes);
+        String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        Instant expiresAt = now.plus(properties.linkTokenTtl());
+        tokenRepository.save(new TelegramLinkToken(hash(token), leader, properties.botId(), expiresAt, group));
+        return new TelegramLinkResponse("https://t.me/" + properties.botUsername() + "?start=g_" + token, expiresAt);
+    }
+
+    /**
+     * Ties a setup link to the Telegram user who opened it and returns its first button id. Opening it again gives
+     * the same id, so the buttons can be resent. Empty if the link isn't usable, belongs to someone else, or the
+     * student no longer leads the group.
+     */
+    public Optional<Integer> openGroupSetup(String token, long telegramUserId) {
+        Instant now = Instant.now();
+        return tokenRepository.findByTokenHashAndBotId(hash(token), properties.botId())
+                .filter(found -> found.getStudyGroup() != null && found.isUsable(now))
+                .filter(found -> found.getStudyGroup().isLedBy(found.getStudent().getId()) && found.getStudent().isActive())
+                .filter(found -> found.claimFor(telegramUserId, random.nextInt(1, Integer.MAX_VALUE - 1)))
+                .map(TelegramLinkToken::getRequestId);
+    }
+
+    /** Uses up the setup link behind a chosen group. Returns the study group's id if the choice is valid. */
+    public Optional<UUID> completeGroupSetup(long telegramUserId, int requestId) {
+        Instant now = Instant.now();
+        return tokenRepository.findSetupInProgress(properties.botId(), telegramUserId, requestId, now)
+                .filter(found -> found.getStudyGroup().isLedBy(found.getStudent().getId()) && found.getStudent().isActive())
+                .map(found -> {
+                    found.markUsed(now);
+                    return found.getStudyGroup().getId();
+                });
     }
 
     private Optional<TelegramAccount> findAccount(UUID studentId) {

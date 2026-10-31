@@ -57,4 +57,25 @@ class UpdateClassifierTest {
         assertThat(UpdateClassifier.classify(update(null, PRIVATE, "/start"))).isInstanceOf(BotEvent.Ignored.class);
         assertThat(UpdateClassifier.classify(update(PERSON, PRIVATE, null))).isInstanceOf(BotEvent.Ignored.class);
     }
+
+    @Test
+    void aChosenChatComesFromAPrivateChat() {
+        assertThat(UpdateClassifier.classify(new Update(1, new Update.Message(2, PERSON, PRIVATE, null,
+                new Update.ChatShared(-100, 8), null, null))))
+                .isEqualTo(new BotEvent.ChatChosen(42, 42, "Aisha", 8, -100));
+    }
+
+    @Test
+    void aChatSharedInAGroupIsIgnored() {
+        assertThat(UpdateClassifier.classify(new Update(1, new Update.Message(2, PERSON, new Update.Chat(-1, "group"), null,
+                new Update.ChatShared(-100, 8), null, null)))).isInstanceOf(BotEvent.Ignored.class);
+    }
+
+    @Test
+    void anUpgradeShowsUpFromEitherSide() {
+        assertThat(UpdateClassifier.classify(new Update(1, new Update.Message(2, PERSON, new Update.Chat(-5, "group"), null, null, -100L, null))))
+                .isEqualTo(new BotEvent.ChatMigrated(-5, -100));
+        assertThat(UpdateClassifier.classify(new Update(1, new Update.Message(2, PERSON, new Update.Chat(-100, "supergroup"), null, null, null, -5L))))
+                .isEqualTo(new BotEvent.ChatMigrated(-5, -100));
+    }
 }
