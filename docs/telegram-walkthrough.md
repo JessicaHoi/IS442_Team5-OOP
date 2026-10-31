@@ -33,7 +33,7 @@ So there are three ways in: a person using the app, a person using Telegram, and
 
 **1. Telegram calls never happen inside a database transaction.** Supabase gives us 3 connections, and a Telegram call can take up to 60 seconds. Holding a connection that long could stall the whole app. That's why `ChatStore` and `SessionChatStore` hold short transactions, while `GroupChatService` and `SessionChatService` are not transactional and call Telegram between them.
 
-**2. Events run after the commit, on a background thread.** `ChatSyncListener` uses `@TransactionalEventListener` and `@Async`. If the save rolls back, Telegram never hears about it. If Telegram fails, the save still stands.
+**2. Events run after the commit, on a background thread.** `ChatSyncListener` uses `@TransactionalEventListener` and `@Async`. If the save rolls back, Telegram never hears about it. If Telegram fails, the save still stands. The `telegramExecutor` runs two at a time with up to 200 waiting, so a slow Telegram never slows a web request. If even that fills up, the update is dropped and logged.
 
 **3. Handlers read the current state instead of trusting the event.** Background events can arrive out of order, so a post for a session cancelled a moment later must not announce it as scheduled. That's why `postIf` checks the session's status first.
 
@@ -44,26 +44,26 @@ So there are three ways in: a person using the app, a person using Telegram, and
 ### Setting up a chat
 1. `GroupChatCard` calls `GroupChatController`, then `GroupChatService.startSetup`, `ChatStore.startSetup` and `TelegramLinkService.createGroupSetupLink`. This returns a one-time `t.me` link.
 2. The leader presses Start. The poller, classifier and router reach `ChatBotHandler.openSetup`, which sends two buttons: create a group or use an existing one.
-3. The leader picks a chat. `ChatBotHandler.chatChosen` reads it from Telegram **before** using up the link, so a failure can be retried. Telegram can send the old id of a group it has just upgraded, so `migrate_to_chat_id` is followed.
-4. `ChatStore.saveLinkedChat` saves it. If the bot has the rights it needs, `GroupChatService.finishSetup` sets permissions, the title and the description, and pins a welcome message.
-5. If rights are missing, the chat stays `NEEDS_ATTENTION`. A later `my_chat_member` update, or the leader's "check again" button, reaches `finishSetup` once they're fixed.
+3. The leader picks a chat. `ChatBotHandler.chatChosen` reads it from Telegram, and checks it isn't linked to another study group, **before** using up the link, so a failure or a wrong choice can be retried. Telegram can send the old id of a group it has just upgraded, so `migrate_to_chat_id` is followed.
+4. `ChatStore.saveLinkedChat` saves it, and only then is the link used up. If the bot has the rights it needs, `GroupChatService.finishSetup` sets permissions, the title and the description, and pins a welcome message.
+5. If rights are missing, the chat stays `NEEDS_ATTENTION`. A later `my_chat_member` update, or the leader's "check again" button, reaches `finishSetup` once they're fixed. `GroupChat.setupFinishedAt` makes setup run only once, so losing and regaining rights later doesn't rename the chat or pin another message.
 
 ### Joining the chat
 1. `GroupChatCard` asks for an invite through `GroupChatService.invite`. That creates a personal link with `creates_join_request=true`, so Telegram asks the bot before letting anyone in.
 2. The student taps it, and `ChatBotHandler.joinRequested` calls `ChatStore.decideJoin`, which calls `ChatMembership.decideJoin`.
 3. `JoinDecision` is one of `Approve`, `Decline` or `Ignore`. The rules are on the entity, so `ChatMembershipTest` can test every case without Spring.
-4. On approval the bot saves who joined, revokes the link and sends a welcome message. Joining deliberately never creates a `TelegramAccount`, so someone holding a forwarded invite can't take over a student's private messages.
+4. On approval the bot saves who joined **first**, then approves. If saving fails, nobody has been let in. If Telegram refuses the approval, the row is reset and the student is told to get a new invite. Then it revokes the link and sends a welcome message. Joining deliberately never creates a `TelegramAccount`, so someone holding a forwarded invite can't take over a student's private messages.
 
 ### Leaving the study group
 1. `MembershipService` publishes `MemberLeft`.
 2. In the same transaction, `studysession/GroupEventListener` removes their answers to future sessions.
 3. After the commit, `ChatSyncListener` calls `GroupChatService.onMemberLeft`, which revokes the invite and removes them from the chat. Banning is how a bot removes someone, and an unban straight after lets them be invited again later.
-4. Telegram refuses to remove a chat's owner. That becomes `REMOVAL_FAILED`, and the leader sees a warning.
+4. Telegram refuses to remove a chat's owner. That becomes `REMOVAL_FAILED`, and the leader sees a warning. A chat upgraded since the id was saved is followed to its new id, so that doesn't count as a refusal.
 
 ### Scheduling a session
 1. `SessionList` calls `StudySessionController`, `StudySessionService.schedule` and `StudySession.schedule`, where the rules live. The service publishes `SessionScheduled`.
 2. After the commit, `ChatSyncListener` calls `SessionChatService.postScheduled`.
-3. It reads the session and checks for a working chat, then `SessionMessages` writes the text and `GroupChatService.send` posts it.
+3. It reads the session and checks for a working chat, then `SessionMessages` writes the text and `ChatSender.send` posts it.
 4. `SessionChatStore.recordPost` saves the message id and time on the session's `SessionChatCard`.
 
 Changing or cancelling follows the same path.
@@ -73,7 +73,7 @@ Changing or cancelling follows the same path.
 2. The poller, classifier and router reach `SessionChatService.buttonPressed`, and `RsvpPress.parse` reads the data.
 3. `SessionChatStore.responderFor` works out which student this is: first who they joined the chat as, then whoever connected that Telegram account. Nobody found means a pop-up, and nothing is saved.
 4. `StudySessionService.respond` saves it, with the same rules as the app.
-5. `answerButton` shows a small notice to the person who pressed.
+5. `answerButton` shows a small notice to the person who pressed. Any unexpected error still gets an answer, or the button would keep spinning.
 
 ### Sending reminders
 1. Every 60 seconds `SessionReminderJob` calls `SessionChatService.sendDueReminders`. It only runs on the instance polling for updates, because a token can only have one.
@@ -93,6 +93,8 @@ Telegram has no way for a bot to start a call or invite anyone to one. A chat ad
 | `group_chat` | A study group's chat, per bot |
 | `chat_membership` | One student's place in that chat |
 | `session_chat_card` | What the chat has been told about one session: its message, when it was announced and whether its reminder went out |
+
+A Telegram account can only be one student per chat: `chat_membership` has a unique constraint on chat and Telegram user. Several lookups rely on that to find one row.
 
 Foreign keys to `student` use `@OnDelete(CASCADE)` so deleting an account still works. Each teammate has their own bot, so queries filter on `bot_id`, and a chat owned by another bot shows `MANAGED_BY_OTHER_BOT`.
 
@@ -116,6 +118,12 @@ So that a crash can't cause a duplicate. The cost is that a crash at exactly the
 **Why is `SessionChatCard` separate from `StudySession`?**
 A session shouldn't know Telegram exists, and the app must work with Telegram off. Keeping that state in `telegram/chat/` keeps the dependency pointing one way.
 
+**What if one Telegram account is used for two students?**
+It's refused with a clear message, and the database has a unique constraint as a backstop. Without that, lookups by Telegram user find two rows and throw, which would break that person's buttons and joins.
+
+**Why does approving a join save first?**
+Because the two failures aren't equal. Saving first and failing leaves nobody in the chat. Approving first and failing to save leaves someone in the chat with no record, whom StudyBuddy could never remove.
+
 **What happens if Telegram is down?**
 The app carries on and the failure is logged. Reminders try again on the next run. Other posts are lost for now, which a later change fixes.
 
@@ -127,3 +135,25 @@ The app carries on and the failure is logged. Reminders try again on the next ru
 **After:** `SessionChatCard` holds that state, and the job only runs on the polling instance. There's one sender, so no claim is needed.
 
 **Why:** a session no longer carries Telegram fields, and about 30 lines of concurrency handling are gone. The README already says to run one polling instance per token, so the claim was guarding against something unsupported. Chat posts look the same.
+
+### Reliability fixes
+Each of these was a real way for something to go wrong, found by reading the code.
+
+| Problem | Fix |
+|---|---|
+| One Telegram account on two students made two rows, and every lookup for that account then threw | A clear `409` in `invite`, and a unique constraint |
+| A third background task blocked the web request that started it | A `ThreadPoolTaskExecutor` with a queue |
+| "Choose another chat" appeared after the link had been used up and the buttons removed | The check comes first, and the link and buttons stay |
+| Linking an existing group renamed it and reset permissions without saying so | The setup message now says so |
+| Getting rights back re-ran setup: another rename and another pinned message | `setupFinishedAt` |
+| An unexpected error left a pressed button spinning | Every press gets an answer |
+| After "Not you?" with a failed new invite, the card showed nothing | The card handles `REMOVED` and reloads on failure |
+| After 7 days the Join button was a dead link | The card fetches a new invite when the old one has expired |
+| A failed save after approval left someone in the chat with no record | Save first, and undo if Telegram refuses |
+| A removal in an upgraded group wrongly reported failure | `kick` follows the new id |
+| The app kept the chat's original title after the bot renamed it | The new title is saved. A rename by a person in Telegram still isn't noticed |
+| A group closed during the 10-minute setup window could still be linked | The link stops working when the group closes |
+
+**Clean-up:** `ChatSender` now holds sending and following upgraded chats, so session code no longer depends on `GroupChatService`. Group messages no longer carry a `RemoveKeyboard` placeholder, because the plain `sendMessage` now returns the message id.
+
+**Left as it is on purpose:** `TelegramAccount.canMessage` is always true, but removing it means changing the API and dropping a column. The test-only constructors on `Update` would mean rewriting about 30 test lines for little benefit. `ChatStore` stays one class, because splitting it wouldn't make any single flow easier to follow.

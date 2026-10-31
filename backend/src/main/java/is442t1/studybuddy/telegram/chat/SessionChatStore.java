@@ -59,8 +59,7 @@ class SessionChatStore {
     public Optional<SessionRef> read(UUID sessionId) {
         return sessionRepository.findById(sessionId).map(session -> new SessionRef(session.getStudyGroup().getId(), session.getStatus(),
                 new SessionMessages.Details(session.getTitle(), session.getStartsAt(), session.getEndsAt(), session.getMeetingMode(),
-                        session.getLocation(), session.getNote(), session.getMeetingLink(), session.isGroupVideoChat(),
-                        session.getRsvps().stream().filter(rsvp -> rsvp.getResponse() == RsvpResponse.GOING).count())));
+                        session.getLocation(), session.getNote(), session.getMeetingLink(), session.isGroupVideoChat(), session.goingCount())));
     }
 
     /**

@@ -6,6 +6,7 @@ import { useConfirm } from '../../composables/useConfirm';
 import { useToast } from '../../composables/useToast';
 import { CHAT_MEMBER_STATES, CHAT_RIGHTS } from '../../utils/constants';
 import { startPolling } from '../../utils/poll';
+import { needsInvite } from '../../utils/telegram';
 import LoadingState from '../ui/LoadingState.vue';
 import ErrorState from '../ui/ErrorState.vue';
 
@@ -34,10 +35,10 @@ const me = computed(() => chat.value?.me);
 const missingRights = computed(() => (chat.value?.missingRights ?? []).map((name) => CHAT_RIGHTS[name] ?? name));
 const removalFailures = computed(() => (chat.value?.members ?? []).filter((member) => member.state === 'REMOVAL_FAILED'));
 
-/** Loads the chat and, for a member who hasn't an invite yet, fetches one so the button is ready to tap. */
+/** Loads the chat and, for a member without a working invite, fetches one so the button is ready to tap. */
 const { loading, error, run: load } = useAsync(async () => {
 	chat.value = await groupsApi.chat(props.groupId);
-	if (status.value === 'ACTIVE' && props.groupOpen && me.value?.state === 'NOT_INVITED') {
+	if (status.value === 'ACTIVE' && props.groupOpen && needsInvite(me.value)) {
 		chat.value = await groupsApi.chatInvite(props.groupId);
 	}
 });
@@ -82,7 +83,15 @@ const startSetup = () => act(async () => {
 
 const verify = () => act(async () => { chat.value = await groupsApi.verifyChat(props.groupId); });
 
-const getInvite = (renew) => act(async () => { chat.value = await groupsApi.chatInvite(props.groupId, renew); });
+/** "Not you?" can remove someone and then fail to make a new invite, so a failure reloads to show where things stand. */
+const getInvite = (renew) => act(async () => {
+	try {
+		chat.value = await groupsApi.chatInvite(props.groupId, renew);
+	} catch (caught) {
+		chat.value = await groupsApi.chat(props.groupId).catch(() => chat.value);
+		throw caught;
+	}
+});
 
 async function notMe() {
 	const confirmed = await confirm({
@@ -166,6 +175,10 @@ async function unlink() {
 					<template v-else-if="me.state === 'LEFT'">
 						<p class="small text-body-secondary mb-2">You left the chat.</p>
 						<button type="button" class="btn btn-outline-primary btn-sm" :disabled="busy" @click="getInvite(true)">Rejoin</button>
+					</template>
+					<template v-else-if="me.state === 'REMOVED' || me.state === 'NOT_INVITED'">
+						<p class="small text-body-secondary mb-2">You're not in the chat yet.</p>
+						<button type="button" class="btn btn-outline-primary btn-sm" :disabled="busy" @click="getInvite(false)">Get an invite</button>
 					</template>
 				</template>
 

@@ -24,7 +24,10 @@ import is442t1.studybuddy.student.Student;
  * so someone holding a forwarded invite can't take over the student's private messages.
  */
 @Entity
-@Table(name = "chat_membership", uniqueConstraints = @UniqueConstraint(columnNames = {"group_chat_id", "student_id"}))
+@Table(name = "chat_membership", uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"group_chat_id", "student_id"}),
+        @UniqueConstraint(columnNames = {"group_chat_id", "telegram_user_id"})
+})
 public class ChatMembership extends BaseEntity {
 
     static final String NOT_MEMBER = "This invite is no longer valid, because you aren't a member of that study group.";

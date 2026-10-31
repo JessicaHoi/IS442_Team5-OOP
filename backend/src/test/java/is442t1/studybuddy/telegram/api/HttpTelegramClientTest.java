@@ -102,14 +102,14 @@ class HttpTelegramClientTest {
     void sendsSetupButtonsTheWayTelegramExpects() {
         server.expect(requestTo(BASE + "/sendMessage"))
                 .andExpect(content().json("""
-                        {"chat_id":42,"text":"Pick","reply_markup":{"is_persistent":true,"resize_keyboard":true,"one_time_keyboard":false,
+                        {"chat_id":42,"text":"Pick","reply_markup":{"is_persistent":true,"resize_keyboard":true,
                          "keyboard":[[{"text":"Existing","request_chat":{"request_id":8,"chat_is_channel":false,"bot_is_member":true}}]]}}
                         """))
                 .andExpect(content().string(not(containsString("administrator_rights"))))
                 .andRespond(withSuccess("{\"ok\":true,\"result\":{\"message_id\":55}}", MediaType.APPLICATION_JSON));
 
         long messageId = client.sendMessage(42, "Pick", new ReplyMarkup.Keyboard(List.of(List.of(new ReplyMarkup.ChatRequestButton("Existing",
-                new ReplyMarkup.ChatRequest(8, false, true, null, null)))), true, true, false));
+                new ReplyMarkup.ChatRequest(8, false, true, null, null)))), true, true));
 
         assertThat(messageId).isEqualTo(55);
         server.verify();

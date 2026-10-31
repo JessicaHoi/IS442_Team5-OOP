@@ -5,8 +5,6 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.LongConsumer;
-import java.util.function.LongFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +15,6 @@ import is442t1.studybuddy.common.exception.ExternalServiceException;
 import is442t1.studybuddy.telegram.TelegramProperties;
 import is442t1.studybuddy.telegram.api.ChatInviteLink;
 import is442t1.studybuddy.telegram.api.ChatMember;
-import is442t1.studybuddy.telegram.api.MessageEntity;
 import is442t1.studybuddy.telegram.api.ReplyMarkup;
 import is442t1.studybuddy.telegram.api.TelegramApiException;
 import is442t1.studybuddy.telegram.api.TelegramClient;
@@ -38,15 +35,18 @@ public class GroupChatService {
     private static final Logger LOG = LoggerFactory.getLogger(GroupChatService.class);
     private static final int TITLE_LIMIT = 128;
     private static final int DESCRIPTION_LIMIT = 255;
+    private static final String LINKED_ACCOUNT_TAKEN = "Your connected Telegram account is already in this chat as another student. Connect your own Telegram account from your profile to join.";
     private static final String TELEGRAM_UNAVAILABLE = "Telegram couldn't do that right now. Please try again.";
 
     private final ChatStore store;
+    private final ChatSender sender;
     private final TelegramClient client;
     private final TelegramProperties properties;
     private final SecureRandom random = new SecureRandom();
 
-    public GroupChatService(ChatStore store, TelegramClient client, TelegramProperties properties) {
+    public GroupChatService(ChatStore store, ChatSender sender, TelegramClient client, TelegramProperties properties) {
         this.store = store;
+        this.sender = sender;
         this.client = client;
         this.properties = properties;
     }
@@ -74,31 +74,35 @@ public class GroupChatService {
 
     /** Reads the bot's rights and, the first time they're enough, finishes setting up the chat. */
     void refreshRights(ChatRef chat) {
-        ChatMember bot = onChat(chat, chatId -> client.getChatMember(chatId, properties.botId()));
+        ChatMember bot = sender.onChat(chat, chatId -> client.getChatMember(chatId, properties.botId()));
         long current = store.findByGroup(chat.groupId()).map(ChatRef::chatId).orElse(chat.chatId());
         store.updateRights(current, ChatRights.of(bot)).ifPresent(this::finishSetup);
     }
 
-    /** Sets the chat up as far as the bot's rights allow. Nothing here is essential, so failures only get logged. */
+    /** Sets the chat up as far as the bot's rights allow. Runs once per chat. Nothing here is essential, so failures only get logged. */
     void finishSetup(ChatRef chat) {
-        attempt("set member permissions", () -> runOnChat(chat, chatId -> client.setMemberPermissions(chatId, true)));
+        attempt("set member permissions", () -> sender.runOnChat(chat, chatId -> client.setMemberPermissions(chatId, true)));
         if (!chat.lacks("CHANGE_INFO")) {
             applyTitleAndDescription(chat);
         }
         attempt("post the welcome message", () -> {
             String text = "This chat is linked to the study group " + chat.groupName()
                     + " on StudyBuddy. The StudyBuddy bot can see messages here but doesn't store them.";
-            long messageId = send(chat, text);
+            long messageId = sender.send(chat, text);
             if (!chat.lacks("PIN_MESSAGES")) {
-                runOnChat(chat, chatId -> client.pinMessage(chatId, messageId));
+                sender.runOnChat(chat, chatId -> client.pinMessage(chatId, messageId));
             }
         });
     }
 
     private void applyTitleAndDescription(ChatRef chat) {
-        attempt("rename the chat", () -> runOnChat(chat, chatId -> client.setTitle(chatId, truncate(chat.groupName() + " · " + chat.courseCode(), TITLE_LIMIT))));
+        attempt("rename the chat", () -> {
+            String title = truncate(chat.groupName() + " · " + chat.courseCode(), TITLE_LIMIT);
+            sender.runOnChat(chat, chatId -> client.setTitle(chatId, title));
+            store.saveTitle(chat.id(), title);
+        });
         if (chat.description() != null && !chat.description().isBlank()) {
-            attempt("set the chat description", () -> runOnChat(chat, chatId -> client.setDescription(chatId, truncate(chat.description(), DESCRIPTION_LIMIT))));
+            attempt("set the chat description", () -> sender.runOnChat(chat, chatId -> client.setDescription(chatId, truncate(chat.description(), DESCRIPTION_LIMIT))));
         }
     }
 
@@ -107,9 +111,9 @@ public class GroupChatService {
         requireEnabled();
         ChatRef chat = store.requireLedChat(leaderId, groupId);
         if (chat.status() != GroupChatStatus.DETACHED) {
-            store.activeLinks(chat.id()).forEach(link -> attempt("revoke an invite", () -> runOnChat(chat, chatId -> client.revokeInviteLink(chatId, link))));
-            attempt("say goodbye", () -> send(chat, "This chat is no longer linked to StudyBuddy. Goodbye!"));
-            attempt("leave the chat", () -> runOnChat(chat, client::leaveChat));
+            store.activeLinks(chat.id()).forEach(link -> attempt("revoke an invite", () -> sender.runOnChat(chat, chatId -> client.revokeInviteLink(chatId, link))));
+            attempt("say goodbye", () -> sender.send(chat, "This chat is no longer linked to StudyBuddy. Goodbye!"));
+            attempt("leave the chat", () -> sender.runOnChat(chat, client::leaveChat));
         }
         store.delete(chat.id());
     }
@@ -128,8 +132,11 @@ public class GroupChatService {
             } else if (state.state() == ChatMemberState.JOINED || state.inviteStillValid()) {
                 return store.view(studentId, groupId);
             }
+            if (state.linkedAccountTaken()) {
+                throw new BusinessRuleException(LINKED_ACCOUNT_TAKEN);
+            }
             if ((!renew || state.state() != ChatMemberState.JOINED) && state.linkedTelegramUserId() != null
-                    && onChat(chat, chatId -> client.getChatMember(chatId, state.linkedTelegramUserId())).isInChat()) {
+                    && sender.onChat(chat, chatId -> client.getChatMember(chatId, state.linkedTelegramUserId())).isInChat()) {
                 store.saveJoined(chat.id(), studentId, state.linkedTelegramUserId(), null);
                 return store.view(studentId, groupId);
             }
@@ -143,7 +150,7 @@ public class GroupChatService {
     private void discardCurrent(InviteState state, UUID studentId) {
         ChatRef chat = state.chat();
         if (state.inviteLink() != null) {
-            runOnChat(chat, chatId -> client.revokeInviteLink(chatId, state.inviteLink()));
+            sender.runOnChat(chat, chatId -> client.revokeInviteLink(chatId, state.inviteLink()));
         }
         if (state.state() == ChatMemberState.JOINED && state.telegramUserId() != null) {
             if (state.telegramUserId().equals(state.linkedTelegramUserId())) {
@@ -159,7 +166,7 @@ public class GroupChatService {
         random.nextBytes(bytes);
         String name = INVITE_NAME_PREFIX + HexFormat.of().formatHex(bytes);
         Instant expiresAt = Instant.now().plus(properties.inviteTtl());
-        ChatInviteLink link = onChat(chat, chatId -> client.createJoinRequestLink(chatId, name, expiresAt));
+        ChatInviteLink link = sender.onChat(chat, chatId -> client.createJoinRequestLink(chatId, name, expiresAt));
         store.saveInvite(chat.id(), studentId, link.inviteLink(), name, expiresAt);
         return link.inviteLink();
     }
@@ -187,7 +194,7 @@ public class GroupChatService {
     public void onAccountDeleted(List<Removal> removals) {
         for (Removal removal : removals) {
             if (removal.inviteLink() != null) {
-                attempt("revoke an invite", () -> client.revokeInviteLink(removal.chatId(), removal.inviteLink()));
+                revokeQuietly(removal);
             }
             if (removal.telegramUserId() != null && removal.state() != ChatMemberState.REMOVED) {
                 attempt("remove a deleted account from a chat", () -> kick(removal.chatId(), removal.chatType(), removal.telegramUserId()));
@@ -197,7 +204,7 @@ public class GroupChatService {
 
     private void remove(Removal removal) {
         if (removal.inviteLink() != null) {
-            attempt("revoke an invite", () -> client.revokeInviteLink(removal.chatId(), removal.inviteLink()));
+            revokeQuietly(removal);
         }
         if (removal.telegramUserId() == null || removal.state() == ChatMemberState.REMOVED || removal.state() == ChatMemberState.LEFT) {
             store.saveRemoved(removal.groupChatId(), removal.studentId());
@@ -212,20 +219,38 @@ public class GroupChatService {
         }
     }
 
-    /** Banning is how a bot removes someone. In a supergroup the unban lets them be invited back later. */
+    private void revokeQuietly(Removal removal) {
+        attempt("revoke an invite", () -> sender.onChatId(removal.chatId(), chatId -> {
+            client.revokeInviteLink(chatId, removal.inviteLink());
+            return null;
+        }));
+    }
+
+    /**
+     * Banning is how a bot removes someone. In a supergroup the unban lets them be invited back later. A group that
+     * has since been upgraded answers with its new id, and is a supergroup from then on.
+     */
     private void kick(long chatId, String chatType, long telegramUserId) {
-        client.banMember(chatId, telegramUserId);
-        if ("supergroup".equals(chatType)) {
-            client.unbanMember(chatId, telegramUserId);
+        try {
+            client.banMember(chatId, telegramUserId);
+            if ("supergroup".equals(chatType)) {
+                client.unbanMember(chatId, telegramUserId);
+            }
+        } catch (TelegramApiException exception) {
+            if (exception.migrateToChatId() == null) {
+                throw exception;
+            }
+            store.migrate(chatId, exception.migrateToChatId());
+            kick(exception.migrateToChatId(), "supergroup", telegramUserId);
         }
     }
 
     /** Makes the chat read-only and stops its invites. Members keep the history. */
     public void onGroupClosed(UUID groupId) {
         store.findByGroup(groupId).filter(chat -> chat.status() != GroupChatStatus.DETACHED).ifPresent(chat -> {
-            store.closeChat(chat.id()).forEach(link -> attempt("revoke an invite", () -> runOnChat(chat, chatId -> client.revokeInviteLink(chatId, link))));
-            attempt("post the closing message", () -> send(chat, "This study group has closed, so the chat is now read-only."));
-            attempt("make the chat read-only", () -> runOnChat(chat, chatId -> client.setMemberPermissions(chatId, false)));
+            store.closeChat(chat.id()).forEach(link -> attempt("revoke an invite", () -> sender.runOnChat(chat, chatId -> client.revokeInviteLink(chatId, link))));
+            attempt("post the closing message", () -> sender.send(chat, "This study group has closed, so the chat is now read-only."));
+            attempt("make the chat read-only", () -> sender.runOnChat(chat, chatId -> client.setMemberPermissions(chatId, false)));
         });
     }
 
@@ -236,40 +261,7 @@ public class GroupChatService {
 
     public void onLeadershipTransferred(UUID groupId, String newLeaderName) {
         store.findByGroup(groupId).filter(chat -> chat.status() == GroupChatStatus.ACTIVE).ifPresent(chat ->
-                attempt("post the leadership notice", () -> send(chat, newLeaderName + " is now the leader of this study group.")));
-    }
-
-    long send(ChatRef chat, String text) {
-        return send(chat, text, new ReplyMarkup.RemoveKeyboard(true));
-    }
-
-    long send(ChatRef chat, String text, ReplyMarkup markup) {
-        return onChat(chat, chatId -> client.sendMessage(chatId, text, markup));
-    }
-
-    long send(ChatRef chat, String text, List<MessageEntity> entities, ReplyMarkup markup) {
-        return entities.isEmpty() ? send(chat, text, markup) : onChat(chat, chatId -> client.sendMessage(chatId, text, entities, markup));
-    }
-
-    /** Runs a call on the chat. If the group has since been upgraded, Telegram says so: save the new id and try once more. */
-    private <T> T onChat(ChatRef chat, LongFunction<T> call) {
-        long chatId = store.findByGroup(chat.groupId()).map(ChatRef::chatId).orElse(chat.chatId());
-        try {
-            return call.apply(chatId);
-        } catch (TelegramApiException exception) {
-            if (exception.migrateToChatId() == null) {
-                throw exception;
-            }
-            store.migrate(chatId, exception.migrateToChatId());
-            return call.apply(exception.migrateToChatId());
-        }
-    }
-
-    private void runOnChat(ChatRef chat, LongConsumer call) {
-        onChat(chat, chatId -> {
-            call.accept(chatId);
-            return null;
-        });
+                attempt("post the leadership notice", () -> sender.send(chat, newLeaderName + " is now the leader of this study group.")));
     }
 
     private static void attempt(String what, Runnable action) {

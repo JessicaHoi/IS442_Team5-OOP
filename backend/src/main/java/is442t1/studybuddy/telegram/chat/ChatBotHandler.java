@@ -27,12 +27,13 @@ import is442t1.studybuddy.telegram.link.TelegramLinkService;
 @ConditionalOnProperty(prefix = "studybuddy.telegram", name = "enabled", havingValue = "true")
 public class ChatBotHandler {
 
-    static final String SETUP_LINK_NOT_VALID = "This setup link has expired or belongs to someone else. Open your group in StudyBuddy and start again.";
-    static final String CHOOSE_CHAT = "Choose a chat for your study group. Create a new group, and I'll name it for you. Or use a group you already own: existing members stay, and StudyBuddy only ever removes people it invited.";
+    static final String SETUP_LINK_NOT_VALID = "This setup link is no longer valid. Open your group in StudyBuddy and start again.";
+    static final String CHOOSE_CHAT = "Choose a chat for your study group. Create a new group, and I'll name it for you. Or use a group you already own: I'll rename it after your study group and reset what members are allowed to do. Existing members stay and will see session details, and StudyBuddy only ever removes people it invited.";
     static final String NOT_ADMIN = "You need to be an admin of that group to link it. Try again from StudyBuddy with a group you own.";
-    static final String ALREADY_LINKED = "That chat is already linked to another study group. Please choose a different one.";
+    static final String ALREADY_LINKED = "That chat is already linked to another study group. Your setup link still works: tap a button below to choose a different one.";
     static final String LINKED = "Linked ✓ You can go back to StudyBuddy.";
     static final String MAKE_ME_ADMIN = "Linked, but I can't manage the chat yet. In the group, open Administrators, add me as an admin, and allow adding and banning users. StudyBuddy will update by itself.";
+    static final String COULD_NOT_JOIN = "I couldn't let you into the chat just now. Open the group in StudyBuddy to get a new invite.";
     static final String COULD_NOT_READ_CHAT = "I couldn't read that group from Telegram. Your setup link still works: tap Use an existing group and choose the same group.";
     private static final Logger LOG = LoggerFactory.getLogger(ChatBotHandler.class);
 
@@ -85,7 +86,7 @@ public class ChatBotHandler {
         ReplyMarkup.ChatRequest existing = new ReplyMarkup.ChatRequest(requestId + 1, false, true, null, null);
         return new ReplyMarkup.Keyboard(List.of(
                 List.of(new ReplyMarkup.ChatRequestButton("Create a new group", create)),
-                List.of(new ReplyMarkup.ChatRequestButton("Use an existing group", existing))), true, true, false);
+                List.of(new ReplyMarkup.ChatRequestButton("Use an existing group", existing))), true, true);
     }
 
     /** The leader picked a chat. Only the person who opened the link, answering its own buttons, gets this far. */
@@ -100,19 +101,20 @@ public class ChatBotHandler {
             client.sendMessage(privateChatId, NOT_ADMIN, new ReplyMarkup.RemoveKeyboard(true));
             return;
         }
-        Optional<UUID> groupId = linkService.completeGroupSetup(telegramUserId, requestId);
+        Optional<UUID> groupId = linkService.groupInSetup(telegramUserId, requestId);
         if (groupId.isEmpty()) {
             client.sendMessage(privateChatId, SETUP_LINK_NOT_VALID, new ReplyMarkup.RemoveKeyboard(true));
             return;
         }
-        Optional<ChatRef> saved = store.saveLinkedChat(groupId.get(), chosen.chat().id(), chosen.chat().type(), chosen.chat().title(),
-                telegramUserId, firstName, chosen.rights());
-        if (saved.isEmpty()) {
-            client.sendMessage(privateChatId, ALREADY_LINKED, new ReplyMarkup.RemoveKeyboard(true));
+        if (store.linkedToAnotherGroup(chosen.chat().id(), groupId.get())) {
+            client.sendMessage(privateChatId, ALREADY_LINKED);
             return;
         }
-        if (saved.get().status() == GroupChatStatus.ACTIVE) {
-            chatService.finishSetup(saved.get());
+        ChatRef saved = store.saveLinkedChat(groupId.get(), chosen.chat().id(), chosen.chat().type(), chosen.chat().title(),
+                telegramUserId, firstName, chosen.rights());
+        linkService.useUpGroupSetup(telegramUserId, requestId);
+        if (saved.status() == GroupChatStatus.ACTIVE) {
+            chatService.finishSetup(saved);
             client.sendMessage(privateChatId, LINKED, new ReplyMarkup.RemoveKeyboard(true));
         } else {
             client.sendMessage(privateChatId, MAKE_ME_ADMIN, new ReplyMarkup.RemoveKeyboard(true));
@@ -163,8 +165,15 @@ public class ChatBotHandler {
                 messageQuietly(request.userChatId(), decline.reason());
             }
             case JoinDecision.Approve approve -> {
-                approve(chatId, userId);
+                // Saved first: if this fails nobody has been let in, whereas the other order leaves someone in the chat with no record of them.
                 store.saveJoined(outcome.chat().id(), outcome.studentId(), userId, displayName(request.from()));
+                try {
+                    approve(chatId, userId);
+                } catch (TelegramApiException exception) {
+                    store.saveJoinFailed(outcome.chat().id(), outcome.studentId());
+                    messageQuietly(request.userChatId(), COULD_NOT_JOIN);
+                    throw exception;
+                }
                 if (outcome.link() != null) {
                     revokeQuietly(chatId, outcome.link());
                 }

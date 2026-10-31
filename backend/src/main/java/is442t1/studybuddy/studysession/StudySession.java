@@ -185,6 +185,10 @@ public class StudySession extends BaseEntity {
         return note;
     }
 
+    public long goingCount() {
+        return rsvps.stream().filter(rsvp -> rsvp.getResponse() == RsvpResponse.GOING).count();
+    }
+
     public String getMeetingLink() {
         return meetingLink;
     }

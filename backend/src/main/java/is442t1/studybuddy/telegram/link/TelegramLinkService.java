@@ -117,27 +117,35 @@ public class TelegramLinkService {
 
     /**
      * Ties a setup link to the Telegram user who opened it and returns its first button id. Opening it again gives
-     * the same id, so the buttons can be resent. Empty if the link isn't usable, belongs to someone else, or the
-     * student no longer leads the group.
+     * the same id, so the buttons can be resent. Empty if the link isn't usable or belongs to someone else, the
+     * student no longer leads the group, or the group has closed.
      */
     public Optional<Integer> openGroupSetup(String token, long telegramUserId) {
         Instant now = Instant.now();
         return tokenRepository.findByTokenHashAndBotId(hash(token), properties.botId())
                 .filter(found -> found.getStudyGroup() != null && found.isUsable(now))
-                .filter(found -> found.getStudyGroup().isLedBy(found.getStudent().getId()) && found.getStudent().isActive())
+                .filter(TelegramLinkService::canStillSetUp)
                 .filter(found -> found.claimFor(telegramUserId, random.nextInt(1, Integer.MAX_VALUE - 1)))
                 .map(TelegramLinkToken::getRequestId);
     }
 
-    /** Uses up the setup link behind a chosen group. Returns the study group's id if the choice is valid. */
-    public Optional<UUID> completeGroupSetup(long telegramUserId, int requestId) {
+    /** The study group a chosen chat would be linked to, if the choice is valid. Leaves the link usable. */
+    @Transactional(readOnly = true)
+    public Optional<UUID> groupInSetup(long telegramUserId, int requestId) {
+        return tokenRepository.findSetupInProgress(properties.botId(), telegramUserId, requestId, Instant.now())
+                .filter(TelegramLinkService::canStillSetUp)
+                .map(found -> found.getStudyGroup().getId());
+    }
+
+    /** Called once the chosen chat is saved, so a failure before that leaves the leader able to try again. */
+    public void useUpGroupSetup(long telegramUserId, int requestId) {
         Instant now = Instant.now();
-        return tokenRepository.findSetupInProgress(properties.botId(), telegramUserId, requestId, now)
-                .filter(found -> found.getStudyGroup().isLedBy(found.getStudent().getId()) && found.getStudent().isActive())
-                .map(found -> {
-                    found.markUsed(now);
-                    return found.getStudyGroup().getId();
-                });
+        tokenRepository.findSetupInProgress(properties.botId(), telegramUserId, requestId, now).ifPresent(found -> found.markUsed(now));
+    }
+
+    private static boolean canStillSetUp(TelegramLinkToken token) {
+        StudyGroup group = token.getStudyGroup();
+        return group.isOpen() && group.isLedBy(token.getStudent().getId()) && token.getStudent().isActive();
     }
 
     private Optional<TelegramAccount> findAccount(UUID studentId) {

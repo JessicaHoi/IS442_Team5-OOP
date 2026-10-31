@@ -3,7 +3,7 @@ package is442t1.studybuddy.telegram.bot;
 import is442t1.studybuddy.telegram.api.ChatMember;
 import is442t1.studybuddy.telegram.api.Update;
 
-/** What an update means to StudyBuddy. Later phases add a case for each new kind of update. */
+/** What an update means to StudyBuddy. */
 sealed interface BotEvent {
 
     /**

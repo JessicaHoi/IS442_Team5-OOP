@@ -17,3 +17,9 @@ export function normalizeTelegramHandle(raw) {
 export const isValidChatLink = (url) => CHAT_LINK.test((url ?? '').trim());
 
 export const telegramProfileUrl = (handle) => `https://t.me/${handle}`;
+
+/** Whether a member's card should fetch an invite: they have none, were removed, or theirs has expired. */
+export function needsInvite(me, now = Date.now()) {
+	if (me?.state === 'NOT_INVITED' || me?.state === 'REMOVED') return true;
+	return me?.state === 'INVITED' && new Date(me.inviteExpiresAt).getTime() <= now;
+}
