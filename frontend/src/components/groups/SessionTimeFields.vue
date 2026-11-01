@@ -71,14 +71,14 @@ async function calendarClosed() {
 		</div>
 	</FormField>
 	<div class="row">
-		<div class="col-5">
+		<div class="col-sm-5">
 			<FormField v-slot="{ id, invalidClass }" label="Starts" required :error="startError">
 				<select :id="id" :value="startsAt" class="form-select" :class="invalidClass" @change="setStart($event.target.value)">
 					<option v-for="option in startOptions" :key="option.value" :value="option.value" :disabled="option.disabled">{{ option.label }}</option>
 				</select>
 			</FormField>
 		</div>
-		<div class="col-7">
+		<div class="col-sm-7">
 			<FormField v-slot="{ id, invalidClass }" label="Ends" required :error="endError">
 				<select :id="id" :value="endsAt" class="form-select" :class="invalidClass" @change="emit('update:endsAt', $event.target.value)">
 					<option v-for="option in endOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
