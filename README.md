@@ -318,8 +318,8 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `GET /groups/{id}/sessions?scope=upcoming\|past` | Members only. `upcoming` is the default: sessions not yet finished, including cancelled ones, soonest first. `past` is newest first. |
 | | `POST /groups/{id}/sessions` | Leader only. `201`. Body `{title, startsAt, endsAt, meetingMode, location?, note?, meetingLink?, groupVideoChat?}`. `meetingLink` (an `http` or `https` address) and `groupVideoChat` are for `ONLINE` sessions only, and a session can't have both. StudyBuddy doesn't create calls: the leader pastes the link. `meetingMode` is `IN_PERSON` or `ONLINE`; the start must be in the future and the length at most 8 hours. `409` if the group is closed. |
 | | `PUT /groups/{id}/sessions/{sid}` | Leader only. Same body. Moving the start clears everyone's answers, because they were for the old time. Saving with no changes does nothing. `409` once the session has started or been cancelled. |
-| | `POST /groups/{id}/sessions/{sid}/cancel` | Leader only. Returns the session. Same `409`. |
-| | `PUT /groups/{id}/sessions/{sid}/rsvp` | Members only. Body `{response}`, `GOING` or `NOT_GOING`. Same `409`. |
+| | `POST /groups/{id}/sessions/{sid}/cancel` | Leader only. Returns the session. Works until an hour after the session ends, so a leader can show that it didn't happen. `409` after that, or if it's already cancelled. |
+| | `PUT /groups/{id}/sessions/{sid}/rsvp` | Members only. Body `{response}`, `GOING` or `NOT_GOING`. `409` once the session has started or been cancelled. |
 | | `GET /groups/{id}/sessions/{sid}/calendar.ics` | Members only. An iCalendar file (`text/calendar`). Errors are still JSON. |
 | | `GET /sessions/upcoming` | The caller's scheduled sessions in all their groups, soonest first. |
 | | `GET /groups/{id}/leadership` | Leader only. Returns `{id, name, status, eligibleMembers:[{id, name}]}`. |

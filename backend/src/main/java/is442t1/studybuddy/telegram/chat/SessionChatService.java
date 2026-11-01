@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,15 +62,18 @@ public class SessionChatService {
     /** The chat needs to hear about a new time, and the reminder can go out again. Cleared first, so a failed reply can't cost it. */
     void startMoved(UUID sessionId) {
         store.startMoved(sessionId, Instant.now());
-        replyToCard(SessionStatus.SCHEDULED, sessionId, session -> SessionMessages.startMoved(session.details(), zone));
+        replyToCard(sessionId, session -> session.status() == SessionStatus.SCHEDULED, session -> SessionMessages.startMoved(session.details(), zone));
     }
 
+    /** Once a session is over, the card changing is enough. A message about it would only disturb people. */
     void cancelled(UUID sessionId) {
-        replyToCard(SessionStatus.CANCELLED, sessionId, session -> SessionMessages.cancelled(session.details()));
+        Instant now = Instant.now();
+        replyToCard(sessionId, session -> session.status() == SessionStatus.CANCELLED && now.isBefore(session.details().endsAt()),
+                session -> SessionMessages.cancelled(session.details()));
     }
 
-    private void replyToCard(SessionStatus expected, UUID sessionId, Function<SessionRef, String> wording) {
-        store.read(sessionId).filter(session -> session.status() == expected).ifPresent(session ->
+    private void replyToCard(UUID sessionId, Predicate<SessionRef> stillTrue, Function<SessionRef, String> wording) {
+        store.read(sessionId).filter(stillTrue).ifPresent(session ->
                 activeChat(session).ifPresent(chat -> store.messageId(sessionId).ifPresent(messageId ->
                         sender.reply(chat, messageId, wording.apply(session), List.of()))));
     }

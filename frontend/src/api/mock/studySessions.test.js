@@ -72,6 +72,26 @@ describe('study sessions', () => {
 		expect((await call('get', '/sessions/upcoming', { token: memberToken })).data).toEqual([]);
 	});
 
+	it('lets the leader cancel until an hour after the end, but nothing else changes by then', async () => {
+		for (const [startsAt, endsAt] of [[hoursFromNow(-1), hoursFromNow(1)], [hoursFromNow(-3), hoursFromNow(-0.5)]]) {
+			const session = await schedule();
+			Object.assign(db.studySessions.find((item) => item.id === session.id), { startsAt, endsAt });
+			expect((await call('put', `${url}/${session.id}`, { token: leaderToken, data: details() })).status).toBe(409);
+			expect((await call('put', `${url}/${session.id}/rsvp`, { token: memberToken, data: { response: 'GOING' } })).status).toBe(409);
+			expect((await call('post', `${url}/${session.id}/cancel`, { token: memberToken })).status).toBe(403);
+			expect((await call('post', `${url}/${session.id}/cancel`, { token: leaderToken })).data.status).toBe('CANCELLED');
+			expect((await call('post', `${url}/${session.id}/cancel`, { token: leaderToken })).status).toBe(409);
+		}
+	});
+
+	it('refuses to cancel more than an hour after the end', async () => {
+		const session = await schedule();
+		Object.assign(db.studySessions.find((item) => item.id === session.id), { startsAt: hoursFromNow(-4), endsAt: hoursFromNow(-2) });
+		const refused = await call('post', `${url}/${session.id}/cancel`, { token: leaderToken });
+		expect(refused.status).toBe(409);
+		expect(refused.data.message).toBe('It\'s too late to cancel this session.');
+	});
+
 	it('closing the group cancels upcoming sessions', async () => {
 		const session = await schedule();
 		await call('post', `/groups/${group.id}/close`, { token: leaderToken });

@@ -1,6 +1,7 @@
 import { badRequest, conflict, created, forbidden, notFound } from '../errors';
 import { route } from '../router';
 import { nextId } from '../db';
+import { isTooLateToCancel } from '../../../utils/sessions';
 
 const STUDENT_ONLY = { role: 'STUDENT' };
 const HOURS_8 = 8 * 60 * 60 * 1000;
@@ -29,8 +30,12 @@ function loadSession(db, group, id) {
 	return session;
 }
 
-function requireChangeable(session) {
+function requireNotCancelled(session) {
 	if (session.status === 'CANCELLED') throw conflict('This session has been cancelled.');
+}
+
+function requireChangeable(session) {
+	requireNotCancelled(session);
 	if (new Date(session.startsAt) <= new Date()) throw conflict('This session has already started.');
 }
 
@@ -156,7 +161,8 @@ route('PUT', '/groups/:id/sessions/:sid', ({ db, user, params, body }) => {
 route('POST', '/groups/:id/sessions/:sid/cancel', ({ db, user, params }) => {
 	const group = ledGroup(db, user, params.id);
 	const session = loadSession(db, group, params.sid);
-	requireChangeable(session);
+	requireNotCancelled(session);
+	if (isTooLateToCancel(session)) throw conflict('It\'s too late to cancel this session.');
 	session.status = 'CANCELLED';
 	session.icsSequence += 1;
 	return toSession(db, session, user.id);

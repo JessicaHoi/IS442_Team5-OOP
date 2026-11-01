@@ -97,7 +97,7 @@ async function disconnect() {
 		</div>
 
 		<template v-else-if="linkUrl && !timedOut">
-			<p class="text-muted small mb-2">Open the bot in Telegram and press <strong>Start</strong>. This page updates by itself.</p>
+			<p class="text-muted small mb-2">Open Telegram and tap <strong>Start</strong>. We'll update this page when you're connected.</p>
 			<a class="btn btn-primary btn-sm" :href="linkUrl" target="_blank" rel="noopener">
 				<i class="bi bi-telegram me-1"></i>Open Telegram
 			</a>
@@ -105,7 +105,7 @@ async function disconnect() {
 
 		<template v-else>
 			<p class="text-muted small mb-2">
-				{{ timedOut ? "We didn't hear from Telegram. If you pressed Start, get a new link and try again." : 'Connect your account so StudyBuddy can recognise you on Telegram.' }}
+				{{ timedOut ? "We didn't hear from Telegram. Get a new link and try again." : 'Connect your account to answer sessions from your group\'s chat.' }}
 			</p>
 			<button type="button" class="btn btn-outline-primary btn-sm" :disabled="busy" @click="connect">
 				<i class="bi bi-telegram me-1"></i>{{ timedOut ? 'Get a new link' : 'Connect Telegram' }}

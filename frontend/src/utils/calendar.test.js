@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarFileName, endAfterStartChange, googleCalendarUrl, nextOccurrence, outlookCalendarUrl, sessionTimesFromSlot, toLocalInput } from './calendar';
+import { calendarFileName, defaultSessionTimes, endAfterStartChange, endTimeOptions, googleCalendarUrl, nextOccurrence, outlookCalendarUrl, sessionTimesFromSlot, startTimeOptions, toLocalInput } from './calendar';
 
 // Wednesday 4 Nov 2026, 18:00 local time.
 const NOW = new Date(2026, 10, 4, 18, 0);
@@ -89,5 +89,63 @@ describe('how to join', () => {
 		expect(details({ meetingLink: 'https://meet.example.com/abc' })).toContain('Join: https://meet.example.com/abc');
 		expect(details({ groupVideoChat: true })).toContain('Telegram chat');
 		expect(details({})).toBe('Study group: IS442 Crew\nBring notes');
+	});
+});
+
+describe('defaultSessionTimes', () => {
+	it('starts on the next full hour and lasts two hours', () => {
+		expect(defaultSessionTimes(new Date(2026, 10, 4, 18, 20))).toEqual({ startsAt: '2026-11-04T19:00', endsAt: '2026-11-04T21:00' });
+	});
+
+	it('moves to the next day when it needs to', () => {
+		expect(defaultSessionTimes(new Date(2026, 10, 4, 23, 5))).toEqual({ startsAt: '2026-11-05T00:00', endsAt: '2026-11-05T02:00' });
+	});
+});
+
+describe('startTimeOptions', () => {
+	const NOW = new Date(2026, 10, 4, 18, 20);
+
+	it('lists every 15 minutes of the day', () => {
+		const options = startTimeOptions('2026-11-05T19:00', NOW);
+		expect(options).toHaveLength(96);
+		expect(options[0].value).toBe('2026-11-05T00:00');
+		expect(options.find((option) => option.value === '2026-11-05T19:00').label).toBe(new Date(2026, 10, 5, 19).toLocaleTimeString('en-SG', { hour: 'numeric', minute: '2-digit' }));
+	});
+
+	it('keeps a time off the grid, in order', () => {
+		const values = startTimeOptions('2026-11-05T19:07', NOW).map((option) => option.value);
+		expect(values).toHaveLength(97);
+		expect(values.indexOf('2026-11-05T19:07')).toBe(values.indexOf('2026-11-05T19:00') + 1);
+	});
+
+	it('disables only the times already past', () => {
+		const options = startTimeOptions('2026-11-04T19:00', NOW);
+		expect(options.find((option) => option.value === '2026-11-04T18:15').disabled).toBe(true);
+		expect(options.find((option) => option.value === '2026-11-04T18:30').disabled).toBe(false);
+	});
+});
+
+describe('endTimeOptions', () => {
+	it('runs from 15 minutes to 8 hours after the start and shows each length', () => {
+		const options = endTimeOptions('2026-11-04T10:00', '2026-11-04T12:00');
+		expect(options).toHaveLength(32);
+		expect(options[0].label).toMatch(/\(15 mins\)$/);
+		expect(options[4].label).toMatch(/\(1 hr 15 mins\)$/);
+		expect(options[7].label).toMatch(/\(2 hrs\)$/);
+		expect(options.at(-1).value).toBe('2026-11-04T18:00');
+	});
+
+	it('says when it runs past midnight', () => {
+		const options = endTimeOptions('2026-11-04T23:00', '2026-11-05T00:30');
+		expect(options.find((option) => option.value === '2026-11-05T00:30').label).toMatch(/next day \(1 hr 30 mins\)$/);
+		expect(options.find((option) => option.value === '2026-11-04T23:45').label).not.toContain('next day');
+	});
+
+	it('keeps an end off the grid', () => {
+		expect(endTimeOptions('2026-11-04T10:00', '2026-11-04T12:07').map((option) => option.value)).toContain('2026-11-04T12:07');
+	});
+
+	it('shows no length for an end that is not after the start', () => {
+		expect(endTimeOptions('2026-11-04T10:00', '2026-11-04T09:00')[0].label).not.toContain('(');
 	});
 });

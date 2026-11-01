@@ -1,9 +1,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { SESSION_MEETING_MODES } from '../../utils/constants';
-import { endAfterStartChange, toLocalInput } from '../../utils/calendar';
+import { defaultSessionTimes, toLocalInput } from '../../utils/calendar';
 import AppModal from '../ui/AppModal.vue';
 import FormField from '../ui/FormField.vue';
+import SessionTimeFields from './SessionTimeFields.vue';
 
 /** Form for scheduling or changing a study session. `session` edits it; `defaults` pre-fills a new one. */
 const props = defineProps({
@@ -13,6 +14,8 @@ const props = defineProps({
 	saving: Boolean,
 	/** The group has a working Telegram chat, so its video chat can be offered. */
 	canUseVideoChat: Boolean,
+	/** Telegram is on but this group has no chat yet, so linking one is worth a mention. */
+	canLinkChat: Boolean,
 });
 const emit = defineEmits(['update:modelValue', 'submit']);
 
@@ -36,7 +39,7 @@ watch(() => props.modelValue, (open) => {
 			meetingLink: props.session.meetingLink ?? '',
 			groupVideoChat: props.session.groupVideoChat,
 		}
-		: { title: '', startsAt: '', endsAt: '', meetingMode: 'IN_PERSON', location: '', note: '', meetingLink: '', groupVideoChat: false, ...props.defaults };
+		: { title: '', ...defaultSessionTimes(), meetingMode: 'IN_PERSON', location: '', note: '', meetingLink: '', groupVideoChat: false, ...props.defaults };
 }, { immediate: true });
 
 const isOnline = computed(() => draft.value.meetingMode === 'ONLINE');
@@ -46,7 +49,7 @@ watch(isOnline, (online) => {
 });
 /** Moving the start clears everyone's answers, because they were for the old time. */
 const startMoved = computed(() => {
-	if (!props.session || !draft.value.startsAt) return false;
+	if (!props.session) return false;
 	return new Date(draft.value.startsAt).getTime() !== new Date(toLocalInput(props.session.startsAt)).getTime();
 });
 const answersToClear = computed(() => (props.session?.goingCount ?? 0) + (props.session?.notGoingCount ?? 0));
@@ -58,16 +61,11 @@ const errors = computed(() => {
 	const { title, startsAt, endsAt, meetingLink, groupVideoChat } = draft.value;
 	return {
 		title: title?.trim() ? '' : 'Give the session a title.',
-		startsAt: startsAt ? '' : 'Choose a start time.',
-		endsAt: !endsAt ? 'Choose an end time.' : startsAt && new Date(endsAt) <= new Date(startsAt) ? 'The session must end after it starts.' : '',
+		startsAt: new Date(startsAt) <= new Date() ? 'Choose a time that hasn\'t passed.' : '',
+		endsAt: new Date(endsAt) <= new Date(startsAt) ? 'The session must end after it starts.' : '',
 		meetingLink: isOnline.value && !groupVideoChat && meetingLink?.trim() && !/^https?:\/\/\S+$/i.test(meetingLink.trim()) ? 'Enter a full meeting link starting with https://.' : '',
 	};
 });
-
-function setStart(value) {
-	draft.value.endsAt = endAfterStartChange(value, draft.value.startsAt, draft.value.endsAt);
-	draft.value.startsAt = value;
-}
 
 function submit() {
 	submitted.value = true;
@@ -95,20 +93,9 @@ function submit() {
 		<FormField v-slot="{ id, invalidClass }" label="Title" required :error="errors.title">
 			<input :id="id" v-model="draft.title" type="text" class="form-control" :class="invalidClass" maxlength="80" />
 		</FormField>
-		<div class="row">
-			<div class="col-sm-6">
-				<FormField v-slot="{ id, invalidClass }" label="Starts" required :error="errors.startsAt">
-					<input :id="id" :value="draft.startsAt" type="datetime-local" class="form-control" :class="invalidClass" @input="setStart($event.target.value)" />
-				</FormField>
-			</div>
-			<div class="col-sm-6">
-				<FormField v-slot="{ id, invalidClass }" label="Ends" required :error="errors.endsAt">
-					<input :id="id" v-model="draft.endsAt" type="datetime-local" class="form-control" :class="invalidClass" />
-				</FormField>
-			</div>
-		</div>
-		<p v-if="startMoved && answersToClear" class="alert alert-warning small" role="status">Moving the start clears the {{ answersToClear }} {{ answersToClear === 1 ? 'answer' : 'answers' }} so far, and everyone is asked again.</p>
-		<FormField v-slot="{ id }" label="Meeting mode" required>
+		<SessionTimeFields v-if="draft.startsAt" v-model:starts-at="draft.startsAt" v-model:ends-at="draft.endsAt" :start-error="errors.startsAt" :end-error="errors.endsAt" />
+		<p v-if="startMoved && answersToClear" class="alert alert-warning small" role="status">Changing the time resets {{ answersToClear }} {{ answersToClear === 1 ? 'answer' : 'answers' }}, so we'll ask everyone again.</p>
+		<FormField v-slot="{ id }" label="Format" required>
 			<select :id="id" v-model="draft.meetingMode" class="form-select">
 				<option v-for="mode in SESSION_MEETING_MODES" :key="mode.value" :value="mode.value">{{ mode.label }}</option>
 			</select>
@@ -124,17 +111,17 @@ function submit() {
 					<input id="session-join-telegram" v-model="draft.groupVideoChat" class="form-check-input" type="radio" name="session-join" :value="true" />
 					<label class="form-check-label" for="session-join-telegram">Telegram video chat</label>
 				</div>
-				<div v-if="draft.groupVideoChat" class="form-text">A chat admin starts the call in Telegram, then the bot tags everyone going. Bots can't start a call themselves.</div>
+				<div v-if="draft.groupVideoChat" class="form-text">You'll start the call in your Telegram group. We'll tag everyone who's going.</div>
 			</fieldset>
-			<FormField v-if="!draft.groupVideoChat" v-slot="{ id, invalidClass }" label="Meeting link" hint="Create the call in Zoom, Meet or Teams, then paste its link." :error="errors.meetingLink">
-				<input :id="id" v-model="draft.meetingLink" type="url" class="form-control" :class="invalidClass" maxlength="500" placeholder="https://" />
+			<FormField v-if="!draft.groupVideoChat" v-slot="{ id, invalidClass }" label="Meeting link" :hint="canLinkChat ? 'Prefer Telegram? Link a chat in the Group chat tab.' : ''" :error="errors.meetingLink">
+				<input :id="id" v-model="draft.meetingLink" type="url" class="form-control" :class="invalidClass" maxlength="500" placeholder="Paste a Zoom, Meet or Teams link" />
 			</FormField>
 		</template>
-		<FormField v-if="showLocation" v-slot="{ id }" label="Location" :hint="isOnline ? 'Optional.' : 'A room or place to meet.'">
-			<input :id="id" v-model="draft.location" type="text" class="form-control" maxlength="200" />
+		<FormField v-if="showLocation" v-slot="{ id }" :label="isOnline ? 'Location (optional)' : 'Location'">
+			<input :id="id" v-model="draft.location" type="text" class="form-control" maxlength="200" placeholder="e.g. SCIS SR 2-1" />
 		</FormField>
-		<FormField v-slot="{ id }" label="Note">
-			<textarea :id="id" v-model="draft.note" class="form-control" rows="2" maxlength="500"></textarea>
+		<FormField v-slot="{ id }" label="Note (optional)">
+			<textarea :id="id" v-model="draft.note" class="form-control" rows="2" maxlength="500" placeholder="Anything to bring or prepare?"></textarea>
 		</FormField>
 		<template #footer>
 			<button type="button" class="btn btn-light border" :disabled="saving" @click="emit('update:modelValue', false)">Close</button>

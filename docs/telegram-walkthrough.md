@@ -82,7 +82,7 @@ The phases are in `CardPhase`: `OPEN` has buttons, `STARTED` and `ENDED` don't, 
 - **`DETAILS`, including a new end time:** the card updates, quietly.
 - **`START_MOVED`:** answers are cleared, because they were for the old time. The card updates, and `SessionChatService.startMoved` sends one reply asking people to answer again. The reminder can go out again for the new time.
 
-Cancelling shows on the card, removes the buttons, unpins it and sends one short reply.
+Cancelling shows on the card, removes the buttons, unpins it and sends one short reply. A leader can cancel until an hour after the session ends. In that last hour the card still changes, but no reply goes out, because a message about a finished session would only disturb people.
 
 ### Pressing Going or Can't
 1. The button carries `rsvp:<session id>:G`. Telegram allows 64 bytes, and this is 43.
@@ -222,4 +222,36 @@ Each of these was a real way for something to go wrong, found by reading the cod
 
 Both helpers are plain functions, so they have fast tests with no browser. No API changed, so the README contract and the mock stay as they were.
 
-**Known limits:** the chat card says "the day before" and "an hour before", which are the default lead times. A server that changes `TELEGRAM_NUDGE_LEAD` or `TELEGRAM_REMINDER_LEAD` would make that wording slightly off.
+**Replaced later:** the Starts and Ends fields and much of this wording, in the next section.
+
+### Cancelling after the start
+**Before:** `StudySession.cancel` refused once a session had started, and the row's menu disappeared with it. A meeting that fell through at the last minute stayed on record as if it had happened.
+
+**After:** the last moment to cancel is the session's end time plus one hour, and a cancel at exactly that moment still counts.
+- `cancel` checks that the caller leads the group, that the session isn't already cancelled, and then the time. `update` and `respond` still go through `requireChangeable`, so a started session can't be moved or answered.
+- `SessionChatService.cancelled` replies in the chat only until the session's end time. In the last hour, only the card changes.
+- `SessionList.vue` keeps Cancel in a leader's menu until the limit, including under Past. Change goes at the start, and calendar options at the end.
+
+No schema changed, so there's nothing to apply on Supabase.
+
+**Why allow it after the end at all, when Calendly, Meetup and Cal.com block it?** A leader often only knows a meeting fell through once its time has passed, and the group should be able to see that. The limit keeps old sessions as they were, so the list stays a fair record.
+
+**Why is the limit in two places?** The backend's `StudySession.CANCEL_BUFFER` is the actual rule. `isTooLateToCancel` in `utils/sessions.js` only decides whether to show the option. If a page stays open past the limit, the leader gets the backend's refusal as a message.
+
+### The date and time fields, and the wording
+**Before:** two browser `datetime-local` fields, which look different in every browser and need a date and time picked twice. The subtext explained how the system works, such as "Bots can't start a call themselves."
+
+**After:**
+- `SessionTimeFields.vue` shows one calendar for the date, then Starts and Ends as lists in 15-minute steps. Ends shows each length, such as "9:00 pm (2 hrs)", and says "next day" past midnight, so a second date isn't needed.
+- The logic is in `startTimeOptions`, `endTimeOptions` and `defaultSessionTimes` in `utils/calendar.js`, as plain functions with tests. The component only displays them, and `SessionFormModal.vue` still sends the same API values.
+- Wording follows one test: add subtext only if the label isn't enough, say what the person does rather than how the system works, and leave out limits they can't act on.
+- If a group has no chat, the form mentions linking one, because otherwise nobody would discover the Telegram option.
+
+**Why a list for the time, rather than a clock or a scroller?** Study sessions start at round times, so a list is one tap, and on a phone a `<select>` opens the phone's own picker. A time off the grid, such as 19:07, stays listed, so opening the form never changes it.
+
+**Why only use vue-datepicker for the date?** Its time controls are arrows and grids, not a list. That means it adds a dependency for the calendar alone. In return, we don't have to build or test a calendar's keyboard support ourselves.
+
+**Details worth knowing:**
+- Its stylesheet sets its own theme, so `SessionTimeFields.vue` points its CSS variables at the app's colours.
+- The calendar stops Escape reaching the Bootstrap modal while it's open, so Escape closes only the calendar. When it closes, focus goes to the wrapper around the date field, because the library drops it otherwise and focusing its input reopens the calendar.
+- It has no API impact, so the README contract and the mock didn't change.
