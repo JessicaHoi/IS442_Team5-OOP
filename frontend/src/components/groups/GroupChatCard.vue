@@ -19,6 +19,7 @@ const props = defineProps({
 	chatLink: { type: String, default: null },
 });
 
+const BOT_SUMMARY = 'Each session gets a live card in the chat, showing who\'s going and who hasn\'t answered. The bot asks for missing answers the day before and sends a reminder an hour before.';
 const POLL_INTERVAL_MS = 3000;
 const POLL_LIMIT_MS = 5 * 60 * 1000;
 
@@ -131,12 +132,16 @@ async function unlink() {
 				<div v-if="status === 'DETACHED'" class="alert alert-warning small" role="status">The StudyBuddy bot was removed from the chat, so it's no longer linked.</div>
 				<template v-if="canManage">
 					<template v-if="setupUrl">
-						<p class="small text-body-secondary mb-2">Open the bot in Telegram, press <strong>Start</strong>, then choose <strong>Create a new group</strong>. Any name works; the bot renames it. This page updates by itself. Use the Telegram app, because Telegram Web can't create groups for bots.</p>
+						<ol class="small text-body-secondary ps-3 mb-2">
+							<li>Open the bot in the Telegram app (Telegram Web can't create groups for bots) and press <strong>Start</strong>.</li>
+							<li>Choose <strong>Create a new group</strong>. Any name works, because the bot renames it.</li>
+						</ol>
+						<p class="small text-body-secondary mb-2">This page updates by itself.</p>
 						<a class="btn btn-primary" :href="setupUrl" target="_blank" rel="noopener"><i class="bi bi-telegram me-2"></i>Open Telegram</a>
 						<button type="button" class="btn btn-link btn-sm" :disabled="busy" @click="startSetup">Get a new link</button>
 					</template>
 					<template v-else>
-						<p class="small text-body-secondary mb-2">Create a Telegram chat for this group. Members join with one tap, and people who leave the group are removed automatically.</p>
+						<p class="small text-body-secondary mb-3">Members join with one tap, and anyone who leaves the group is removed. {{ BOT_SUMMARY }}</p>
 						<button type="button" class="btn btn-primary" :disabled="busy" @click="startSetup"><i class="bi bi-telegram me-2"></i>Set up group chat</button>
 					</template>
 				</template>
@@ -161,11 +166,13 @@ async function unlink() {
 					<p v-else class="small text-body-secondary mb-0">Your leader is finishing setting up the chat.</p>
 				</div>
 
+				<p v-if="status === 'ACTIVE'" class="small text-body-secondary mb-3">{{ BOT_SUMMARY }}</p>
+
 				<!-- This student's way in -->
 				<template v-if="status === 'ACTIVE' && me">
 					<template v-if="me.state === 'INVITED'">
 						<a class="btn btn-primary mb-2" :href="me.inviteUrl" target="_blank" rel="noopener"><i class="bi bi-telegram me-2"></i>Join the group chat</a>
-						<p class="small text-body-secondary mb-1">Telegram shows <em>Request to join</em>, and you're usually approved instantly. Other members will see your Telegram profile, and the StudyBuddy bot can see chat messages but doesn't store them.</p>
+						<p class="small text-body-secondary mb-1">Tap <em>Request to join</em> in Telegram, and you're usually approved instantly. Members will see your Telegram profile. The bot can see chat messages but doesn't store them.</p>
 						<button type="button" class="btn btn-link btn-sm p-0" :disabled="busy" @click="getInvite(true)">Link not working? Get a new one</button>
 					</template>
 					<template v-else-if="me.state === 'JOINED'">

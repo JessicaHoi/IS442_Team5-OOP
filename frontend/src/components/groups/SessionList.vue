@@ -7,6 +7,7 @@ import { useToast } from '../../composables/useToast';
 import { calendarFileName, googleCalendarUrl, outlookCalendarUrl, sessionTimesFromSlot } from '../../utils/calendar';
 import { labelOf, MEETING_MODES } from '../../utils/constants';
 import { formatSessionTime } from '../../utils/format';
+import { nextSessionBadge } from '../../utils/sessions';
 import EmptyState from '../ui/EmptyState.vue';
 import ErrorState from '../ui/ErrorState.vue';
 import LoadingState from '../ui/LoadingState.vue';
@@ -37,6 +38,7 @@ const saving = ref(false);
 const chatActive = ref(false);
 
 const isEmpty = computed(() => !upcoming.value.length && !past.value.length);
+const nextBadge = computed(() => nextSessionBadge(upcoming.value));
 
 async function load() {
 	loading.value = true;
@@ -156,41 +158,45 @@ async function act(session, action) {
 				<template v-if="section.items.length">
 					<h2 class="h6 text-body-secondary mb-2">{{ section.title }}</h2>
 					<ul class="list-group list-group-flush mb-4">
-						<li v-for="session in section.items" :key="session.id" class="list-group-item px-0">
+						<li v-for="session in section.items" :key="session.id" class="list-group-item" :class="nextBadge?.sessionId === session.id ? 'session-next ps-3 pe-0' : 'px-0'">
 							<div class="d-flex flex-wrap justify-content-between gap-2">
 								<div>
 									<div class="fw-medium" :class="{ 'text-decoration-line-through': session.status === 'CANCELLED' }">
 										{{ session.title }}
 										<span v-if="session.status === 'CANCELLED'" class="badge text-bg-secondary ms-1">Cancelled</span>
+										<span v-if="nextBadge?.sessionId === session.id" class="badge ms-1" :class="nextBadge.started ? 'text-bg-success' : 'text-bg-primary'">{{ nextBadge.started ? 'Happening now' : 'Next' }}</span>
 									</div>
 									<div class="small text-muted">{{ formatSessionTime(session.startsAt, session.endsAt) }}</div>
 									<div class="small text-muted">{{ labelOf(MEETING_MODES, session.meetingMode) }}<template v-if="session.location"> · {{ session.location }}</template></div>
 									<div v-if="session.groupVideoChat" class="small text-muted"><i class="bi bi-camera-video me-1"></i>Video chat in the group's Telegram chat</div>
 									<div v-if="session.note" class="small mt-1">{{ session.note }}</div>
 									<div class="small text-muted mt-1">
-										{{ session.goingCount }} going · {{ session.notGoingCount }} can't make it
-										<template v-if="going(session).length"> · {{ going(session).join(', ') }}</template>
+										{{ session.goingCount }} going<template v-if="going(session).length">: {{ going(session).join(', ') }}</template> · {{ session.notGoingCount }} can't
 									</div>
 								</div>
-								<div class="d-flex flex-wrap align-items-start gap-2">
+								<div class="d-flex flex-wrap align-items-center align-self-start gap-2">
 									<a v-if="session.meetingLink && session.status === 'SCHEDULED' && section.title === 'Upcoming'" class="btn btn-sm btn-primary" :href="session.meetingLink" target="_blank" rel="noopener noreferrer"><i class="bi bi-camera-video me-1"></i>Join</a>
 									<template v-if="canAnswer(session)">
-										<button type="button" class="btn btn-sm" :class="session.myRsvp === 'GOING' ? 'btn-success' : 'btn-outline-success'" :aria-pressed="session.myRsvp === 'GOING'" :disabled="busyId === session.id" @click="respond(session, 'GOING')">Going</button>
-										<button type="button" class="btn btn-sm" :class="session.myRsvp === 'NOT_GOING' ? 'btn-secondary' : 'btn-outline-secondary'" :aria-pressed="session.myRsvp === 'NOT_GOING'" :disabled="busyId === session.id" @click="respond(session, 'NOT_GOING')">Can't make it</button>
+										<div class="btn-group btn-group-sm" role="group" :aria-label="`Your answer for ${session.title}`">
+											<button type="button" class="btn" :class="session.myRsvp === 'GOING' ? 'btn-success' : 'btn-outline-success'" :aria-pressed="session.myRsvp === 'GOING'" :disabled="busyId === session.id" @click="respond(session, 'GOING')">Going</button>
+											<button type="button" class="btn" :class="session.myRsvp === 'NOT_GOING' ? 'btn-secondary' : 'btn-outline-secondary'" :aria-pressed="session.myRsvp === 'NOT_GOING'" :disabled="busyId === session.id" @click="respond(session, 'NOT_GOING')">Can't</button>
+										</div>
 										<div class="dropdown">
-											<button type="button" class="btn btn-sm btn-light border dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-calendar-plus me-1"></i>Add to calendar</button>
-											<ul class="dropdown-menu">
+											<button type="button" class="btn btn-sm btn-light border" data-bs-toggle="dropdown" aria-expanded="false" :aria-label="`More actions for ${session.title}`"><i class="bi bi-three-dots"></i></button>
+											<ul class="dropdown-menu dropdown-menu-end">
+												<li><h3 class="dropdown-header">Add to calendar</h3></li>
 												<li><a class="dropdown-item" :href="googleCalendarUrl(session)" target="_blank" rel="noopener noreferrer">Google Calendar</a></li>
 												<li><a class="dropdown-item" :href="outlookCalendarUrl(session)" target="_blank" rel="noopener noreferrer">Outlook</a></li>
 												<li><button type="button" class="dropdown-item" @click="downloadCalendar(session)">Apple or other (.ics)</button></li>
+												<template v-if="canManage">
+													<li><hr class="dropdown-divider" /></li>
+													<li><button type="button" class="dropdown-item" @click="openForm(session)">Change session</button></li>
+													<li><button type="button" class="dropdown-item text-danger" :disabled="busyId === session.id" @click="cancelSession(session)">Cancel session</button></li>
+												</template>
 											</ul>
 										</div>
 									</template>
 									<button v-else-if="session.status === 'CANCELLED' && section.title === 'Upcoming'" type="button" class="btn btn-sm btn-light border" :disabled="busyId === session.id" @click="downloadCalendar(session)">Update my calendar (.ics)</button>
-									<template v-if="canManage && canAnswer(session)">
-										<button type="button" class="btn btn-sm btn-light border" @click="openForm(session)">Change</button>
-										<button type="button" class="btn btn-sm btn-outline-danger" :disabled="busyId === session.id" @click="cancelSession(session)">Cancel</button>
-									</template>
 								</div>
 							</div>
 						</li>
@@ -202,3 +208,10 @@ async function act(session, action) {
 		<SessionFormModal v-model="formOpen" :session="editing" :defaults="formDefaults" :saving="saving" :can-use-video-chat="chatActive" @submit="save" />
 	</section>
 </template>
+
+<style scoped>
+/* A left accent. A border would shift the row's text out of line with the others, and it has to survive list-group-flush. */
+.session-next {
+	box-shadow: inset 3px 0 0 var(--bs-primary);
+}
+</style>

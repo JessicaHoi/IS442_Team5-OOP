@@ -2,11 +2,25 @@
 
 const DAY_INDEX = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 };
 const pad = (value) => String(value).padStart(2, '0');
+const DEFAULT_LENGTH_MS = 2 * 60 * 60 * 1000;
 
 /** The value a datetime-local input expects, in the browser's time zone. */
 export function toLocalInput(value) {
 	const date = new Date(value);
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+	return `${String(date.getFullYear()).padStart(4, '0')}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/**
+ * The end time to show after the start changes: the session keeps its length, a new one gets two hours, and an end
+ * that can still stand is left alone. All three are datetime-local values.
+ */
+export function endAfterStartChange(start, previousStart, end) {
+	const startMs = new Date(start).getTime();
+	if (Number.isNaN(startMs)) return end;
+	const endMs = new Date(end).getTime();
+	const previousMs = new Date(previousStart).getTime();
+	if (endMs > previousMs) return toLocalInput(startMs + endMs - previousMs);
+	return endMs > startMs ? end : toLocalInput(startMs + DEFAULT_LENGTH_MS);
 }
 
 /** The next time a weekly slot happens. A day may be `WED` or `WEDNESDAY`, a time `19:00` or `19:00:00`. */
