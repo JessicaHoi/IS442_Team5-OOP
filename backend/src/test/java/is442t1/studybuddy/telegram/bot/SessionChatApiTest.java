@@ -338,6 +338,72 @@ class SessionChatApiTest extends ApiTestSupport {
     }
 
     @Test
+    void cancellingARunningSessionStillTellsTheChat() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        setTimes(sessionId, Instant.now().minusSeconds(60), Instant.now().plusSeconds(3600));
+
+        mockMvc.perform(as(leaderToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isOk());
+        refresher.flush();
+
+        verify(client).editMessage(eq(chatId), eq(CARD), contains("❌ Cancelled: Mock exam"));
+        verify(client, timeout(TIMEOUT_MS)).sendReply(eq(chatId), eq(CARD), contains("has been cancelled"), any());
+    }
+
+    @Test
+    void cancellingAFinishedSessionOnlyChangesItsCard() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        setTimes(sessionId, Instant.now().minusSeconds(7200), Instant.now().minusSeconds(60));
+        sessionChat.sweep(Instant.now());
+        refresher.flush();
+        verify(client).editMessage(eq(chatId), eq(CARD), contains("✔️ Finished: Mock exam"));
+
+        mockMvc.perform(as(leaderToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isOk());
+        refresher.flush();
+
+        verify(client).editMessage(eq(chatId), eq(CARD), contains("❌ Cancelled: Mock exam"));
+        verify(client, after(500).never()).sendReply(eq(chatId), eq(CARD), contains("has been cancelled"), any());
+    }
+
+    @Test
+    void anOldCardThatCanNoLongerBeEditedIsNotPostedAgainWhenCancelled() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        setTimes(sessionId, Instant.now().minusSeconds(7200), Instant.now().minusSeconds(60));
+        doThrow(new TelegramApiException(400, "editMessageText failed: Bad Request: message can't be edited", null, null))
+                .when(client).editMessage(eq(chatId), eq(CARD), contains("❌ Cancelled"));
+
+        mockMvc.perform(as(leaderToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isOk());
+        refresher.flush();
+        refresher.flush();
+
+        verifyCardsPosted(1);
+    }
+
+    @Test
+    void tooLateToCancelLeavesTheCardAlone() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        setTimes(sessionId, Instant.now().minusSeconds(14400), Instant.now().minusSeconds(3660));
+
+        mockMvc.perform(as(leaderToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("It's too late to cancel this session."));
+        refresher.flush();
+
+        verify(client, never()).editMessage(eq(chatId), eq(CARD), contains("❌ Cancelled"));
+    }
+
+    @Test
+    void aMemberCannotCancelASessionThatHasStarted() throws Exception {
+        linkChat();
+        String sessionId = posted(schedule(inHours(24)));
+        setTimes(sessionId, Instant.now().minusSeconds(60), Instant.now().plusSeconds(3600));
+
+        mockMvc.perform(as(memberToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isForbidden());
+    }
+
+    @Test
     void theSoonestUpcomingSessionIsThePinnedOne() throws Exception {
         linkChat();
         when(client.sendMessage(eq(chatId), anyString(), any(ReplyMarkup.ActionButtons.class))).thenReturn(101L).thenReturn(102L);
