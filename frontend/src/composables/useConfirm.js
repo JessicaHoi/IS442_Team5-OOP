@@ -5,6 +5,7 @@ const state = reactive({
 	title: '',
 	message: '',
 	confirmLabel: 'Confirm',
+	cancelLabel: 'Cancel',
 	danger: false,
 });
 let pendingResolve = null;
@@ -20,9 +21,9 @@ function settle(result) {
  *   if (await confirm({ title: 'Delete?', danger: true })) { ... }
  */
 export function useConfirm() {
-	function confirm({ title, message = '', confirmLabel = 'Confirm', danger = false }) {
+	function confirm({ title, message = '', confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger = false }) {
 		pendingResolve?.(false);
-		Object.assign(state, { open: true, title, message, confirmLabel, danger });
+		Object.assign(state, { open: true, title, message, confirmLabel, cancelLabel, danger });
 		return new Promise((resolve) => {
 			pendingResolve = resolve;
 		});

@@ -103,6 +103,7 @@ async function cancelSession(session) {
 			? 'Everyone in the group will see it\'s cancelled. You can\'t undo this.'
 			: 'It\'ll show as cancelled, so the group knows it didn\'t happen. You can\'t undo this.',
 		confirmLabel: 'Cancel session',
+		cancelLabel: 'Keep session',
 		danger: true,
 	});
 	if (!confirmed) return;
@@ -157,7 +158,7 @@ async function act(session, action) {
 			v-else-if="isEmpty"
 			icon="bi-calendar-event"
 			title="No sessions yet"
-			:message="canManage ? 'Schedule one here, or pick a time under Details › Best time to meet.' : 'Your group leader has not scheduled a session yet.'"
+			:message="canManage ? 'Schedule one, or pick a time under Details › Best time to meet.' : 'Your leader hasn\'t scheduled one yet.'"
 		/>
 		<template v-else>
 			<template v-for="section in [{ title: 'Upcoming', items: upcoming }, { title: 'Past', items: past }]" :key="section.title">
@@ -174,7 +175,7 @@ async function act(session, action) {
 									</div>
 									<div class="small text-muted">{{ formatSessionTime(session.startsAt, session.endsAt) }}</div>
 									<div class="small text-muted">{{ labelOf(MEETING_MODES, session.meetingMode) }}<template v-if="session.location"> · {{ session.location }}</template></div>
-									<div v-if="session.groupVideoChat" class="small text-muted"><i class="bi bi-camera-video me-1"></i>Video chat in the group's Telegram chat</div>
+									<div v-if="session.groupVideoChat" class="small text-muted"><i class="bi bi-camera-video me-1"></i>Telegram video chat</div>
 									<div v-if="session.note" class="small mt-1">{{ session.note }}</div>
 									<div class="small text-muted mt-1">
 										{{ session.goingCount }} going<template v-if="going(session).length">: {{ going(session).join(', ') }}</template> · {{ session.notGoingCount }} can't
