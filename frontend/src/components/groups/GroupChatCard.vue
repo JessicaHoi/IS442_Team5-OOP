@@ -19,7 +19,7 @@ const props = defineProps({
 	chatLink: { type: String, default: null },
 });
 
-const BOT_SUMMARY = 'Each session gets a live card in the chat, showing who\'s going and who hasn\'t answered. The bot asks for missing answers the day before and sends a reminder an hour before.';
+const CHAT_SUMMARY = 'See who\'s coming, answer from the chat, and get a reminder before each session.';
 const POLL_INTERVAL_MS = 3000;
 const POLL_LIMIT_MS = 5 * 60 * 1000;
 
@@ -107,7 +107,7 @@ async function notMe() {
 async function unlink() {
 	const confirmed = await confirm({
 		title: 'Unlink this chat?',
-		message: 'Invites stop working and the StudyBuddy bot leaves. The chat itself and its members stay on Telegram.',
+		message: 'Invite links will stop working and the bot will leave. The chat and its members stay on Telegram.',
 		confirmLabel: 'Unlink chat',
 		danger: true,
 	});
@@ -129,19 +129,19 @@ async function unlink() {
 		<template v-else-if="chat">
 			<!-- No chat yet, or the bot was removed -->
 			<template v-if="status === 'NOT_LINKED' || status === 'DETACHED'">
-				<div v-if="status === 'DETACHED'" class="alert alert-warning small" role="status">The StudyBuddy bot was removed from the chat, so it's no longer linked.</div>
+				<div v-if="status === 'DETACHED'" class="alert alert-warning small" role="status">This chat is no longer linked because the StudyBuddy bot was removed.</div>
 				<template v-if="canManage">
 					<template v-if="setupUrl">
 						<ol class="small text-body-secondary ps-3 mb-2">
-							<li>Open the bot in the Telegram app (Telegram Web can't create groups for bots) and press <strong>Start</strong>.</li>
-							<li>Choose <strong>Create a new group</strong>. Any name works, because the bot renames it.</li>
+							<li>Open the Telegram app and tap <strong>Start</strong>. (It won't work in Telegram Web.)</li>
+							<li>Tap <strong>Create a new group</strong>. Any name is fine, we'll rename it for you.</li>
 						</ol>
-						<p class="small text-body-secondary mb-2">This page updates by itself.</p>
+						<p class="small text-body-secondary mb-2">We'll update this page when it's ready.</p>
 						<a class="btn btn-primary" :href="setupUrl" target="_blank" rel="noopener"><i class="bi bi-telegram me-2"></i>Open Telegram</a>
 						<button type="button" class="btn btn-link btn-sm" :disabled="busy" @click="startSetup">Get a new link</button>
 					</template>
 					<template v-else>
-						<p class="small text-body-secondary mb-3">Members join with one tap, and anyone who leaves the group is removed. {{ BOT_SUMMARY }}</p>
+						<p class="small text-body-secondary mb-3">Members join with one tap, and leave the chat when they leave the group. {{ CHAT_SUMMARY }}</p>
 						<button type="button" class="btn btn-primary" :disabled="busy" @click="startSetup"><i class="bi bi-telegram me-2"></i>Set up group chat</button>
 					</template>
 				</template>
@@ -151,7 +151,7 @@ async function unlink() {
 				</template>
 			</template>
 
-			<p v-else-if="status === 'MANAGED_BY_OTHER_BOT'" class="small text-body-secondary mb-0">This group's chat is managed by another StudyBuddy bot, so it can't be used from here.</p>
+			<p v-else-if="status === 'MANAGED_BY_OTHER_BOT'" class="small text-body-secondary mb-0">This group's chat is linked to another StudyBuddy bot, so you can't use it here.</p>
 
 			<template v-else>
 				<p v-if="status === 'CLOSED'" class="small text-body-secondary">This group is closed, so its chat is read-only.</p>
@@ -166,13 +166,13 @@ async function unlink() {
 					<p v-else class="small text-body-secondary mb-0">Your leader is finishing setting up the chat.</p>
 				</div>
 
-				<p v-if="status === 'ACTIVE'" class="small text-body-secondary mb-3">{{ BOT_SUMMARY }}</p>
+				<p v-if="status === 'ACTIVE'" class="small text-body-secondary mb-3">{{ CHAT_SUMMARY }}</p>
 
 				<!-- This student's way in -->
 				<template v-if="status === 'ACTIVE' && me">
 					<template v-if="me.state === 'INVITED'">
 						<a class="btn btn-primary mb-2" :href="me.inviteUrl" target="_blank" rel="noopener"><i class="bi bi-telegram me-2"></i>Join the group chat</a>
-						<p class="small text-body-secondary mb-1">Tap <em>Request to join</em> in Telegram, and you're usually approved instantly. Members will see your Telegram profile. The bot can see chat messages but doesn't store them.</p>
+						<p class="small text-body-secondary mb-1">Tap <em>Request to join</em> in Telegram. Other members will see your Telegram profile. StudyBuddy can see chat messages but doesn't save them.</p>
 						<button type="button" class="btn btn-link btn-sm p-0" :disabled="busy" @click="getInvite(true)">Link not working? Get a new one</button>
 					</template>
 					<template v-else-if="me.state === 'JOINED'">
@@ -191,9 +191,9 @@ async function unlink() {
 
 				<!-- What only the leader sees -->
 				<template v-if="canManage">
-					<div v-if="chat.ownedByFormerLeader" class="alert alert-info small mt-3" role="status">Telegram doesn't move chat ownership automatically. Ask the previous leader to make you an admin of the chat.</div>
+					<div v-if="chat.ownedByFormerLeader" class="alert alert-info small mt-3" role="status">Ask the previous leader to make you an admin of the chat in Telegram.</div>
 					<div v-if="removalFailures.length" class="alert alert-warning small mt-3" role="status">
-						Telegram wouldn't let the bot remove {{ removalFailures.map((member) => member.name).join(', ') }}, usually because they own or administer the chat. Remove them in Telegram yourself.
+						We couldn't remove {{ removalFailures.map((member) => member.name).join(', ') }} from the chat, usually because they're an admin. You'll need to remove them in Telegram.
 					</div>
 					<ul v-if="chat.members?.length" class="list-unstyled small mt-3 mb-3">
 						<li v-for="member in chat.members" :key="member.studentId" class="d-flex justify-content-between gap-3 py-1 border-bottom">
