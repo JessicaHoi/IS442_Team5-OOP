@@ -7,7 +7,7 @@ import { useToast } from '../../composables/useToast';
 import { calendarFileName, googleCalendarUrl, outlookCalendarUrl, sessionTimesFromSlot } from '../../utils/calendar';
 import { labelOf, MEETING_MODES } from '../../utils/constants';
 import { formatSessionTime } from '../../utils/format';
-import { nextSessionBadge } from '../../utils/sessions';
+import { isTooLateToCancel, nextSessionBadge } from '../../utils/sessions';
 import EmptyState from '../ui/EmptyState.vue';
 import ErrorState from '../ui/ErrorState.vue';
 import LoadingState from '../ui/LoadingState.vue';
@@ -69,6 +69,8 @@ watch(() => props.prefill, (slot) => {
 }, { immediate: true });
 
 const canAnswer = (session) => session.status === 'SCHEDULED' && new Date(session.startsAt) > new Date();
+const canAddToCalendar = (session) => session.status === 'SCHEDULED' && new Date(session.endsAt) > new Date();
+const canCancel = (session) => props.canManage && session.status === 'SCHEDULED' && !isTooLateToCancel(session);
 const going = (session) => session.attendees.filter((attendee) => attendee.response === 'GOING').map((attendee) => attendee.name);
 
 function openForm(session = null, defaults = null) {
@@ -95,7 +97,9 @@ async function save(payload) {
 async function cancelSession(session) {
 	const confirmed = await confirm({
 		title: `Cancel “${session.title}”?`,
-		message: 'Members will see it as cancelled. This cannot be undone.',
+		message: canAnswer(session)
+			? 'Everyone in the group will see it\'s cancelled. You can\'t undo this.'
+			: 'It\'ll show as cancelled, so the group knows it didn\'t happen. You can\'t undo this.',
 		confirmLabel: 'Cancel session',
 		danger: true,
 	});
@@ -176,27 +180,25 @@ async function act(session, action) {
 								</div>
 								<div class="d-flex flex-wrap align-items-center align-self-start gap-2">
 									<a v-if="session.meetingLink && session.status === 'SCHEDULED' && section.title === 'Upcoming'" class="btn btn-sm btn-primary" :href="session.meetingLink" target="_blank" rel="noopener noreferrer"><i class="bi bi-camera-video me-1"></i>Join</a>
-									<template v-if="canAnswer(session)">
-										<div class="btn-group btn-group-sm" role="group" :aria-label="`Your answer for ${session.title}`">
-											<button type="button" class="btn" :class="session.myRsvp === 'GOING' ? 'btn-success' : 'btn-outline-success'" :aria-pressed="session.myRsvp === 'GOING'" :disabled="busyId === session.id" @click="respond(session, 'GOING')">Going</button>
-											<button type="button" class="btn" :class="session.myRsvp === 'NOT_GOING' ? 'btn-secondary' : 'btn-outline-secondary'" :aria-pressed="session.myRsvp === 'NOT_GOING'" :disabled="busyId === session.id" @click="respond(session, 'NOT_GOING')">Can't</button>
-										</div>
-										<div class="dropdown">
-											<button type="button" class="btn btn-sm btn-light border" data-bs-toggle="dropdown" aria-expanded="false" :aria-label="`More actions for ${session.title}`"><i class="bi bi-three-dots"></i></button>
-											<ul class="dropdown-menu dropdown-menu-end">
+									<div v-if="canAnswer(session)" class="btn-group btn-group-sm" role="group" :aria-label="`Your answer for ${session.title}`">
+										<button type="button" class="btn" :class="session.myRsvp === 'GOING' ? 'btn-success' : 'btn-outline-success'" :aria-pressed="session.myRsvp === 'GOING'" :disabled="busyId === session.id" @click="respond(session, 'GOING')">Going</button>
+										<button type="button" class="btn" :class="session.myRsvp === 'NOT_GOING' ? 'btn-secondary' : 'btn-outline-secondary'" :aria-pressed="session.myRsvp === 'NOT_GOING'" :disabled="busyId === session.id" @click="respond(session, 'NOT_GOING')">Can't</button>
+									</div>
+									<div v-if="canAddToCalendar(session) || canCancel(session)" class="dropdown">
+										<button type="button" class="btn btn-sm btn-light border" data-bs-toggle="dropdown" aria-expanded="false" :aria-label="`More actions for ${session.title}`"><i class="bi bi-three-dots"></i></button>
+										<ul class="dropdown-menu dropdown-menu-end">
+											<template v-if="canAddToCalendar(session)">
 												<li><h3 class="dropdown-header">Add to calendar</h3></li>
 												<li><a class="dropdown-item" :href="googleCalendarUrl(session)" target="_blank" rel="noopener noreferrer">Google Calendar</a></li>
 												<li><a class="dropdown-item" :href="outlookCalendarUrl(session)" target="_blank" rel="noopener noreferrer">Outlook</a></li>
 												<li><button type="button" class="dropdown-item" @click="downloadCalendar(session)">Apple or other (.ics)</button></li>
-												<template v-if="canManage">
-													<li><hr class="dropdown-divider" /></li>
-													<li><button type="button" class="dropdown-item" @click="openForm(session)">Change session</button></li>
-													<li><button type="button" class="dropdown-item text-danger" :disabled="busyId === session.id" @click="cancelSession(session)">Cancel session</button></li>
-												</template>
-											</ul>
-										</div>
-									</template>
-									<button v-else-if="session.status === 'CANCELLED' && section.title === 'Upcoming'" type="button" class="btn btn-sm btn-light border" :disabled="busyId === session.id" @click="downloadCalendar(session)">Update my calendar (.ics)</button>
+											</template>
+											<li v-if="canAddToCalendar(session) && canCancel(session)"><hr class="dropdown-divider" /></li>
+											<li v-if="canManage && canAnswer(session)"><button type="button" class="dropdown-item" @click="openForm(session)">Change session</button></li>
+											<li v-if="canCancel(session)"><button type="button" class="dropdown-item text-danger" :disabled="busyId === session.id" @click="cancelSession(session)">Cancel session</button></li>
+										</ul>
+									</div>
+									<button v-if="session.status === 'CANCELLED' && section.title === 'Upcoming'" type="button" class="btn btn-sm btn-light border" :disabled="busyId === session.id" @click="downloadCalendar(session)">Update my calendar (.ics)</button>
 								</div>
 							</div>
 						</li>
