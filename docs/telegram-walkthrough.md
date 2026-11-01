@@ -222,7 +222,7 @@ Each of these was a real way for something to go wrong, found by reading the cod
 
 Both helpers are plain functions, so they have fast tests with no browser. No API changed, so the README contract and the mock stay as they were.
 
-**Known limits:** the chat card says "the day before" and "an hour before", which are the default lead times. A server that changes `TELEGRAM_NUDGE_LEAD` or `TELEGRAM_REMINDER_LEAD` would make that wording slightly off.
+**Replaced later:** the Starts and Ends fields and much of this wording, in the next section.
 
 ### Cancelling after the start
 **Before:** `StudySession.cancel` refused once a session had started, and the row's menu disappeared with it. A meeting that fell through at the last minute stayed on record as if it had happened.
@@ -237,3 +237,21 @@ No schema changed, so there's nothing to apply on Supabase.
 **Why allow it after the end at all, when Calendly, Meetup and Cal.com block it?** A leader often only knows a meeting fell through once its time has passed, and the group should be able to see that. The limit keeps old sessions as they were, so the list stays a fair record.
 
 **Why is the limit in two places?** The backend's `StudySession.CANCEL_BUFFER` is the actual rule. `isTooLateToCancel` in `utils/sessions.js` only decides whether to show the option. If a page stays open past the limit, the leader gets the backend's refusal as a message.
+
+### The date and time fields, and the wording
+**Before:** two browser `datetime-local` fields, which look different in every browser and need a date and time picked twice. The subtext explained how the system works, such as "Bots can't start a call themselves."
+
+**After:**
+- `SessionTimeFields.vue` shows one calendar for the date, then Starts and Ends as lists in 15-minute steps. Ends shows each length, such as "9:00 pm (2 hrs)", and says "next day" past midnight, so a second date isn't needed.
+- The logic is in `startTimeOptions`, `endTimeOptions` and `defaultSessionTimes` in `utils/calendar.js`, as plain functions with tests. The component only displays them, and `SessionFormModal.vue` still sends the same API values.
+- Wording follows one test: add subtext only if the label isn't enough, say what the person does rather than how the system works, and leave out limits they can't act on.
+- If a group has no chat, the form mentions linking one, because otherwise nobody would discover the Telegram option.
+
+**Why a list for the time, rather than a clock or a scroller?** Study sessions start at round times, so a list is one tap, and on a phone a `<select>` opens the phone's own picker. A time off the grid, such as 19:07, stays listed, so opening the form never changes it.
+
+**Why only use vue-datepicker for the date?** Its time controls are arrows and grids, not a list. That means it adds a dependency for the calendar alone. In return, we don't have to build or test a calendar's keyboard support ourselves.
+
+**Details worth knowing:**
+- Its stylesheet sets its own theme, so `SessionTimeFields.vue` points its CSS variables at the app's colours.
+- The calendar stops Escape reaching the Bootstrap modal while it's open, so Escape closes only the calendar.
+- It has no API impact, so the README contract and the mock didn't change.
