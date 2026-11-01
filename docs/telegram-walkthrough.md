@@ -82,7 +82,7 @@ The phases are in `CardPhase`: `OPEN` has buttons, `STARTED` and `ENDED` don't, 
 - **`DETAILS`, including a new end time:** the card updates, quietly.
 - **`START_MOVED`:** answers are cleared, because they were for the old time. The card updates, and `SessionChatService.startMoved` sends one reply asking people to answer again. The reminder can go out again for the new time.
 
-Cancelling shows on the card, removes the buttons, unpins it and sends one short reply.
+Cancelling shows on the card, removes the buttons, unpins it and sends one short reply. A leader can cancel until an hour after the session ends. In that last hour the card still changes, but no reply goes out, because a message about a finished session would only disturb people.
 
 ### Pressing Going or Can't
 1. The button carries `rsvp:<session id>:G`. Telegram allows 64 bytes, and this is 43.
@@ -223,3 +223,17 @@ Each of these was a real way for something to go wrong, found by reading the cod
 Both helpers are plain functions, so they have fast tests with no browser. No API changed, so the README contract and the mock stay as they were.
 
 **Known limits:** the chat card says "the day before" and "an hour before", which are the default lead times. A server that changes `TELEGRAM_NUDGE_LEAD` or `TELEGRAM_REMINDER_LEAD` would make that wording slightly off.
+
+### Cancelling after the start
+**Before:** `StudySession.cancel` refused once a session had started, and the row's menu disappeared with it. A meeting that fell through at the last minute stayed on record as if it had happened.
+
+**After:** the last moment to cancel is the session's end time plus one hour, and a cancel at exactly that moment still counts.
+- `cancel` checks that the caller leads the group, that the session isn't already cancelled, and then the time. `update` and `respond` still go through `requireChangeable`, so a started session can't be moved or answered.
+- `SessionChatService.cancelled` replies in the chat only until the session's end time. In the last hour, only the card changes.
+- `SessionList.vue` keeps Cancel in a leader's menu until the limit, including under Past. Change goes at the start, and calendar options at the end.
+
+No schema changed, so there's nothing to apply on Supabase.
+
+**Why allow it after the end at all, when Calendly, Meetup and Cal.com block it?** A leader often only knows a meeting fell through once its time has passed, and the group should be able to see that. The limit keeps old sessions as they were, so the list stays a fair record.
+
+**Why is the limit in two places?** The backend's `StudySession.CANCEL_BUFFER` is the actual rule. `isTooLateToCancel` in `utils/sessions.js` only decides whether to show the option. If a page stays open past the limit, the leader gets the backend's refusal as a message.
