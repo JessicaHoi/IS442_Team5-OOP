@@ -34,6 +34,7 @@ class StudySessionTest {
 
     private static final Instant NOW = Instant.parse("2026-11-01T00:00:00Z");
     private static final Instant START = NOW.plus(Duration.ofDays(3));
+    private static final Instant END = START.plus(Duration.ofHours(2));
 
     private StudyGroupLeader leader;
     private Student member;
@@ -160,6 +161,37 @@ class StudySessionTest {
         assertThatThrownBy(() -> cancelled.respond(member, RsvpResponse.GOING, NOW)).isInstanceOf(BusinessRuleException.class);
         assertThatThrownBy(() -> started.update(leader.getId(), valid(), START)).isInstanceOf(BusinessRuleException.class);
         assertThatThrownBy(() -> started.respond(member, RsvpResponse.GOING, START)).isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void aSessionCanBeCancelledUntilAnHourAfterItEnds() {
+        for (Instant now : List.of(START, END, END.plus(Duration.ofHours(1)))) {
+            StudySession session = schedule(valid());
+            session.respond(member, RsvpResponse.GOING, NOW);
+
+            session.cancel(leader.getId(), now);
+
+            assertThat(session.getStatus()).isEqualTo(SessionStatus.CANCELLED);
+            assertThat(session.getIcsSequence()).isEqualTo(1);
+            assertThat(session.goingCount()).isEqualTo(1);
+        }
+    }
+
+    @Test
+    void aSessionCannotBeCancelledMoreThanAnHourAfterItEnds() {
+        StudySession session = schedule(valid());
+
+        assertThatThrownBy(() -> session.cancel(leader.getId(), END.plus(Duration.ofHours(1)).plusSeconds(1)))
+                .isInstanceOf(BusinessRuleException.class).hasMessage("It's too late to cancel this session.");
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
+    }
+
+    @Test
+    void onlyTheLeaderCanCancel() {
+        StudySession session = schedule(valid());
+
+        assertThatThrownBy(() -> session.cancel(member.getId(), NOW)).isInstanceOf(PermissionDeniedException.class);
+        assertThat(session.getStatus()).isEqualTo(SessionStatus.SCHEDULED);
     }
 
     @Test

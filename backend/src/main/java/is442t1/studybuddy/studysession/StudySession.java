@@ -45,6 +45,8 @@ import is442t1.studybuddy.student.Student;
 public class StudySession extends BaseEntity {
 
     private static final Duration MAX_LENGTH = Duration.ofHours(8);
+    /** How long after the end a leader can still cancel. The frontend has the same limit in utils/sessions.js. */
+    private static final Duration CANCEL_BUFFER = Duration.ofHours(1);
     private static final int MAX_TITLE = 80;
     private static final int MAX_LOCATION = 200;
     private static final int MAX_NOTE = 500;
@@ -138,9 +140,13 @@ public class StudySession extends BaseEntity {
         return Arrays.asList(title, startsAt, endsAt, meetingMode, location, note, meetingLink, groupVideoChat);
     }
 
+    /** Allowed for longer than changing a session, because a meeting can fall through after its start. Later than that, the record stands. */
     public void cancel(UUID callerId, Instant now) {
         requireLeader(studyGroup, callerId);
-        requireChangeable(now);
+        requireNotCancelled();
+        if (now.isAfter(endsAt.plus(CANCEL_BUFFER))) {
+            throw new BusinessRuleException("It's too late to cancel this session.");
+        }
         markCancelled();
     }
 
@@ -236,10 +242,14 @@ public class StudySession extends BaseEntity {
         icsSequence++;
     }
 
-    private void requireChangeable(Instant now) {
+    private void requireNotCancelled() {
         if (status == SessionStatus.CANCELLED) {
             throw new BusinessRuleException("This session has been cancelled.");
         }
+    }
+
+    private void requireChangeable(Instant now) {
+        requireNotCancelled();
         if (!now.isBefore(startsAt)) {
             throw new BusinessRuleException("This session has already started.");
         }
