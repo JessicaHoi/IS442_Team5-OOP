@@ -253,5 +253,5 @@ No schema changed, so there's nothing to apply on Supabase.
 
 **Details worth knowing:**
 - Its stylesheet sets its own theme, so `SessionTimeFields.vue` points its CSS variables at the app's colours.
-- The calendar stops Escape reaching the Bootstrap modal while it's open, so Escape closes only the calendar.
+- The calendar stops Escape reaching the Bootstrap modal while it's open, so Escape closes only the calendar. When it closes, focus goes to the wrapper around the date field, because the library drops it otherwise and focusing its input reopens the calendar.
 - It has no API impact, so the README contract and the mock didn't change.

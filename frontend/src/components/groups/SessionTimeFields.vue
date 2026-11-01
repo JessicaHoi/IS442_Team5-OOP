@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 import { VueDatePicker } from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import { endAfterStartChange, endTimeOptions, startTimeOptions, toLocalInput } from '../../utils/calendar';
@@ -16,6 +16,7 @@ const emit = defineEmits(['update:startsAt', 'update:endsAt']);
 
 const today = new Date();
 const calendarOpen = ref(false);
+const dateField = ref(null);
 const calendarFormats = {
 	input: (date) => date.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
 };
@@ -38,11 +39,19 @@ function setDate(value) {
 function keepEscapeInCalendar(event) {
 	if (calendarOpen.value) event.stopPropagation();
 }
+
+/** The calendar drops focus when it closes, which loses a keyboard user's place. Focusing its input would reopen it, so the wrapper takes focus. A click on another field has already moved it. */
+async function calendarClosed() {
+	calendarOpen.value = false;
+	await nextTick();
+	const focused = document.activeElement;
+	if (focused === document.body || focused.closest('.dp--menu')) dateField.value?.focus();
+}
 </script>
 
 <template>
 	<FormField v-slot="{ id }" label="Date" required>
-		<div class="session-date" @keydown.esc="keepEscapeInCalendar">
+		<div ref="dateField" class="session-date" tabindex="-1" @keydown.esc="keepEscapeInCalendar">
 			<VueDatePicker
 				:model-value="date"
 				:min-date="today"
@@ -57,7 +66,7 @@ function keepEscapeInCalendar(event) {
 				hide-offset-dates
 				@update:model-value="setDate"
 				@open="calendarOpen = true"
-				@closed="calendarOpen = false"
+				@closed="calendarClosed"
 			/>
 		</div>
 	</FormField>
@@ -80,6 +89,10 @@ function keepEscapeInCalendar(event) {
 </template>
 
 <style scoped>
+.session-date:focus {
+	outline: none;
+}
+
 /* The calendar's own theme, pointed at the app's colours. */
 .session-date :deep(.dp--theme-light) {
 	--dp-font-family: var(--bs-body-font-family);
