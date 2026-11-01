@@ -211,3 +211,15 @@ Each of these was a real way for something to go wrong, found by reading the cod
 **After:** one tagged reply per session, about 24 hours before, and a private warning to the leader when fewer than two are going.
 
 **Known limits:** the check runs once, so someone joining the chat afterwards isn't nudged, and answers changing afterwards don't produce a new warning. A session created inside the window gets neither the nudge nor the warning. If the app crashes between marking and sending, that session's nudge is lost, which is better than sending it twice. I found no official limit on how many people one message can notify, so tagging a whole large group needs checking with real accounts.
+
+### The session and chat screens
+**Before:** a session row could show up to six equal buttons, the next session looked like every other, and the form asked for an end time and a location even when it could work them out.
+
+**After:**
+- `SessionList.vue` shows Join, one Going or Can't choice, and a menu holding Add to calendar, Change and Cancel. `nextSessionBadge` in `utils/sessions.js` picks the session to highlight.
+- `SessionFormModal.vue` asks "How will people join?" when the group has a working chat, and hides Location for online sessions unless one is already set. `endAfterStartChange` in `utils/calendar.js` fills in the end time: a new session gets two hours, and moving a session keeps its length.
+- `GroupChatCard.vue` has shorter wording, numbered setup steps, and one summary of what the bot does.
+
+Both helpers are plain functions, so they have fast tests with no browser. No API changed, so the README contract and the mock stay as they were.
+
+**Known limits:** the chat card says "the day before" and "an hour before", which are the default lead times. A server that changes `TELEGRAM_NUDGE_LEAD` or `TELEGRAM_REMINDER_LEAD` would make that wording slightly off.

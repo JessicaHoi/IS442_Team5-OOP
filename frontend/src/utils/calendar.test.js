@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarFileName, googleCalendarUrl, nextOccurrence, outlookCalendarUrl, sessionTimesFromSlot, toLocalInput } from './calendar';
+import { calendarFileName, endAfterStartChange, googleCalendarUrl, nextOccurrence, outlookCalendarUrl, sessionTimesFromSlot, toLocalInput } from './calendar';
 
 // Wednesday 4 Nov 2026, 18:00 local time.
 const NOW = new Date(2026, 10, 4, 18, 0);
@@ -11,6 +11,32 @@ const session = {
 	location: 'GSR 2-1',
 	note: 'Bring notes',
 };
+
+describe('endAfterStartChange', () => {
+	it('gives a new session two hours', () => {
+		expect(endAfterStartChange('2026-11-04T19:00', '', '')).toBe('2026-11-04T21:00');
+	});
+
+	it('keeps the length when the start moves', () => {
+		expect(endAfterStartChange('2026-11-06T09:00', '2026-11-04T19:00', '2026-11-04T19:45')).toBe('2026-11-06T09:45');
+	});
+
+	it('leaves an end alone when the old start is unknown and the end still works', () => {
+		expect(endAfterStartChange('2026-11-04T19:00', '', '2026-11-04T19:30')).toBe('2026-11-04T19:30');
+	});
+
+	it('replaces an end that was never after the start', () => {
+		expect(endAfterStartChange('2026-11-04T19:00', '2026-11-04T18:00', '2026-11-04T17:00')).toBe('2026-11-04T21:00');
+	});
+
+	it('leaves the end alone while the start is incomplete', () => {
+		expect(endAfterStartChange('', '2026-11-04T19:00', '2026-11-04T21:00')).toBe('2026-11-04T21:00');
+	});
+
+	it('writes years with four digits while one is being typed', () => {
+		expect(endAfterStartChange('0202-11-04T19:00', '0020-11-04T19:00', '0020-11-04T21:00').slice(0, 4)).toBe('0202');
+	});
+});
 
 describe('nextOccurrence', () => {
 	it('uses today when the slot is still ahead', () => {
