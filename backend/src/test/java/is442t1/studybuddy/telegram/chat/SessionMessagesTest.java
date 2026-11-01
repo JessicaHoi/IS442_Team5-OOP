@@ -69,6 +69,29 @@ class SessionMessagesTest {
     }
 
     @Test
+    void aNudgeTagsThePeopleItNeedsAnswersFrom() {
+        SessionMessages.Tagged nudge = SessionMessages.nudge(details(START.plusSeconds(7200), StudyMode.ONLINE, null, null), SINGAPORE,
+                List.of(new SessionMessages.Attendee("Priya Nair", 5)));
+
+        assertThat(nudge.text()).isEqualTo("""
+                👋 Can you make Mock exam? Wed 4 Nov, 19:00–21:00
+                Tap Going or Can't on the card above.
+                Still to answer: Priya Nair""");
+        assertThat(nudge.entities()).singleElement().satisfies(entity -> {
+            assertThat(entity.user().id()).isEqualTo(5);
+            assertThat(nudge.text().substring(entity.offset(), entity.offset() + entity.length())).isEqualTo("Priya Nair");
+        });
+    }
+
+    @Test
+    void aLowTurnoutWarningGivesTheLeaderTheCounts() {
+        assertThat(SessionMessages.lowTurnout(details(START.plusSeconds(7200), StudyMode.ONLINE, null, null), SINGAPORE))
+                .isEqualTo("""
+                        ⚠️ Mock exam (Wed 4 Nov, 19:00–21:00) has 2 going so far.
+                        1 can't, 1 hasn't answered. You can move or cancel it in StudyBuddy.""");
+    }
+
+    @Test
     void aSessionsPhaseFollowsItsStatusAndTheClock() {
         Instant end = START.plusSeconds(7200);
         assertThat(CardPhase.of(SessionStatus.SCHEDULED, START, end, START.minusSeconds(1))).isEqualTo(CardPhase.OPEN);

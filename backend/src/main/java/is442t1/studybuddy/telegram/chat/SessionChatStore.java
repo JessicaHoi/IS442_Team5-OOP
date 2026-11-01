@@ -2,6 +2,7 @@ package is442t1.studybuddy.telegram.chat;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import is442t1.studybuddy.common.AppProperties;
 import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.enums.RsvpResponse;
 import is442t1.studybuddy.model.enums.SessionStatus;
@@ -22,6 +24,7 @@ import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.studysession.StudySession;
 import is442t1.studybuddy.studysession.StudySessionRepository;
 import is442t1.studybuddy.telegram.TelegramProperties;
+import is442t1.studybuddy.telegram.link.TelegramAccount;
 import is442t1.studybuddy.telegram.link.TelegramAccountRepository;
 
 /** The database side of study session messages, in short transactions, for the same reason as {@link ChatStore}. */
@@ -54,16 +57,18 @@ class SessionChatStore {
     private final SessionChatCardRepository cardRepository;
     private final TelegramAccountRepository accountRepository;
     private final TelegramProperties properties;
+    private final ZoneId zone;
 
     SessionChatStore(StudySessionRepository sessionRepository, GroupChatRepository chatRepository,
             ChatMembershipRepository membershipRepository, SessionChatCardRepository cardRepository,
-            TelegramAccountRepository accountRepository, TelegramProperties properties) {
+            TelegramAccountRepository accountRepository, TelegramProperties properties, AppProperties appProperties) {
         this.sessionRepository = sessionRepository;
         this.chatRepository = chatRepository;
         this.membershipRepository = membershipRepository;
         this.cardRepository = cardRepository;
         this.accountRepository = accountRepository;
         this.properties = properties;
+        this.zone = appProperties.timeZone();
     }
 
     @Transactional(readOnly = true)
@@ -123,17 +128,48 @@ class SessionChatStore {
     @Transactional(readOnly = true)
     public List<SessionMessages.Attendee> goingInChat(UUID sessionId) {
         StudySession session = sessionRepository.findById(sessionId).orElseThrow();
-        Map<UUID, Long> inChat = chatRepository.findByStudyGroup_Id(session.getStudyGroup().getId())
-                .filter(chat -> chat.getBotId() == properties.botId())
-                .map(chat -> membershipRepository.findByGroupChat_Id(chat.getId()).stream()
-                        .filter(membership -> membership.getState() == ChatMemberState.JOINED && membership.getTelegramUserId() != null)
-                        .collect(Collectors.toMap(membership -> membership.getStudent().getId(), ChatMembership::getTelegramUserId)))
-                .orElse(Map.of());
+        Map<UUID, Long> inChat = telegramIdsInChat(session);
         return session.getRsvps().stream()
                 .filter(rsvp -> rsvp.getResponse() == RsvpResponse.GOING && inChat.containsKey(rsvp.getStudent().getId()))
                 .map(rsvp -> new SessionMessages.Attendee(rsvp.getStudent().getName(), inChat.get(rsvp.getStudent().getId())))
                 .sorted(Comparator.comparing(SessionMessages.Attendee::name))
                 .toList();
+    }
+
+    /** Those with no answer whom the bot can tag. The rest are still named on the card. */
+    @Transactional(readOnly = true)
+    public List<SessionMessages.Attendee> silentInChat(UUID sessionId) {
+        StudySession session = sessionRepository.findById(sessionId).orElseThrow();
+        Map<UUID, Long> inChat = telegramIdsInChat(session);
+        Set<UUID> answered = session.getRsvps().stream().map(rsvp -> rsvp.getStudent().getId()).collect(Collectors.toSet());
+        return session.getStudyGroup().getMembers().stream()
+                .filter(student -> !answered.contains(student.getId()) && inChat.containsKey(student.getId()))
+                .map(student -> new SessionMessages.Attendee(student.getName(), inChat.get(student.getId())))
+                .sorted(Comparator.comparing(SessionMessages.Attendee::name))
+                .toList();
+    }
+
+    private Map<UUID, Long> telegramIdsInChat(StudySession session) {
+        return chatRepository.findByStudyGroup_Id(session.getStudyGroup().getId())
+                .filter(chat -> chat.getBotId() == properties.botId())
+                .map(chat -> membershipRepository.findByGroupChat_Id(chat.getId()).stream()
+                        .filter(membership -> membership.getState() == ChatMemberState.JOINED && membership.getTelegramUserId() != null)
+                        .collect(Collectors.toMap(membership -> membership.getStudent().getId(), ChatMembership::getTelegramUserId)))
+                .orElse(Map.of());
+    }
+
+    /**
+     * Where to message the leader privately: their connected account, otherwise their account in the chat. Setting up a
+     * chat means starting the bot, which it needs to message them, but someone made leader later may never have.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Long> leaderTelegramId(UUID sessionId) {
+        return sessionRepository.findById(sessionId).flatMap(session -> {
+            UUID leaderId = session.getStudyGroup().getLeader().getId();
+            return accountRepository.findByBotIdAndStudent_Id(properties.botId(), leaderId)
+                    .map(TelegramAccount::getTelegramUserId)
+                    .or(() -> Optional.ofNullable(telegramIdsInChat(session).get(leaderId)));
+        });
     }
 
     /** The video chat session a call in this group is most likely for. */
@@ -157,6 +193,16 @@ class SessionChatStore {
                         .filter(card -> !card.announcedAfter(session.getStartsAt().minus(lead)))
                         .isPresent())
                 .map(StudySession::getId)
+                .toList();
+    }
+
+    /** Sessions whose chat can be asked for missing answers now. */
+    @Transactional(readOnly = true)
+    public List<UUID> dueNudges(Instant now) {
+        Duration lead = properties.nudgeLead();
+        return cardRepository.findAwaitingNudge(properties.botId(), now, now.plus(lead)).stream()
+                .filter(card -> NudgeRule.isDue(card.getStudySession().getStartsAt(), card.getAnnouncedAt(), lead, zone, now))
+                .map(card -> card.getStudySession().getId())
                 .toList();
     }
 
@@ -231,6 +277,14 @@ class SessionChatStore {
 
     public void clearReminder(UUID sessionId) {
         cardRepository.findByStudySession_Id(sessionId).ifPresent(SessionChatCard::clearReminder);
+    }
+
+    public void markNudgeSent(UUID sessionId, Instant now) {
+        cardRepository.findByStudySession_Id(sessionId).ifPresent(card -> card.markNudgeSent(now));
+    }
+
+    public void clearNudge(UUID sessionId) {
+        cardRepository.findByStudySession_Id(sessionId).ifPresent(SessionChatCard::clearNudge);
     }
 
     private SessionChatCard cardFor(UUID sessionId, UUID groupChatId) {

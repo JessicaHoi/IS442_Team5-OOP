@@ -10,12 +10,12 @@ import org.junit.jupiter.api.Test;
 class TelegramPropertiesTest {
 
     private static TelegramProperties enabled(String token, String username) {
-        return new TelegramProperties(true, token, username, true, Duration.ofSeconds(50), Duration.ofMinutes(10), Duration.ofDays(7), Duration.ofMinutes(60));
+        return new TelegramProperties(true, token, username, true, Duration.ofSeconds(50), Duration.ofMinutes(10), Duration.ofDays(7), Duration.ofMinutes(60), Duration.ofHours(24));
     }
 
     @Test
     void offNeedsNoToken() {
-        assertThat(new TelegramProperties(false, "", "", true, Duration.ofSeconds(50), Duration.ofMinutes(10), Duration.ofDays(7), Duration.ofMinutes(60)).enabled()).isFalse();
+        assertThat(new TelegramProperties(false, "", "", true, Duration.ofSeconds(50), Duration.ofMinutes(10), Duration.ofDays(7), Duration.ofMinutes(60), Duration.ofHours(24)).enabled()).isFalse();
     }
 
     @Test

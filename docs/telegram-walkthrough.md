@@ -97,6 +97,15 @@ Every 60 seconds `SessionCardJob` calls `SessionChatService.sweep`. This is the 
 2. `sendDueReminders` finds sessions starting within the lead time, in a working chat, with a card and no reminder sent. It skips any whose card was posted or moved after the window opened, because the chat has only just heard about it.
 3. Each reminder is marked as sent first, then sent as a reply to the card. If Telegram refuses, the mark is cleared and the next run tries again. If the app crashes in between, one reminder is lost, which is better than sending it twice.
 
+### Nudges and the leader warning
+The sweep's last step is `sendDueNudges`. It's the one thing the bot does to get answers rather than report them.
+1. `SessionChatCardRepository.findAwaitingNudge` finds posted cards of scheduled sessions in working chats, with no nudge sent, starting within the lead time.
+2. `NudgeRule.isDue` decides whether now is right. It's a plain function taking `now`, so its edge cases are tested without Spring. The window opens `TELEGRAM_NUDGE_LEAD` before the start and closes 3 hours before it. Nothing goes out outside 08:00 to 22:00 in `APP_TIME_ZONE`, so a nudge due overnight waits for the morning. A session announced after the window opened is skipped, because the chat has only just been asked.
+3. The session is marked first, as with reminders. `silentInChat` lists members with no answer whom the bot can tag. If there are any, one reply to the card tags them. People not in the chat can't be tagged, but the card still names them.
+4. `warnLeaderIfFewAreGoing` then privately tells the leader if fewer than two are going, in a group of at least two. It runs even when nobody was tagged, because everyone answering "Can't" is when the leader most needs to know.
+
+If the reply fails, the mark is cleared and the next run tries again. The warning comes after the reply, so a retry can't warn twice. A failed warning is only logged, because the likely cause is a leader who blocked the bot, and retrying would send the nudge again. Moving the start clears the mark, so the new time gets its own nudge.
+
 ### When a video chat starts
 Telegram has no way for a bot to start a call or invite anyone to one. A chat admin starts it, Telegram sends a `video_chat_started` message, and `SessionChatService.videoChatStarted` tags the others going, if a video chat session is due within 30 minutes or is running.
 
@@ -108,7 +117,7 @@ Telegram has no way for a bot to start a call or invite anyone to one. A chat ad
 | `telegram_link_token` | A one-time link. Stored hashed, 10 minutes |
 | `group_chat` | A study group's chat, per bot |
 | `chat_membership` | One student's place in that chat |
-| `session_chat_card` | One session's card: its message, when it was announced, whether its reminder went out, the phase it shows and whether it's pinned |
+| `session_chat_card` | One session's card: its message, when it was announced, whether its reminder and nudge went out, the phase it shows and whether it's pinned |
 
 A Telegram account can only be one student per chat: `chat_membership` has a unique constraint on chat and Telegram user. Several lookups rely on that to find one row.
 
@@ -152,6 +161,12 @@ Because the two failures aren't equal. Saving first and failing leaves nobody in
 **What happens if Telegram is down?**
 The app carries on and the failure is logged. Cards and reminders try again by themselves. Only the short replies about a moved or cancelled session are lost, and the card still shows the change.
 
+**Why does a nudge tag only some people?** Telling everyone trains people to mute the chat. Only those with no answer have anything to do, and only people the bot knows are in the chat can be tagged.
+
+**Why is the nudge rule a separate class?** Time rules have awkward edges: quiet hours, a window opening overnight, a session moved late. As a plain function taking `now`, each edge gets a fast test with no database or clock.
+
+**Why does the leader get a private message rather than a chat post?** It lets them act before the group sees a session looking thin. A bot can only message someone who has started it. Connecting an account or setting up the chat both do that, but someone made leader later may have done neither, so their warning fails and is only logged.
+
 ## Changes
 
 ### Moving reminder state out of `StudySession`
@@ -189,3 +204,10 @@ Each of these was a real way for something to go wrong, found by reading the cod
 **After:** one card per session, updated in place, as described above.
 
 **Known limits:** a deleted account's name stays on a card until its next change. Sessions with old-style posts turn into cards the first time the sweep sees them, but older posts of the same session stay as they were, and their buttons still work.
+
+### Nudges and the leader warning
+**Before:** the card showed who hadn't answered, but nothing asked them, and a leader only found out about low turnout by looking.
+
+**After:** one tagged reply per session, about 24 hours before, and a private warning to the leader when fewer than two are going.
+
+**Known limits:** the check runs once, so someone joining the chat afterwards isn't nudged, and answers changing afterwards don't produce a new warning. A session created inside the window gets neither the nudge nor the warning. If the app crashes between marking and sending, that session's nudge is lost, which is better than sending it twice. I found no official limit on how many people one message can notify, so tagging a whole large group needs checking with real accounts.

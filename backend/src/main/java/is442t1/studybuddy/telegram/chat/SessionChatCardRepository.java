@@ -1,5 +1,6 @@
 package is442t1.studybuddy.telegram.chat;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,4 +30,14 @@ public interface SessionChatCardRepository extends JpaRepository<SessionChatCard
                and (card.shownPhase is null or card.shownPhase in (is442t1.studybuddy.telegram.chat.CardPhase.OPEN, is442t1.studybuddy.telegram.chat.CardPhase.STARTED))
             """)
     List<SessionChatCard> findUnfinished(@Param("botId") long botId);
+
+    /** Posted cards of scheduled sessions starting soon, with no nudge sent, in working chats with this bot. */
+    @Query("""
+            select card from SessionChatCard card join fetch card.studySession session
+             where card.groupChat.botId = :botId and card.messageId is not null and card.nudgeSentAt is null
+               and card.groupChat.status = is442t1.studybuddy.telegram.chat.GroupChatStatus.ACTIVE
+               and session.status = is442t1.studybuddy.model.enums.SessionStatus.SCHEDULED
+               and session.startsAt > :now and session.startsAt <= :until
+            """)
+    List<SessionChatCard> findAwaitingNudge(@Param("botId") long botId, @Param("now") Instant now, @Param("until") Instant until);
 }
