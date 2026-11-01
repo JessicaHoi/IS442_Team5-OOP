@@ -49,6 +49,8 @@ public class SessionChatCard extends BaseEntity {
 
     private Instant reminderSentAt;
 
+    private Instant nudgeSentAt;
+
     /** The phase the message last showed, so the sweep can tell when time has moved it on. */
     @Enumerated(EnumType.STRING)
     private CardPhase shownPhase;
@@ -80,10 +82,11 @@ public class SessionChatCard extends BaseEntity {
         pinned = false;
     }
 
-    /** A moved session counts as newly announced, and can have a reminder for its new time. */
+    /** A moved session counts as newly announced, and can have a nudge and a reminder for its new time. */
     void startMoved(Instant now) {
         announcedAt = now;
         reminderSentAt = null;
+        nudgeSentAt = null;
     }
 
     /** A session just announced needs no reminder as well, so this says whether that has happened since {@code moment}. */
@@ -100,6 +103,15 @@ public class SessionChatCard extends BaseEntity {
         reminderSentAt = null;
     }
 
+    void markNudgeSent(Instant now) {
+        nudgeSentAt = now;
+    }
+
+    /** The send failed, so the next run tries again. */
+    void clearNudge() {
+        nudgeSentAt = null;
+    }
+
     void setPinned(boolean nowPinned) {
         pinned = nowPinned;
     }
@@ -110,6 +122,10 @@ public class SessionChatCard extends BaseEntity {
 
     public Long getMessageId() {
         return messageId;
+    }
+
+    public Instant getAnnouncedAt() {
+        return announcedAt;
     }
 
     public CardPhase getShownPhase() {

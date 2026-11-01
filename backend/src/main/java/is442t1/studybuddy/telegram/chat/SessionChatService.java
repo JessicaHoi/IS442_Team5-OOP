@@ -26,8 +26,8 @@ import is442t1.studybuddy.telegram.chat.SessionChatStore.SessionRef;
 import is442t1.studybuddy.telegram.chat.SessionMessages.Tagged;
 
 /**
- * Study sessions in the group chat, apart from the card itself: Going and Can't buttons, reminders and short replies to
- * the card. {@link SessionCardRefresher} looks after the card. Like {@link GroupChatService}, it isn't transactional,
+ * Study sessions in the group chat, apart from the card itself: Going and Can't buttons, nudges, reminders and short
+ * replies to the card. {@link SessionCardRefresher} looks after the card. Like {@link GroupChatService}, it isn't transactional,
  * so no Telegram call holds a database connection.
  */
 @Service
@@ -82,6 +82,7 @@ public class SessionChatService {
     public void sweep(Instant now) {
         store.cardsToRefresh(now).forEach(refresher::markDirty);
         sendDueReminders(now);
+        sendDueNudges(now);
     }
 
     private Optional<ChatRef> activeChat(SessionRef session) {
@@ -148,6 +149,50 @@ public class SessionChatService {
                             : new Tagged(SessionMessages.reminder(session.details(), zone), List.of());
                     sender.reply(chat, messageId, reminder.text(), reminder.entities());
                 })));
+    }
+
+    /**
+     * Asks each chat now due for its missing answers, once per session, the same way as reminders: marked first, unmarked
+     * if Telegram refuses. A session where nobody can be tagged still counts, because its leader may need to hear about it.
+     */
+    public void sendDueNudges(Instant now) {
+        for (UUID sessionId : store.dueNudges(now)) {
+            try {
+                sendNudge(sessionId, now);
+            } catch (TelegramApiException exception) {
+                store.clearNudge(sessionId);
+                LOG.warn("Could not send a session nudge: {}", exception.getMessage());
+            }
+        }
+    }
+
+    private void sendNudge(UUID sessionId, Instant now) {
+        store.read(sessionId).ifPresent(session -> activeChat(session).ifPresent(chat -> store.messageId(sessionId).ifPresent(messageId -> {
+            store.markNudgeSent(sessionId, now);
+            List<SessionMessages.Attendee> silent = store.silentInChat(sessionId);
+            if (!silent.isEmpty()) {
+                Tagged nudge = SessionMessages.nudge(session.details(), zone, silent);
+                sender.reply(chat, messageId, nudge.text(), nudge.entities());
+            }
+            LOG.info("Tagged {} in the nudge for session {}.", silent.size(), sessionId);
+            warnLeaderIfFewAreGoing(sessionId, session.details());
+        })));
+    }
+
+    /** Runs after the nudge has gone, so retrying a failed nudge can't warn twice. A failed warning is only logged: the leader may never have started the bot, and the chat has already been asked. */
+    private void warnLeaderIfFewAreGoing(UUID sessionId, SessionMessages.Details session) {
+        int members = session.going().size() + session.notGoing().size() + session.noAnswer().size();
+        if (!NudgeRule.isLowTurnout(session.going().size(), members)) {
+            return;
+        }
+        try {
+            store.leaderTelegramId(sessionId).ifPresent(leader -> {
+                client.sendMessage(leader, SessionMessages.lowTurnout(session, zone));
+                LOG.info("Warned the leader of session {} about low turnout.", sessionId);
+            });
+        } catch (TelegramApiException exception) {
+            LOG.warn("Could not warn a leader about low turnout: {}", exception.getMessage());
+        }
     }
 
     /**

@@ -26,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
@@ -67,6 +69,9 @@ class SessionChatApiTest extends ApiTestSupport {
     private static final String BOT_LINK = "https://t.me/study_test_bot?start=";
     private static final String UNKNOWN_PERSON = "StudyBuddy doesn't know this Telegram account. Join the chat from your study group's page, or answer there.";
     private static final String STARTING_SOON = "Starting soon";
+    private static final String NUDGE = "Can you make";
+    private static final String LOW_TURNOUT = "going so far";
+    private static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
     private static final long CARD = 77;
 
     @MockitoBean private TelegramClient client;
@@ -692,13 +697,191 @@ class SessionChatApiTest extends ApiTestSupport {
                 .andReturn().getResponse().getContentAsString(), "$.id");
     }
 
+    /** Noon in Singapore a few days ahead, so that a nudge check before it can be placed in the daytime whenever the tests run. */
+    private static Instant noonInThreeDays() {
+        return LocalDate.now(SINGAPORE).plusDays(3).atTime(12, 0).atZone(SINGAPORE).toInstant();
+    }
+
+    private static Instant duringTheNudgeWindow(Instant startsAt) {
+        return startsAt.minus(Duration.ofHours(20));
+    }
+
+    private void verifyNudges(int count) {
+        verify(client, times(count)).sendReply(eq(chatId), eq(CARD), contains(NUDGE), any());
+    }
+
+    private void verifyLeaderWarnings(int count) {
+        verify(client, times(count)).sendMessage(eq(leaderTelegramId), contains(LOW_TURNOUT));
+    }
+
+    @Test
+    void aNudgeTagsOnlyThoseInTheChatWithNoAnswerAndGoesOutOnce() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        String sessionId = posted(schedule(startsAt));
+        long memberTelegramId = joinChat();
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+
+        sessionChat.sendDueNudges(startsAt.minus(Duration.ofHours(25)));
+        verifyNudges(0);
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt).plusSeconds(60));
+
+        ArgumentCaptor<List<MessageEntity>> entities = ArgumentCaptor.captor();
+        verify(client, times(1)).sendReply(eq(chatId), eq(CARD), contains(NUDGE), entities.capture());
+        assertThat(entities.getValue()).singleElement().satisfies(tag -> assertThat(tag.user().id()).isEqualTo(memberTelegramId));
+    }
+
+    @Test
+    void nobodyLeftToTagMeansNoNudgeButTheLeaderStillHearsIfFewAreGoing() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        String sessionId = posted(schedule(startsAt));
+        long memberTelegramId = joinChat();
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        press(memberTelegramId, "rsvp:" + sessionId + ":N");
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+
+        verifyNudges(0);
+        verifyLeaderWarnings(1);
+    }
+
+    @Test
+    void theLeaderIsNotWarnedWhenEnoughAreGoing() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        String sessionId = posted(schedule(startsAt));
+        long memberTelegramId = joinChat();
+        press(leaderTelegramId, "rsvp:" + sessionId + ":G");
+        press(memberTelegramId, "rsvp:" + sessionId + ":G");
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+
+        verifyLeaderWarnings(0);
+    }
+
+    @Test
+    void aLeadersConnectedAccountIsPreferredForTheWarning() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        posted(schedule(startsAt));
+        joinChat();
+        long connected = connectTelegram(leaderToken);
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+
+        verify(client).sendMessage(eq(connected), contains(LOW_TURNOUT));
+        verifyLeaderWarnings(0);
+    }
+
+    @Test
+    void aFailedNudgeIsTriedAgainAndTheLeaderIsWarnedOnlyOnce() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        posted(schedule(startsAt));
+        joinChat();
+        when(client.sendReply(eq(chatId), eq(CARD), contains(NUDGE), any()))
+                .thenThrow(new TelegramApiException(429, "Too Many Requests", 1, null))
+                .thenReturn(1L);
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+        verifyLeaderWarnings(0);
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt).plusSeconds(60));
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt).plusSeconds(120));
+        verifyNudges(2);
+        verifyLeaderWarnings(1);
+    }
+
+    @Test
+    void aFailedLeaderWarningDoesNotSendTheNudgeAgain() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        posted(schedule(startsAt));
+        joinChat();
+        when(client.sendMessage(eq(leaderTelegramId), contains(LOW_TURNOUT))).thenThrow(new TelegramApiException(403, "Forbidden: bot was blocked by the user", null, null));
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt).plusSeconds(60));
+
+        verifyNudges(1);
+        verifyLeaderWarnings(1);
+    }
+
+    @Test
+    void movingTheStartAllowsANudgeForTheNewTime() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        String sessionId = posted(schedule(startsAt));
+        joinChat();
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+        verifyNudges(1);
+
+        Instant newStart = startsAt.plus(Duration.ofDays(2));
+        reschedule(sessionId, newStart);
+        verify(client, timeout(TIMEOUT_MS)).sendReply(eq(chatId), eq(CARD), contains("has moved"), any());
+        await().atMost(Duration.ofMillis(TIMEOUT_MS)).untilAsserted(() -> {
+            sessionChat.sendDueNudges(duringTheNudgeWindow(newStart));
+            verifyNudges(2);
+        });
+    }
+
+    @Test
+    void aSessionAnnouncedInsideTheWindowIsNotNudged() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        String sessionId = posted(schedule(startsAt));
+        joinChat();
+        jdbc.update("update session_chat_card set announced_at = ? where study_session_id = ?",
+                Timestamp.from(startsAt.minus(Duration.ofHours(23))), UUID.fromString(sessionId));
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+
+        verifyNudges(0);
+    }
+
+    @Test
+    void quietHoursHoldANudgeUntilMorning() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        posted(schedule(startsAt));
+        joinChat();
+
+        sessionChat.sendDueNudges(startsAt.minus(Duration.ofHours(13)));
+        verifyNudges(0);
+
+        sessionChat.sendDueNudges(startsAt.minus(Duration.ofHours(4)));
+        verifyNudges(1);
+    }
+
+    @Test
+    void aCancelledSessionIsNotNudged() throws Exception {
+        linkChat();
+        Instant startsAt = noonInThreeDays();
+        String sessionId = posted(schedule(startsAt));
+        joinChat();
+        mockMvc.perform(as(leaderToken, post(path("/sessions/" + sessionId + "/cancel")))).andExpect(status().isOk());
+
+        sessionChat.sendDueNudges(duringTheNudgeWindow(startsAt));
+
+        verifyNudges(0);
+        verifyLeaderWarnings(0);
+    }
+
     private long joinChatAndAnswerGoing(String sessionId) throws Exception {
+        long memberTelegramId = joinChat();
+        press(memberTelegramId, "rsvp:" + sessionId + ":G");
+        return memberTelegramId;
+    }
+
+    private long joinChat() throws Exception {
         long memberTelegramId = NEXT_ID.incrementAndGet();
         String invite = read(mockMvc.perform(as(memberToken, post(path("/chat/invite"))))
                 .andReturn().getResponse().getContentAsString(), "$.me.inviteUrl");
         router.route(new Update(1, null, null, null, new Update.ChatJoinRequest(new Update.Chat(chatId, "supergroup"), person(memberTelegramId),
                 memberTelegramId, new ChatInviteLink(invite, invite.substring("https://t.me/+".length())))));
-        press(memberTelegramId, "rsvp:" + sessionId + ":G");
         return memberTelegramId;
     }
 

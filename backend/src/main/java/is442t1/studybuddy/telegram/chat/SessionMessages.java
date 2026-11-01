@@ -22,7 +22,7 @@ final class SessionMessages {
             String meetingLink, boolean groupVideoChat, List<String> going, List<String> notGoing, List<String> noAnswer) {
     }
 
-    /** Someone going to a session whom the bot can tag, because it knows their account in this chat. */
+    /** Someone the bot can tag, because it knows their account in this chat. */
     record Attendee(String name, long telegramUserId) {
     }
 
@@ -81,27 +81,43 @@ final class SessionMessages {
     }
 
     static String reminder(Details session, ZoneId zone) {
-        int silent = session.noAnswer().size();
         return "⏰ Starting soon: " + session.title() + " at " + TIME.format(session.startsAt().atZone(zone)) + "\n"
-                + session.going().size() + " going, " + silent + (silent == 1 ? " hasn't" : " haven't") + " answered";
+                + session.going().size() + " going, " + notAnswered(session);
+    }
+
+    private static String notAnswered(Details session) {
+        int silent = session.noAnswer().size();
+        return silent + (silent == 1 ? " hasn't" : " haven't") + " answered";
+    }
+
+    /** A reply to the card that tags only the people it still needs an answer from. */
+    static Tagged nudge(Details session, ZoneId zone, List<Attendee> silent) {
+        return tag("👋 Can you make " + session.title() + "? " + when(session, zone) + "\nTap Going or Can't on the card above.",
+                "Still to answer", silent);
+    }
+
+    /** A private message, so the leader can act while there's still time and the chat isn't told the session looks thin. */
+    static String lowTurnout(Details session, ZoneId zone) {
+        return "⚠️ " + session.title() + " (" + when(session, zone) + ") has " + session.going().size() + " going so far.\n"
+                + session.notGoing().size() + " can't, " + notAnswered(session) + ". You can move or cancel it in StudyBuddy.";
     }
 
     /** A video chat session's reminder tags the people going, because a bot can't invite them to the call itself. */
     static Tagged videoChatReminder(Details session, ZoneId zone, List<Attendee> going) {
-        return tag(reminder(session, zone) + "\nA chat admin needs to start the video chat here when it's time.", going);
+        return tag(reminder(session, zone) + "\nA chat admin needs to start the video chat here when it's time.", "Going", going);
     }
 
     static Tagged videoChatStarted(String title, List<Attendee> going) {
-        return tag("🎥 The video chat for " + title + " has started. Join from the bar at the top of this chat.", going);
+        return tag("🎥 The video chat for " + title + " has started. Join from the bar at the top of this chat.", "Going", going);
     }
 
-    private static Tagged tag(String text, List<Attendee> going) {
-        if (going.isEmpty()) {
+    private static Tagged tag(String text, String label, List<Attendee> people) {
+        if (people.isEmpty()) {
             return new Tagged(text, List.of());
         }
-        StringBuilder tagged = new StringBuilder(text).append("\nGoing: ");
+        StringBuilder tagged = new StringBuilder(text).append("\n").append(label).append(": ");
         List<MessageEntity> entities = new ArrayList<>();
-        for (Attendee attendee : going) {
+        for (Attendee attendee : people) {
             if (!entities.isEmpty()) {
                 tagged.append(", ");
             }

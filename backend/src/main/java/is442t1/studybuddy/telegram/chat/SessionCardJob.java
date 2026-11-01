@@ -7,7 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * How the bot does things on time: posts missing cards, moves cards on as sessions start and end, and sends reminders.
+ * How the bot does things on time: posts missing cards, moves cards on as sessions start and end, and sends reminders and nudges.
  * Only the instance reading the bot's updates runs this, so nothing is sent twice.
  */
 @Component

@@ -58,6 +58,8 @@ studybuddy:
     invite-ttl: 7d
     # How long before a study session its reminder goes to the group chat.
     reminder-lead: ${TELEGRAM_REMINDER_LEAD:60m}
+    # How long before a study session the group chat can be asked for missing answers.
+    nudge-lead: ${TELEGRAM_NUDGE_LEAD:24h}
     # How often session cards are updated after a change, and how often to check for anything that's due.
     card-refresh: 3s
     card-check: 60s
