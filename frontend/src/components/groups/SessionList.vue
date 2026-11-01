@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { groupsApi } from '../../api/groups.api';
+import { integrationsApi } from '../../api/integrations.api';
 import { sessionsApi } from '../../api/sessions.api';
 import { useConfirm } from '../../composables/useConfirm';
 import { useToast } from '../../composables/useToast';
@@ -35,7 +36,7 @@ const formOpen = ref(false);
 const editing = ref(null);
 const formDefaults = ref(null);
 const saving = ref(false);
-const chatActive = ref(false);
+const chatStatus = ref(null);
 
 const isEmpty = computed(() => !upcoming.value.length && !past.value.length);
 const nextBadge = computed(() => nextSessionBadge(upcoming.value));
@@ -52,10 +53,11 @@ async function load() {
 	}
 }
 
-/** Only decides whether to offer the video chat, so a failure just leaves it out. */
+/** Only decides what the form offers for a video chat, so a failure just leaves it out. */
 async function loadChatStatus() {
 	if (!props.canManage) return;
-	chatActive.value = await groupsApi.chat(props.groupId).then((chat) => chat.status === 'ACTIVE').catch(() => false);
+	const { telegram } = await integrationsApi.get().catch(() => ({ telegram: { enabled: false } }));
+	if (telegram.enabled) chatStatus.value = await groupsApi.chat(props.groupId).then((chat) => chat.status).catch(() => null);
 }
 
 watch(() => props.groupId, () => {
@@ -207,7 +209,7 @@ async function act(session, action) {
 			</template>
 		</template>
 
-		<SessionFormModal v-model="formOpen" :session="editing" :defaults="formDefaults" :saving="saving" :can-use-video-chat="chatActive" @submit="save" />
+		<SessionFormModal v-model="formOpen" :session="editing" :defaults="formDefaults" :saving="saving" :can-use-video-chat="chatStatus === 'ACTIVE'" :can-link-chat="chatStatus === 'NOT_LINKED' || chatStatus === 'DETACHED'" @submit="save" />
 	</section>
 </template>
 
