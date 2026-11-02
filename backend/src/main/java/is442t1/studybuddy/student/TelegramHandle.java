@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 import is442t1.studybuddy.common.exception.ValidationException;
 
 /** Turns what a student typed ({@code @name} or a {@code t.me} link) into a bare Telegram username. */
-final class TelegramHandle {
+public final class TelegramHandle {
 
     private static final Pattern LINK_PREFIX = Pattern.compile("^(https?://)?(www\\.)?t\\.me/", Pattern.CASE_INSENSITIVE);
     private static final Pattern VALID = Pattern.compile("[A-Za-z][A-Za-z0-9_]{3,30}[A-Za-z0-9]");
@@ -14,7 +14,7 @@ final class TelegramHandle {
     }
 
     /** The bare username, or {@code null} if the student left the field empty. */
-    static String normalize(String raw) {
+    public static String normalize(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }

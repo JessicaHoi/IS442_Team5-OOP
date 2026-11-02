@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 import { studentsApi } from '../../api/students.api';
+import { coursesApi } from '../../api/courses.api';
 import { useLookupsStore } from '../../stores/lookups';
 import { useAuthStore } from '../../stores/auth';
 import { useToast } from '../../composables/useToast';
@@ -28,6 +29,10 @@ const profile = reactive({ name: '', school: '', programme: '', yearOfStudy: '',
 /** One study preference per course the student needs a buddy for. */
 const prefs = ref([]);
 const courseToAdd = ref('');
+const newCourseCode = ref('');
+const newCourseName = ref('');
+const addingCourse = ref(false);
+const courseCreationError = ref('');
 const errors = ref({});
 /** Per-preference errors, keyed by course code. */
 const preferenceErrors = ref({});
@@ -80,6 +85,37 @@ function addPreference() {
 	if (!courseToAdd.value) return;
 	prefs.value = [...prefs.value, emptyPreference(courseToAdd.value)];
 	courseToAdd.value = '';
+}
+
+async function createCourse() {
+	courseCreationError.value = '';
+	const courseCode = newCourseCode.value.trim().toUpperCase();
+	const courseName = newCourseName.value.trim();
+	if (!/^[A-Z0-9]{1,20}$/.test(courseCode)) {
+		courseCreationError.value = 'Enter a course code using up to 20 letters or numbers.';
+		return;
+	}
+	if (!courseName || courseName.length > 255) {
+		courseCreationError.value = 'Enter a course name of at most 255 characters.';
+		return;
+	}
+	if (lookups.courses.some((course) => course.code === courseCode)) {
+		courseCreationError.value = 'That course code is already listed. Select it above.';
+		return;
+	}
+	addingCourse.value = true;
+	try {
+		const course = await coursesApi.create(courseCode, courseName);
+		lookups.addCourse(course);
+		profile.courses = [...profile.courses, course.code];
+		newCourseCode.value = '';
+		newCourseName.value = '';
+		toast.success(`${course.code} added to the shared catalogue and selected. Save your profile to keep it there.`);
+	} catch (caught) {
+		courseCreationError.value = caught.message;
+	} finally {
+		addingCourse.value = false;
+	}
 }
 
 function updatePreference(index, preference) {
@@ -207,6 +243,23 @@ async function save() {
 					<div class="form-label">Courses you are taking <span class="text-danger">*</span></div>
 					<ChipSelect v-model="profile.courses" :options="courseOptions" />
 					<div v-if="errors.courses" class="invalid-feedback d-block">{{ errors.courses }}</div>
+					<div class="row g-2 align-items-end mt-2">
+						<div class="col-md-3">
+							<label for="new-course-code" class="form-label">Course code</label>
+							<input id="new-course-code" v-model="newCourseCode" class="form-control" maxlength="20" autocomplete="off" placeholder="IS442" :disabled="addingCourse" />
+						</div>
+						<div class="col-md-6">
+							<label for="new-course-name" class="form-label">Course name</label>
+							<input id="new-course-name" v-model="newCourseName" class="form-control" maxlength="255" autocomplete="off" placeholder="Object-Oriented Application Development" :disabled="addingCourse" />
+						</div>
+						<div class="col-md-3">
+							<button type="button" class="btn btn-outline-primary w-100" :disabled="addingCourse" @click="createCourse">
+								<span v-if="addingCourse" class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Add course
+							</button>
+						</div>
+					</div>
+					<div v-if="courseCreationError" class="small text-danger mt-2" role="alert">{{ courseCreationError }}</div>
+					<div v-else class="form-text">Adding a course makes it available to all students.</div>
 				</div>
 			</section>
 

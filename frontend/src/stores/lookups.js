@@ -15,11 +15,17 @@ export const useLookupsStore = defineStore('lookups', () => {
 		loaded.value = true;
 	}
 
+	function addCourse(course) {
+		if (!courses.value.some((existing) => existing.code === course.code)) {
+			courses.value = [...courses.value, course].sort((a, b) => a.code.localeCompare(b.code));
+		}
+	}
+
 	/** "IS442 · Object-Oriented Application Development" */
 	function courseLabel(code) {
 		const course = byCode.value[code];
 		return course ? `${course.code} · ${course.name}` : code;
 	}
 
-	return { courses, loaded, byCode, loadCourses, courseLabel };
+	return { courses, loaded, byCode, loadCourses, addCourse, courseLabel };
 });

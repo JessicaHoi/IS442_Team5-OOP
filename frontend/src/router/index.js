@@ -18,6 +18,12 @@ const routes = [
 				component: () => import('../views/LoginView.vue'),
 				meta: { public: true, title: 'Sign in' },
 			},
+			{
+				path: '/signup',
+				name: 'signup',
+				component: () => import('../views/SignupView.vue'),
+				meta: { public: true, title: 'Create account' },
+			},
 		],
 	},
 	{

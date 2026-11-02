@@ -39,6 +39,13 @@ export const useAuthStore = defineStore('auth', () => {
 		writeSession({ token: token.value, user: user.value });
 	}
 
+	async function register(details) {
+		const session = await authApi.register(details);
+		token.value = session.token;
+		user.value = session.user;
+		writeSession({ token: token.value, user: user.value });
+	}
+
 	/** Forget the session in this browser only (used when the server already rejected the token). */
 	function logout() {
 		token.value = null;
@@ -71,5 +78,5 @@ export const useAuthStore = defineStore('auth', () => {
 		writeSession({ token: token.value, user: user.value });
 	}
 
-	return { token, user, isAuthenticated, isAdmin, homePath, login, logout, signOut, setDisplayName, updateAccountDetails };
+	return { token, user, isAuthenticated, isAdmin, homePath, login, register, logout, signOut, setDisplayName, updateAccountDetails };
 });

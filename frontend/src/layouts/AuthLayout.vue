@@ -19,7 +19,7 @@ const appName = import.meta.env.VITE_APP_NAME || 'StudyBuddy';
 
 <style scoped>
 .auth-card {
-	max-width: 26rem;
+	max-width: 34rem;
 }
 .brand-mark {
 	display: inline-flex;

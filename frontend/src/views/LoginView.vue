@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { RouterLink } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useToast } from '../composables/useToast';
 
@@ -73,6 +74,10 @@ async function submit() {
 				<span v-if="busy" class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Sign in
 			</button>
 		</form>
+
+		<p class="text-center small mb-0 mt-3">
+			New to StudyBuddy? <RouterLink :to="{ name: 'signup' }">Create a student account</RouterLink>
+		</p>
 
 		<div v-if="demoAccounts.length" class="border-top mt-4 pt-3">
 			<div class="section-title">Demo accounts</div>
