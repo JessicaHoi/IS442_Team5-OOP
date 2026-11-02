@@ -16,6 +16,10 @@ There are three ways to run the app:
 
 All three load the same demo accounts (see [Demo accounts](#demo-accounts)). The backend supports sign-in, profiles and preferences, study-buddy matching and connection management, and study groups. In B and C, pages that call other missing endpoints show an error until those are built.
 
+New students can create an account and complete their profile with their school, programme, year, contact number and courses; they are signed in immediately. Administrators continue to create administrator accounts.
+
+Students can add a missing course by providing its course code and name during signup or from My profile. New courses are added to the shared course catalogue.
+
 The backend supports administrator account listing with account status, timestamps and usage counts. Suspended accounts cannot sign in or use existing sessions. Successful sign-ins update the last-login timestamp.
 
 Administrators can create, update and delete accounts. Account roles cannot change after creation. Administrators cannot suspend or delete their own accounts. Password changes and suspension revoke existing sessions after the change is saved.

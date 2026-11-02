@@ -9,6 +9,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.ValidationException;
 
 @Service
@@ -23,6 +24,17 @@ public class CourseService {
 
     public List<CourseResponse> listCourses() {
         return courseRepository.findAll(Sort.by("courseCode")).stream().map(CourseResponse::from).toList();
+    }
+
+    @Transactional
+    public CourseResponse createCourse(CreateCourseRequest request) {
+        if (courseRepository.existsById(request.courseCode())) {
+            throw new BusinessRuleException("A course with this code already exists.");
+        }
+        Course course = new Course();
+        course.setCourseCode(request.courseCode());
+        course.setCourseName(request.courseName());
+        return CourseResponse.from(courseRepository.saveAndFlush(course));
     }
 
     /** Loads one course, or fails with a 400 because the client sent an unknown code. */

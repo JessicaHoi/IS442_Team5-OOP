@@ -1,6 +1,7 @@
 package is442t1.studybuddy.auth;
 
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,9 +17,16 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final AuthService authService;
+    private final RegistrationService registrationService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, RegistrationService registrationService) {
         this.authService = authService;
+        this.registrationService = registrationService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<LoginResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(registrationService.register(request));
     }
 
     @PostMapping("/login")
