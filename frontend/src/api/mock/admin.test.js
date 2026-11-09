@@ -37,6 +37,37 @@ describe('administrator account lifecycle', () => {
 		expect((await call('get', '/students/me', { token: studentToken })).data.preferences).toEqual([]);
 	});
 
+	it('lists all of a student\'s groups with member details and roles, including closed groups', async () => {
+		const db = getDb();
+		const group = db.groups.find((candidate) => candidate.memberIds.length > 1);
+		const memberId = group.memberIds.find((id) => id !== group.leaderId);
+		group.status = 'CLOSED';
+		const response = await call('get', `/admin/users/${memberId}/groups`, { token });
+		expect(response.status).toBe(200);
+		expect(response.data).toHaveLength(db.groups.filter((candidate) => candidate.memberIds.includes(memberId)).length);
+		const detail = response.data.find((candidate) => candidate.id === group.id);
+		expect(detail.status).toBe('CLOSED');
+		expect(detail.memberCount).toBe(group.memberIds.length);
+		expect(detail.courseName).toBe(db.courses.find((course) => course.code === group.courseCode).name);
+		expect(detail.members[0]).toMatchObject({ id: group.leaderId, isLeader: true });
+		expect(detail.members.find((member) => member.id === memberId)).toEqual({
+			id: memberId, name: db.users.find((user) => user.id === memberId).name,
+			programme: db.students[memberId].programme, yearOfStudy: db.students[memberId].yearOfStudy, isLeader: false,
+		});
+		expect(detail).not.toHaveProperty('chatLink');
+	});
+
+	it('restricts group membership inspection to admins and handles empty or missing accounts', async () => {
+		const db = getDb();
+		const student = db.users.find((user) => user.role === 'STUDENT' && user.status === 'ACTIVE');
+		const url = `/admin/users/${student.id}/groups`;
+		expect((await call('get', url)).status).toBe(401);
+		expect((await call('get', url, { token: await login(student.email) })).status).toBe(403);
+		expect((await call('get', '/admin/users/999999/groups', { token })).status).toBe(404);
+		db.groups.forEach((group) => { group.memberIds = group.memberIds.filter((id) => id !== student.id); });
+		expect((await call('get', url, { token })).data).toEqual([]);
+	});
+
 	it('rejects role conversion, self-suspension, duplicates and overlong Unicode passwords', async () => {
 		const db = getDb();
 		const admin = db.users.find((user) => user.role === 'ADMIN');

@@ -57,6 +57,11 @@ public class UserAccountController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/{id}/groups")
+    public List<UserGroupResponse> listUserGroups(@PathVariable UUID id) {
+        return accountService.listUserGroups(id);
+    }
+
     @GetMapping("/{id}/led-groups")
     public List<LedGroupResponse> listLedGroups(@PathVariable UUID id) {
         return accountService.listLedGroups(id);

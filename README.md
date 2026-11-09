@@ -337,6 +337,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `POST /admin/users` | Body `{name,email,password,role,status}`. `409` for a duplicate email. |
 | | `PUT /admin/users/{id}` | Same body. `password` optional. |
 | | `DELETE /admin/users/{id}` | `204`. Permanently removes the account. `409` while the account leads a group. |
+| | `GET /admin/users/{id}/groups` | Admins only. All groups the account belongs to, including closed groups, with course details and members (`id`, `name`, `programme`, `yearOfStudy`, `isLeader`). |
 | | `GET /admin/users/{id}/led-groups` | Groups the account leads, with `eligibleMembers`. |
 | | `PUT /admin/users/{id}/led-groups/{groupId}/leader` | Body `{studentId}`. Transfers leadership, including from a suspended leader. |
 | | `GET` and `PUT /admin/matching-config` | See shape below. |

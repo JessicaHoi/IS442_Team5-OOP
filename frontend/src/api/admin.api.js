@@ -5,6 +5,7 @@ export const adminApi = {
 	createUser: (user) => unwrap(http.post('/admin/users', user)),
 	updateUser: (id, user) => unwrap(http.put(`/admin/users/${id}`, user)),
 	deleteUser: (id) => unwrap(http.delete(`/admin/users/${id}`)),
+	listUserGroups: (id) => unwrap(http.get(`/admin/users/${id}/groups`)),
 	listLedGroups: (id) => unwrap(http.get(`/admin/users/${id}/led-groups`)),
 	transferLeadership: (id, groupId, studentId) => unwrap(http.put(`/admin/users/${id}/led-groups/${groupId}/leader`, { studentId })),
 

@@ -6,6 +6,8 @@ defineProps({
 	members: { type: Array, required: true },
 	/** Hide the remove buttons (e.g. when the group is closed). */
 	readonly: Boolean,
+	/** Label ordinary members as well as the leader in administrative views. */
+	showMemberRoles: Boolean,
 });
 defineEmits(['remove']);
 </script>
@@ -18,6 +20,7 @@ defineEmits(['remove']);
 				<div class="fw-medium">
 					{{ member.name }}
 					<span v-if="member.isLeader" class="badge badge-soft-primary ms-1">Leader</span>
+					<span v-else-if="showMemberRoles" class="badge text-bg-light border ms-1">Member</span>
 				</div>
 				<div class="small text-muted">{{ programmeLine(member) }}</div>
 			</div>

@@ -1,6 +1,7 @@
 package is442t1.studybuddy.admin;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -25,6 +26,7 @@ import is442t1.studybuddy.group.StudyGroup;
 import is442t1.studybuddy.group.GroupLeadershipService;
 import is442t1.studybuddy.group.LedGroupResponse;
 import is442t1.studybuddy.group.StudyGroupRepository;
+import is442t1.studybuddy.group.StudyGroupMapper;
 import is442t1.studybuddy.model.AccountUsageCount;
 import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.UserRepository;
@@ -39,6 +41,7 @@ public class UserAccountService {
     private final UserRepository userRepository;
     private final StudyBuddyConnectionRepository connectionRepository;
     private final StudyGroupRepository groupRepository;
+    private final StudyGroupMapper groupMapper;
     private final PasswordEncoder passwordEncoder;
     private final SessionTokenService tokenService;
     private final GroupLeadershipService leadershipService;
@@ -47,13 +50,15 @@ public class UserAccountService {
     private final ApplicationEventPublisher events;
 
     public UserAccountService(UserRepository userRepository, StudyBuddyConnectionRepository connectionRepository,
-            StudyGroupRepository groupRepository, PasswordEncoder passwordEncoder, SessionTokenService tokenService,
+            StudyGroupRepository groupRepository, StudyGroupMapper groupMapper, PasswordEncoder passwordEncoder,
+            SessionTokenService tokenService,
             GroupLeadershipService leadershipService, MembershipRequestRepository membershipRequestRepository,
             MatchRequestRepository matchRequestRepository,
             ApplicationEventPublisher events) {
         this.userRepository = userRepository;
         this.connectionRepository = connectionRepository;
         this.groupRepository = groupRepository;
+        this.groupMapper = groupMapper;
         this.passwordEncoder = passwordEncoder;
         this.tokenService = tokenService;
         this.leadershipService = leadershipService;
@@ -123,6 +128,18 @@ public class UserAccountService {
         if (!administrators.contains(callerId.toString()) || caller == null || !caller.isActive()) {
             throw new PermissionDeniedException("An active administrator account is required.");
         }
+    }
+
+    public List<UserGroupResponse> listUserGroups(UUID userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User account not found.");
+        }
+        return groupRepository.findByMemberId(userId).stream()
+                .sorted(Comparator.comparing(StudyGroup::getGroupName, String.CASE_INSENSITIVE_ORDER))
+                .map(group -> new UserGroupResponse(group.getId(), group.getGroupName(),
+                        group.getCourse().getCourseCode(), group.getCourse().getCourseName(), group.getStatus(),
+                        group.getMemberCount(), group.getMaxSize(), groupMapper.membersOf(group)))
+                .toList();
     }
 
     public List<LedGroupResponse> listLedGroups(UUID userId) {

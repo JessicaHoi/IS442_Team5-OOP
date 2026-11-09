@@ -3,7 +3,7 @@ import { badRequest, conflict, created, noContent, notFound } from '../errors';
 import { route } from '../router';
 import { nextId } from '../db';
 import { revokeUserSessions } from '../sessions';
-import { toAccountView } from '../serializers';
+import { toAccountView, toStudentRef } from '../serializers';
 import { ledGroupView, transferGroupLeadership } from '../groupLeadership';
 import { MATCHING_CRITERIA, MATCHING_STRATEGIES, ROLES, USER_STATUSES } from '../../../utils/constants';
 
@@ -40,6 +40,23 @@ function validatePassword(password) {
 	if (typeof password !== 'string' || !password.trim() || password.length < MIN_PASSWORD_LENGTH) throw badRequest('Password must be at least 6 characters and must not be blank.');
 	if (new TextEncoder().encode(password).length > 72) throw badRequest('Password is too long. Use fewer characters.');
 }
+
+route('GET', '/admin/users/:id/groups', ({ db, params }) => {
+	const user = loadUser(db, params.id);
+	return db.groups.filter((group) => group.memberIds.includes(user.id))
+		.sort((a, b) => a.name.localeCompare(b.name))
+		.map((group) => ({
+			id: group.id,
+			name: group.name,
+			courseCode: group.courseCode,
+			courseName: db.courses.find((course) => course.code === group.courseCode)?.name ?? '',
+			status: group.status,
+			memberCount: group.memberIds.length,
+			maxSize: group.maxSize,
+			members: group.memberIds.map((id) => ({ ...toStudentRef(db, id), isLeader: id === group.leaderId }))
+				.sort((a, b) => Number(b.isLeader) - Number(a.isLeader) || a.name.localeCompare(b.name)),
+		}));
+}, ADMIN_ONLY);
 
 route('GET', '/admin/users/:id/led-groups', ({ db, params }) => {
 	const user = loadUser(db, params.id);

@@ -48,6 +48,19 @@ class UserAccountApiTest extends ApiTestSupport {
     }
 
     @Test
+    void groupInspectionIsAdminOnlyAndHandlesEmptyAndMissingAccounts() throws Exception {
+        String studentEmail = createStudent("Group Inspection Student");
+        String path = "/api/admin/users/" + idOf(studentEmail) + "/groups";
+        mockMvc.perform(get(path)).andExpect(status().isUnauthorized());
+        mockMvc.perform(as(login(studentEmail), get(path))).andExpect(status().isForbidden());
+        String adminToken = login(createAdministrator());
+        mockMvc.perform(as(adminToken, get(path))).andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+        mockMvc.perform(as(adminToken, get("/api/admin/users/" + UUID.randomUUID() + "/groups")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void listsSafeAccountFieldsIncludingSuspendedAndIncompleteAccounts() throws Exception {
         String adminEmail = createAdministrator();
         SystemAdministrator administrator = (SystemAdministrator) userRepository.findByEmailIgnoreCase(adminEmail).orElseThrow();
@@ -113,12 +126,33 @@ class UserAccountApiTest extends ApiTestSupport {
         mockMvc.perform(as(leaderToken, post("/api/groups/" + closedGroup + "/close")))
                 .andExpect(status().isOk());
 
-        List<Map<String, Object>> accounts = accounts(login(createAdministrator()));
+        String adminToken = login(createAdministrator());
+        List<Map<String, Object>> accounts = accounts(adminToken);
         assertThat(account(accounts, leaderId).get("connectionCount")).isEqualTo(2);
         assertThat(account(accounts, leaderId).get("groupCount")).isEqualTo(2);
         assertThat(account(accounts, memberId).get("connectionCount")).isEqualTo(1);
         assertThat(account(accounts, memberId).get("groupCount")).isEqualTo(1);
         assertThat(account(accounts, idOf(fourthEmail)).get("connectionCount")).isEqualTo(0);
+
+        // The popup includes exactly the memberships counted in the account table.
+        mockMvc.perform(as(adminToken, get("/api/admin/users/" + leaderId + "/groups")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2));
+        mockMvc.perform(as(adminToken, get("/api/admin/users/" + memberId + "/groups")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(closedGroup))
+                .andExpect(jsonPath("$[0].status").value("CLOSED"))
+                .andExpect(jsonPath("$[0].courseCode").value("USAGE101"))
+                .andExpect(jsonPath("$[0].courseName").isString())
+                .andExpect(jsonPath("$[0].memberCount").value(2))
+                .andExpect(jsonPath("$[0].members.length()").value(2))
+                .andExpect(jsonPath("$[0].members[0].id").value(leaderId.toString()))
+                .andExpect(jsonPath("$[0].members[0].isLeader").value(true))
+                .andExpect(jsonPath("$[0].members[1].id").value(memberId.toString()))
+                .andExpect(jsonPath("$[0].members[1].isLeader").value(false))
+                .andExpect(jsonPath("$[0].members[1].programme").isString())
+                .andExpect(jsonPath("$[0].members[1].yearOfStudy").isNumber())
+                .andExpect(jsonPath("$[0].chatLink").doesNotExist())
+                .andExpect(jsonPath("$[0].members[0].password").doesNotExist());
     }
 
     private List<Map<String, Object>> accounts(String token) throws Exception {
