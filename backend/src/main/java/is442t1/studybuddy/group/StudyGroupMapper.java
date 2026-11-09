@@ -58,7 +58,7 @@ public class StudyGroupMapper {
     }
 
     /** Leader first, then the other members by name. */
-    private List<StudyGroupResponse.Member> membersOf(StudyGroup group) {
+    public List<StudyGroupResponse.Member> membersOf(StudyGroup group) {
         return group.getMembers().stream()
                 .sorted(Comparator.comparing((Student member) -> !group.isLedBy(member.getId()))
                         .thenComparing(Student::getName))

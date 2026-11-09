@@ -16,6 +16,7 @@ import ErrorState from '../../components/ui/ErrorState.vue';
 import EmptyState from '../../components/ui/EmptyState.vue';
 import UserFormModal from '../../components/admin/UserFormModal.vue';
 import LeadershipTransferModal from '../../components/admin/LeadershipTransferModal.vue';
+import UserGroupsModal from '../../components/admin/UserGroupsModal.vue';
 
 const PAGE_SIZE = 12;
 
@@ -62,6 +63,13 @@ const saving = ref(false);
 const formError = ref('');
 const leadershipOpen = ref(false);
 const leadershipUser = ref(null);
+const groupsOpen = ref(false);
+const groupsUser = ref(null);
+
+function openGroups(user) {
+	groupsUser.value = user;
+	groupsOpen.value = true;
+}
 
 function openLeadership(user) {
 	leadershipUser.value = user;
@@ -185,7 +193,10 @@ async function deleteUser(user) {
 								<td><StatusBadge :status="user.status" /></td>
 								<td class="text-muted">{{ timeAgo(user.lastLogin) }}</td>
 								<td class="text-end">{{ user.role === ROLES.STUDENT ? user.connectionCount : '–' }}</td>
-								<td class="text-end">{{ user.role === ROLES.STUDENT ? user.groupCount : '–' }}</td>
+								<td class="text-end">
+									<button v-if="user.role === ROLES.STUDENT" type="button" class="group-count" :aria-label="`View groups for ${user.name} (${user.groupCount})`" aria-haspopup="dialog" title="View groups and members" @click="openGroups(user)">{{ user.groupCount }}</button>
+									<span v-else>–</span>
+								</td>
 								<td class="pe-3 text-end text-nowrap">
 									<button type="button" class="btn btn-icon btn-light border me-1" :aria-label="`Edit ${user.name}`" title="Edit" @click="openEdit(user)">
 										<i class="bi bi-pencil"></i>
@@ -222,10 +233,22 @@ async function deleteUser(user) {
 
 		<UserFormModal v-model="formOpen" :user="editing" :is-self="Boolean(editing && isSelf(editing))" :saving="saving" :error="formError" @submit="saveUser" />
 		<LeadershipTransferModal v-model="leadershipOpen" :user="leadershipUser" @transferred="load" />
+		<UserGroupsModal v-model="groupsOpen" :user="groupsUser" />
 	</div>
 </template>
 
 <style scoped>
+.group-count {
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: inherit;
+	font: inherit;
+	cursor: pointer;
+}
+.group-count:hover {
+	text-decoration: underline;
+}
 .stat-icon {
 	display: inline-flex;
 	align-items: center;
