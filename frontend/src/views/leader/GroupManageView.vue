@@ -237,7 +237,7 @@ async function closeGroup() {
 				</li>
 			</ul>
 
-			<div class="card-flat px-3 px-md-4 py-2 py-md-3">
+			<div class="card-flat px-3 px-md-4 py-2 py-md-3" :class="{ 'overflow-visible': activeTab === 'sessions' }">
 				<JoinRequestList
 					v-if="activeTab === 'requests' && group.status === 'OPEN'"
 					:requests="requests"
