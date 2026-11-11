@@ -188,7 +188,8 @@ async function act(session, action) {
 										<button type="button" class="btn" :class="session.myRsvp === 'NOT_GOING' ? 'btn-secondary' : 'btn-outline-secondary'" :aria-pressed="session.myRsvp === 'NOT_GOING'" :disabled="busyId === session.id" @click="respond(session, 'NOT_GOING')">Can't</button>
 									</div>
 									<div v-if="canAddToCalendar(session) || canCancel(session)" class="dropdown">
-										<button type="button" class="btn btn-sm btn-light border" data-bs-toggle="dropdown" aria-expanded="false" :aria-label="`More actions for ${session.title}`"><i class="bi bi-three-dots"></i></button>
+										<!-- Fixed positioning, so the card's overflow: hidden can't cut the menu off when the list is short. -->
+										<button type="button" class="btn btn-sm btn-light border" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false" :aria-label="`More actions for ${session.title}`"><i class="bi bi-three-dots"></i></button>
 										<ul class="dropdown-menu dropdown-menu-end">
 											<template v-if="canAddToCalendar(session)">
 												<li><h3 class="dropdown-header">Add to calendar</h3></li>
