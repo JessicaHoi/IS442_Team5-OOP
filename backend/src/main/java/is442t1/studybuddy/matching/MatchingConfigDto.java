@@ -13,6 +13,9 @@ import is442t1.studybuddy.model.enums.MatchingStrategy;
 /**
  * Body of {@code GET} and {@code PUT /api/admin/matching-config}: the ranking
  * strategy and the setting of every matching criterion.
+ *
+ * @param strategy the ranking strategy
+ * @param criteria the settings for the matching criteria
  */
 public record MatchingConfigDto(
         @NotNull(message = "Choose a matching strategy.")
@@ -22,7 +25,13 @@ public record MatchingConfigDto(
         List<@Valid @NotNull CriterionSetting> criteria
 ) {
 
-    /** One criterion as shown on the admin page. {@code key} matches {@link MatchingCriterion#key()}. */
+    /**
+     * One criterion as shown on the admin page.
+     *
+     * @param key the criterion key, matching {@link MatchingCriterion#key()}
+     * @param enabled whether the criterion is enabled
+     * @param weight the criterion weight, from 0 to 100
+     */
     public record CriterionSetting(
             @NotBlank(message = "Every matching criterion must be configured.")
             String key,

@@ -65,6 +65,21 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final StudyBuddyConnectionRepository connectionRepository;
     private final MatchingConfigurationRepository matchingConfigurationRepository;
 
+    /**
+     * Creates the demo data seeder.
+     *
+     * @param properties the seeding settings
+     * @param resourceLoader the seed resource loader
+     * @param objectMapper the seed data mapper
+     * @param passwordEncoder the demo password encoder
+     * @param userRepository the account repository
+     * @param courseRepository the course repository
+     * @param studentRepository the student repository
+     * @param groupRepository the group repository
+     * @param matchRequestRepository the buddy request repository
+     * @param connectionRepository the connection repository
+     * @param matchingConfigurationRepository the matching configuration repository
+     */
     public DemoDataSeeder(SeedProperties properties, ResourceLoader resourceLoader, ObjectMapper objectMapper,
             PasswordEncoder passwordEncoder, UserRepository userRepository, CourseRepository courseRepository,
             StudentRepository studentRepository, StudyGroupRepository groupRepository,

@@ -18,6 +18,12 @@ import is442t1.studybuddy.model.enums.StudyMode;
  * Study preference for one course, in both requests and responses.
  * {@code meetingMode} is the in-person/online choice and {@code groupFormat}
  * the one-to-one/small-group choice (the brief calls both "study mode").
+ *
+ * @param course the course code
+ * @param meetingMode the preferred meeting mode
+ * @param groupFormat the preferred group format
+ * @param goals the study goals
+ * @param availability the weekly availability slots
  */
 public record StudyPreferenceDto(
         @NotBlank(message = "Choose the course you need a study buddy for.")
@@ -36,7 +42,12 @@ public record StudyPreferenceDto(
         List<@Valid TimeSlotDto> availability
 ) {
 
-    /** Copies every collection: the response is written after the transaction, when lazy entity collections are closed. */
+    /**
+     * Converts a preference and copies its collections for use after the transaction.
+     *
+     * @param preference the stored preference
+     * @return the API representation
+     */
     public static StudyPreferenceDto from(StudyPreference preference) {
         return new StudyPreferenceDto(
                 preference.getCourse().getCourseCode(),

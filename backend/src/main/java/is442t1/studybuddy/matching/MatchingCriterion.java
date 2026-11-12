@@ -9,10 +9,15 @@ import java.util.function.ToDoubleFunction;
  * (shared with the front end) and how to read its 0-1 score from a breakdown.
  */
 public enum MatchingCriterion {
+    /** Course overlap. */
     COURSE("course", MatchScoreBreakdown::course),
+    /** Availability overlap. */
     AVAILABILITY("availability", MatchScoreBreakdown::availability),
+    /** Meeting-mode compatibility. */
     STUDY_MODE("studyMode", MatchScoreBreakdown::studyMode),
+    /** Study-goal compatibility. */
     STUDY_GOAL("studyGoal", MatchScoreBreakdown::studyGoal),
+    /** Group-format compatibility. */
     GROUP_SIZE("groupSize", MatchScoreBreakdown::groupSize);
 
     private final String key;
@@ -23,15 +28,31 @@ public enum MatchingCriterion {
         this.scoreReader = scoreReader;
     }
 
+    /**
+     * Returns the API key for this criterion.
+     *
+     * @return the API key for this criterion
+     */
     public String key() {
         return key;
     }
 
-    /** This criterion's score (0 to 1) in the given breakdown. */
+    /**
+     * Reads this criterion's score from a breakdown.
+     *
+     * @param breakdown the score breakdown
+     * @return the criterion score from 0 to 1
+     */
     public double scoreIn(MatchScoreBreakdown breakdown) {
         return scoreReader.applyAsDouble(breakdown);
     }
 
+    /**
+     * Finds a criterion by its API key.
+     *
+     * @param key the API key
+     * @return the criterion, if recognized
+     */
     public static Optional<MatchingCriterion> fromKey(String key) {
         return Arrays.stream(values()).filter(criterion -> criterion.key.equals(key)).findFirst();
     }

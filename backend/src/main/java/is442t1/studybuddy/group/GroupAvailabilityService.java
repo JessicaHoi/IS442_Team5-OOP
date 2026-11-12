@@ -10,23 +10,52 @@ import is442t1.studybuddy.common.exception.ResourceNotFoundException;
 import is442t1.studybuddy.common.web.TimeSlotDto;
 import is442t1.studybuddy.model.UserRepository;
 
+/**
+ * Manages each member's group-specific availability override.
+ */
 @Service
 @Transactional(readOnly = true)
 public class GroupAvailabilityService {
     private final StudyGroupRepository groups;
     private final UserRepository users;
 
+    /**
+     * Creates the service.
+     *
+     * @param groups repository for study groups
+     * @param users account lookup and locking operations
+     */
     public GroupAvailabilityService(StudyGroupRepository groups, UserRepository users) {
         this.groups = groups;
         this.users = users;
     }
 
+    /**
+     * Gets the member's effective availability for a group.
+     *
+     * @param groupId the group's identifier
+     * @param studentId the member's identifier
+     * @return the group override if present, otherwise the profile availability for the course
+     * @throws ResourceNotFoundException if the group does not exist
+     * @throws PermissionDeniedException if the student is not a group member
+     */
     public GroupAvailabilityResponse get(UUID groupId, UUID studentId) {
         StudyGroup group = groups.findById(groupId).orElseThrow(() -> new ResourceNotFoundException("Group not found."));
         requireMember(group, studentId);
         return response(group, studentId);
     }
 
+    /**
+     * Replaces the member's group-specific availability if the supplied revision is current.
+     *
+     * @param groupId the group's identifier
+     * @param studentId the member's identifier
+     * @param request the replacement slots and revision being replaced
+     * @return the effective availability and current revision after saving
+     * @throws ResourceNotFoundException if the student or group does not exist
+     * @throws PermissionDeniedException if the account is inactive or the student is not a member
+     * @throws BusinessRuleException if the group is closed or the revision is stale
+     */
     @Transactional
     public GroupAvailabilityResponse save(UUID groupId, UUID studentId, GroupAvailabilityRequest request) {
         StudyGroup group = editableGroup(groupId, studentId, request.revision());
@@ -35,6 +64,17 @@ public class GroupAvailabilityService {
         return response(group, studentId);
     }
 
+    /**
+     * Removes the member's group-specific override if the supplied revision is current.
+     *
+     * @param groupId the group's identifier
+     * @param studentId the member's identifier
+     * @param revision the current override revision, or {@code null} if there is no override
+     * @return the effective availability after reverting to profile slots
+     * @throws ResourceNotFoundException if the student or group does not exist
+     * @throws PermissionDeniedException if the account is inactive or the student is not a member
+     * @throws BusinessRuleException if the group is closed or the revision is stale
+     */
     @Transactional
     public GroupAvailabilityResponse reset(UUID groupId, UUID studentId, UUID revision) {
         StudyGroup group = editableGroup(groupId, studentId, revision);

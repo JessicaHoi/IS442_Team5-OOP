@@ -17,6 +17,14 @@ import is442t1.studybuddy.model.enums.StudyMode;
  * Body of {@code POST /api/groups} and {@code PUT /api/groups/{id}}.
  * {@code courseCode} is required on create and ignored on update, because a
  * group's course cannot change.
+ *
+ * @param courseCode the course code to associate on creation
+ * @param name the group name; trimmed before use
+ * @param description the group description; trimmed before use
+ * @param goals the study goals selected for the group
+ * @param meetingMode how the group plans to meet
+ * @param availability the group's proposed time slots
+ * @param maxSize the maximum number of members, including the leader
  */
 public record StudyGroupRequest(
         String courseCode,

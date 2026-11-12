@@ -111,34 +111,74 @@ public class GroupChat extends BaseEntity {
         status = GroupChatStatus.CLOSED;
     }
 
+    /**
+     * Returns the StudyBuddy group linked to this Telegram chat.
+     *
+     * @return linked StudyBuddy group
+     */
     public StudyGroup getStudyGroup() {
         return studyGroup;
     }
 
+    /**
+     * Returns the Telegram bot identifier that manages this chat.
+     *
+     * @return managing bot's identifier
+     */
     public long getBotId() {
         return botId;
     }
 
+    /**
+     * Returns the current Telegram chat identifier.
+     *
+     * @return current chat identifier
+     */
     public long getChatId() {
         return chatId;
     }
 
+    /**
+     * Returns Telegram's chat type, such as {@code group} or {@code supergroup}.
+     *
+     * @return Telegram chat type
+     */
     public String getChatType() {
         return chatType;
     }
 
+    /**
+     * Returns the current link and permissions state.
+     *
+     * @return current chat status
+     */
     public GroupChatStatus getStatus() {
         return status;
     }
 
+    /**
+     * Returns the chat title, or null if no title was recorded.
+     *
+     * @return recorded chat title, or null
+     */
     public String getTitle() {
         return title;
     }
 
+    /**
+     * Returns comma-separated names of rights the bot is missing; blank means none are missing.
+     *
+     * @return missing rights, or an empty string when none are missing
+     */
     public String getMissingRights() {
         return missingRights;
     }
 
+    /**
+     * Returns the student who linked this chat, who may still own it in Telegram.
+     *
+     * @return linking student's identifier
+     */
     public UUID getLinkedByStudentId() {
         return linkedByStudentId;
     }

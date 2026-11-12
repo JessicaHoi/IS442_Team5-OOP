@@ -39,6 +39,15 @@ public class StudySessionService {
     private final AppProperties appProperties;
     private final ApplicationEventPublisher events;
 
+    /**
+     * Creates the session service.
+     *
+     * @param sessionRepository the session repository
+     * @param groupRepository the group repository
+     * @param studentService the student service
+     * @param appProperties the application URL settings
+     * @param events the domain event publisher
+     */
     public StudySessionService(StudySessionRepository sessionRepository, StudyGroupRepository groupRepository,
             StudentService studentService, AppProperties appProperties, ApplicationEventPublisher events) {
         this.sessionRepository = sessionRepository;
@@ -48,6 +57,15 @@ public class StudySessionService {
         this.events = events;
     }
 
+    /**
+     * Lists upcoming or past sessions in a group for a member.
+     *
+     * @param callerId the requesting student's identifier
+     * @param groupId the group identifier
+     * @param scope either {@code upcoming} or {@code past}
+     * @return the group's matching sessions
+     * @throws ValidationException if the scope is unsupported
+     */
     @Transactional(readOnly = true)
     public List<StudySessionResponse> listForGroup(UUID callerId, UUID groupId, String scope) {
         requireMember(requireGroup(groupId), callerId);
@@ -60,6 +78,12 @@ public class StudySessionService {
         return sessions.stream().map(session -> StudySessionResponse.from(session, callerId)).toList();
     }
 
+    /**
+     * Lists a student's upcoming scheduled sessions across their groups.
+     *
+     * @param studentId the student identifier
+     * @return the upcoming sessions
+     */
     @Transactional(readOnly = true)
     public List<StudySessionResponse> listUpcomingForStudent(UUID studentId) {
         return sessionRepository.findUpcomingForStudent(studentId, Instant.now()).stream()
@@ -67,6 +91,14 @@ public class StudySessionService {
                 .toList();
     }
 
+    /**
+     * Schedules a session in a group.
+     *
+     * @param callerId the requesting student's identifier
+     * @param groupId the group identifier
+     * @param details the session details
+     * @return the scheduled session
+     */
     public StudySessionResponse schedule(UUID callerId, UUID groupId, SessionDetails details) {
         StudyGroup group = requireGroupForUpdate(groupId);
         requireActive(callerId);
@@ -75,6 +107,15 @@ public class StudySessionService {
         return StudySessionResponse.from(session, callerId);
     }
 
+    /**
+     * Updates a group session.
+     *
+     * @param callerId the requesting student's identifier
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @param details the replacement session details
+     * @return the updated session
+     */
     public StudySessionResponse update(UUID callerId, UUID groupId, UUID sessionId, SessionDetails details) {
         requireGroupForUpdate(groupId);
         requireActive(callerId);
@@ -86,6 +127,14 @@ public class StudySessionService {
         return StudySessionResponse.from(session, callerId);
     }
 
+    /**
+     * Cancels a group session.
+     *
+     * @param callerId the requesting student's identifier
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @return the cancelled session
+     */
     public StudySessionResponse cancel(UUID callerId, UUID groupId, UUID sessionId) {
         requireGroupForUpdate(groupId);
         requireActive(callerId);
@@ -95,6 +144,15 @@ public class StudySessionService {
         return StudySessionResponse.from(session, callerId);
     }
 
+    /**
+     * Records a member's response to a session.
+     *
+     * @param callerId the responding student's identifier
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @param request the response
+     * @return the updated session
+     */
     public StudySessionResponse respond(UUID callerId, UUID groupId, UUID sessionId, RsvpRequest request) {
         requireGroupForUpdate(groupId);
         StudySession session = requireSession(groupId, sessionId);
@@ -105,6 +163,14 @@ public class StudySessionService {
         return StudySessionResponse.from(session, callerId);
     }
 
+    /**
+     * Generates a calendar file for a session visible to a group member.
+     *
+     * @param callerId the requesting student's identifier
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @return the iCalendar text
+     */
     @Transactional(readOnly = true)
     public String calendarFile(UUID callerId, UUID groupId, UUID sessionId) {
         StudyGroup group = requireGroup(groupId);

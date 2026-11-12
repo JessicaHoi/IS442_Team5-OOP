@@ -12,6 +12,10 @@ import is442t1.studybuddy.model.enums.MatchingStrategy;
 @Component
 public class AvailabilityFirstRankingStrategy extends CriterionFirstRankingStrategy {
 
+    /** Creates the availability-first strategy. */
+    public AvailabilityFirstRankingStrategy() {
+    }
+
     @Override
     public MatchingStrategy type() {
         return MatchingStrategy.AVAILABILITY_FIRST;

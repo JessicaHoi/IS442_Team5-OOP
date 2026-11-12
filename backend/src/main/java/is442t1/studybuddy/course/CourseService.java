@@ -12,20 +12,38 @@ import org.springframework.transaction.annotation.Transactional;
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.ValidationException;
 
+/** Maintains and resolves courses in the shared catalogue. */
 @Service
 @Transactional(readOnly = true)
 public class CourseService {
 
     private final CourseRepository courseRepository;
 
+    /**
+     * Creates the course service.
+     *
+     * @param courseRepository the course repository
+     */
     public CourseService(CourseRepository courseRepository) {
         this.courseRepository = courseRepository;
     }
 
+    /**
+     * Lists courses in code order.
+     *
+     * @return the course responses
+     */
     public List<CourseResponse> listCourses() {
         return courseRepository.findAll(Sort.by("courseCode")).stream().map(CourseResponse::from).toList();
     }
 
+    /**
+     * Adds a course to the catalogue.
+     *
+     * @param request the new course details
+     * @return the created course
+     * @throws BusinessRuleException if the course code already exists
+     */
     @Transactional
     public CourseResponse createCourse(CreateCourseRequest request) {
         if (courseRepository.existsById(request.courseCode())) {
@@ -37,13 +55,25 @@ public class CourseService {
         return CourseResponse.from(courseRepository.saveAndFlush(course));
     }
 
-    /** Loads one course, or fails with a 400 because the client sent an unknown code. */
+    /**
+     * Loads a course by code.
+     *
+     * @param courseCode the course code
+     * @return the matching course
+     * @throws ValidationException if the code is unknown
+     */
     public Course requireCourse(String courseCode) {
         return courseRepository.findById(courseCode)
                 .orElseThrow(() -> new ValidationException("Unknown course: " + courseCode + "."));
     }
 
-    /** Loads every course in {@code courseCodes}, failing if any code is unknown. */
+    /**
+     * Loads the distinct courses in the supplied codes.
+     *
+     * @param courseCodes the course codes
+     * @return the matching courses
+     * @throws ValidationException if any code is unknown
+     */
     public Set<Course> requireCourses(Collection<String> courseCodes) {
         Set<String> uniqueCodes = new HashSet<>(courseCodes);
         List<Course> found = courseRepository.findAllById(uniqueCodes);

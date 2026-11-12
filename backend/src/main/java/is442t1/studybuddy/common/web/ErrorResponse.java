@@ -1,5 +1,9 @@
 package is442t1.studybuddy.common.web;
 
-/** JSON body of every error response: {@code {"message": "..."}}. */
+/**
+ * JSON body of an error response.
+ *
+ * @param message the error message
+ */
 public record ErrorResponse(String message) {
 }

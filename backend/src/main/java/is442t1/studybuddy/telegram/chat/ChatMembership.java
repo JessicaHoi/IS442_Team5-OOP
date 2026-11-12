@@ -154,30 +154,65 @@ public class ChatMembership extends BaseEntity {
         return state == ChatMemberState.INVITED && inviteLink != null && inviteExpiresAt.isAfter(now);
     }
 
+    /**
+     * Returns the group chat this student's membership belongs to.
+     *
+     * @return the linked group chat
+     */
     public GroupChat getGroupChat() {
         return groupChat;
     }
 
+    /**
+     * Returns the StudyBuddy student represented by this membership.
+     *
+     * @return the associated student
+     */
     public Student getStudent() {
         return student;
     }
 
+    /**
+     * Returns the student's current Telegram chat membership state.
+     *
+     * @return current membership state
+     */
     public ChatMemberState getState() {
         return state;
     }
 
+    /**
+     * Returns the current personal invite URL, or null when no invite is available.
+     *
+     * @return invite URL, or null
+     */
     public String getInviteLink() {
         return inviteLink;
     }
 
+    /**
+     * Returns the current invite's expiration time, or null when no invite is available.
+     *
+     * @return expiration time, or null
+     */
     public Instant getInviteExpiresAt() {
         return inviteExpiresAt;
     }
 
+    /**
+     * Returns the Telegram user recorded as joining for this student, or null if none is recorded.
+     *
+     * @return Telegram user identifier, or null
+     */
     public Long getTelegramUserId() {
         return telegramUserId;
     }
 
+    /**
+     * Returns the Telegram first name recorded when the student joined, or null if none is recorded.
+     *
+     * @return recorded Telegram name, or null
+     */
     public String getTelegramName() {
         return telegramName;
     }

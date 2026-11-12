@@ -13,6 +13,7 @@ import is442t1.studybuddy.common.exception.PermissionDeniedException;
 import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.UserRepository;
 
+/** Signs users in and provides account information for active sessions. */
 @Service
 @Transactional(readOnly = true)
 public class AuthService {
@@ -23,6 +24,13 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final SessionTokenService tokenService;
 
+    /**
+     * Creates the authentication service.
+     *
+     * @param userRepository the account repository
+     * @param passwordEncoder the password encoder
+     * @param tokenService the session token service
+     */
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
             SessionTokenService tokenService) {
         this.userRepository = userRepository;
@@ -30,6 +38,15 @@ public class AuthService {
         this.tokenService = tokenService;
     }
 
+    /**
+     * Authenticates an active account and issues a session token.
+     *
+     * @param email the account email
+     * @param password the supplied password
+     * @return the new session and account details
+     * @throws AuthenticationException if the credentials are invalid or changed during sign-in
+     * @throws PermissionDeniedException if the account is suspended
+     */
     @Transactional
     public LoginResponse login(String email, String password) {
         User user = userRepository.findByEmailIgnoreCase(email.trim())
@@ -53,12 +70,24 @@ public class AuthService {
         return new LoginResponse(token, SessionUser.from(user));
     }
 
+    /**
+     * Looks up the account for an authenticated caller.
+     *
+     * @param caller the authenticated caller
+     * @return the account's session representation
+     * @throws AuthenticationException if the account no longer exists
+     */
     public SessionUser currentUser(AuthenticatedUser caller) {
         return userRepository.findById(caller.id())
                 .map(SessionUser::from)
                 .orElseThrow(() -> new AuthenticationException("Your account no longer exists."));
     }
 
+    /**
+     * Revokes the bearer token in an authorization header, if present.
+     *
+     * @param authorizationHeader the authorization header
+     */
     public void logout(String authorizationHeader) {
         BearerToken.extract(authorizationHeader).ifPresent(tokenService::revoke);
     }

@@ -16,7 +16,12 @@ import is442t1.studybuddy.model.enums.MatchingStrategy;
  */
 public record PreviewResponse(String studentName, String course, Ranking current, Ranking proposed) {
 
-    /** One side of the comparison: the strategy used and the top matches. */
+    /**
+     * One side of the comparison: the strategy used and the top matches.
+     *
+     * @param strategy the ranking strategy used
+     * @param results the ranked matches
+     */
     public record Ranking(MatchingStrategy strategy, List<Entry> results) {
     }
 

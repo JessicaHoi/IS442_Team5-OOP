@@ -18,6 +18,10 @@ import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.TimeSlot;
 import is442t1.studybuddy.student.Student;
 
+/**
+ * A member's optional availability override for a particular study group.
+ * When absent, the member's course-specific profile availability is used.
+ */
 @Entity
 @Table(name = "group_member_availability", uniqueConstraints = @UniqueConstraint(columnNames = {"study_group_id", "student_id"}))
 public class GroupMemberAvailability extends BaseEntity {
@@ -46,7 +50,14 @@ public class GroupMemberAvailability extends BaseEntity {
     }
 
     boolean belongsTo(UUID studentId) { return student.hasId(studentId); }
+    /** Gets the revision token used to detect stale updates.
+     * @return the current revision token
+     */
     public UUID getRevision() { return revision; }
+
+    /** Gets an immutable copy of the override slots.
+     * @return the stored availability slots
+     */
     public List<TimeSlot> getSlots() { return List.copyOf(slots); }
 
     void replace(List<TimeSlot> slots) {

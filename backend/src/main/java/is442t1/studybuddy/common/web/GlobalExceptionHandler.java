@@ -32,8 +32,18 @@ import is442t1.studybuddy.common.exception.ValidationException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    /** Creates the API exception handler. */
+    public GlobalExceptionHandler() {
+    }
+
     private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Maps a database integrity conflict to HTTP 409.
+     *
+     * @param exception the database exception
+     * @return the error response
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleIntegrityConflict(DataIntegrityViolationException exception) {
         Throwable cause = exception.getMostSpecificCause();
@@ -45,11 +55,23 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.CONFLICT, "The change conflicts with existing data.");
     }
 
+    /**
+     * Maps a domain error to its corresponding HTTP status.
+     *
+     * @param exception the domain exception
+     * @return the error response
+     */
     @ExceptionHandler(DomainException.class)
     public ResponseEntity<ErrorResponse> handleDomain(DomainException exception) {
         return respond(statusOf(exception), exception.getMessage());
     }
 
+    /**
+     * Reports the first request-body validation error.
+     *
+     * @param exception the validation exception
+     * @return an HTTP 400 error response
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleInvalidBody(MethodArgumentNotValidException exception) {
         String message = exception.getBindingResult().getFieldErrors().stream()
@@ -59,12 +81,23 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.BAD_REQUEST, message);
     }
 
+    /**
+     * Reports a malformed or unreadable request body.
+     *
+     * @param exception the body parsing exception
+     * @return an HTTP 400 error response
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleUnreadableBody(HttpMessageNotReadableException exception) {
         return respond(HttpStatus.BAD_REQUEST, "The request body is malformed or has an unknown value.");
     }
 
-    /** A malformed id in the path points at nothing (404); a bad query value is a client mistake (400). */
+    /**
+     * Reports a malformed path or query argument.
+     *
+     * @param exception the argument type mismatch
+     * @return HTTP 404 for a path variable or HTTP 400 for another argument
+     */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleBadArgument(MethodArgumentTypeMismatchException exception) {
         if (exception.getParameter().hasParameterAnnotation(PathVariable.class)) {
@@ -73,13 +106,24 @@ public class GlobalExceptionHandler {
         return respond(HttpStatus.BAD_REQUEST, "The value of '" + exception.getName() + "' is not valid.");
     }
 
+    /**
+     * Preserves an explicit response status and reports its reason.
+     *
+     * @param exception the status exception
+     * @return the error response
+     */
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException exception) {
         String message = exception.getReason() != null ? exception.getReason() : "The request could not be completed.";
         return ResponseEntity.status(exception.getStatusCode()).body(new ErrorResponse(message));
     }
 
-    /** Last resort for bugs. Spring's own checked web exceptions (404, 405, ...) keep their default handling. */
+    /**
+     * Logs an unexpected runtime error and returns a generic response.
+     *
+     * @param exception the unexpected exception
+     * @return an HTTP 500 error response
+     */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(RuntimeException exception) {
         LOG.error("Unexpected error", exception);

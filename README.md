@@ -123,6 +123,23 @@ cd frontend && npm test        # frontend unit tests (Vitest)
 cd frontend && npm run build   # production bundle into backend/src/main/resources/static
 ```
 
+### Backend documentation
+
+With Java 21 or later installed, run these commands from `backend/`:
+
+```bash
+./mvnw javadoc:javadoc  # Windows: .\mvnw javadoc:javadoc
+./mvnw site             # Windows: .\mvnw site
+```
+
+Open `backend/target/reports/apidocs/index.html` for the standalone Java API
+reference, or `backend/target/site/index.html` for the project site and its
+linked API reference. The reference is generated from Java source comments;
+it is not an HTTP API specification. Both commands validate public Javadoc
+and fail on Javadoc warnings. Existing Markdown guides remain separate from
+the Maven site. The generated files are local build output and are not
+committed.
+
 ## Configuration
 
 Nothing environment-specific is hard-coded. Settings live in `.env.development`, `.env.production` and `.env.example`.

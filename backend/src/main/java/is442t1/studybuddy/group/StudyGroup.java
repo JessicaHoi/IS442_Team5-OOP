@@ -104,10 +104,23 @@ public class StudyGroup extends BaseEntity {
     @OneToMany(mappedBy = "studyGroup", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<GroupMemberAvailability> memberAvailabilities = new ArrayList<>();
 
+    /**
+     * Finds a member's group-specific availability override.
+     *
+     * @param studentId the member's identifier
+     * @return the override, or empty when the member uses profile availability
+     */
     public Optional<GroupMemberAvailability> findMemberAvailability(UUID studentId) {
         return memberAvailabilities.stream().filter(item -> item.belongsTo(studentId)).findFirst();
     }
 
+    /**
+     * Gets a member's group override, falling back to their availability for this course.
+     *
+     * @param studentId the member's identifier
+     * @return the override slots or the member's profile slots for this course
+     * @throws ResourceNotFoundException if the student is not a member
+     */
     public List<TimeSlot> memberAvailability(UUID studentId) {
         Student member = members.stream().filter(item -> item.hasId(studentId)).findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("Group member not found."));
@@ -139,87 +152,167 @@ public class StudyGroup extends BaseEntity {
         applyDetails(details);
     }
 
+    /** Gets the group's name.
+     * @return the group's name
+     */
     public String getGroupName() {
         return groupName;
     }
 
+    /** Gets the group's description.
+     * @return the group's description
+     */
     public String getDescription() {
         return description;
     }
 
+    /** Gets the course this group is for.
+     * @return the associated course
+     */
     public Course getCourse() {
         return course;
     }
 
+    /** Gets the group's current leader.
+     * @return the current leader
+     */
     public StudyGroupLeader getLeader() {
         return leader;
     }
 
+    /** Gets an unmodifiable view of the group's members.
+     * @return the group's members
+     */
     public Set<Student> getMembers() {
         return Collections.unmodifiableSet(members);
     }
 
+    /** Gets an unmodifiable view of the group's study goals.
+     * @return the group's study goals
+     */
     public Set<StudyGoal> getStudyGoals() {
         return Collections.unmodifiableSet(studyGoals);
     }
 
+    /** Gets the group's meeting mode.
+     * @return the meeting mode
+     */
     public StudyMode getStudyMode() {
         return studyMode;
     }
 
+    /** Gets an unmodifiable view of the group's proposed availability.
+     * @return the proposed time slots
+     */
     public List<TimeSlot> getAvailability() {
         return Collections.unmodifiableList(availability);
     }
 
+    /** Gets the maximum number of members allowed in the group.
+     * @return the maximum member count
+     */
     public int getMaxSize() {
         return maxSize;
     }
 
+    /** Gets the Telegram chat link, or {@code null} if none has been set.
+     * @return the chat link, if configured
+     */
     public String getChatLink() {
         return chatLink;
     }
 
+    /** Gets the group's status.
+     * @return whether the group is open or closed
+     */
     public GroupStatus getStatus() {
         return status;
     }
 
+    /** Gets the creation time.
+     * @return when the group was created
+     */
     public Instant getCreatedAt() {
         return createdAt;
     }
 
+    /** Checks whether the group is open to membership and management changes.
+     * @return {@code true} if the group is open
+     */
     public boolean isOpen() {
         return status == GroupStatus.OPEN;
     }
 
+    /** Checks whether the group has reached its maximum size.
+     * @return {@code true} if the current member count is at least the maximum
+     */
     public boolean isFull() {
         return members.size() >= maxSize;
     }
 
+    /** Counts the group's current members, including the leader.
+     * @return the current member count
+     */
     public int getMemberCount() {
         return members.size();
     }
 
+    /**
+     * Checks whether a student is the group's current leader.
+     *
+     * @param studentId the student's identifier
+     * @return {@code true} if that student leads this group
+     */
     public boolean isLedBy(UUID studentId) {
         return leader.hasId(studentId);
     }
 
+    /**
+     * Checks whether a student belongs to this group.
+     *
+     * @param studentId the student's identifier
+     * @return {@code true} if the student is a member
+     */
     public boolean hasMember(UUID studentId) {
         return members.stream().anyMatch(member -> member.hasId(studentId));
     }
 
+    /** Gets this group's join requests that have not yet been answered.
+     * @return the pending join requests
+     */
     public List<MembershipRequest> getPendingRequests() {
         return membershipRequests.stream().filter(MembershipRequest::isPending).toList();
     }
 
+    /**
+     * Checks for an unanswered join request from a student.
+     *
+     * @param studentId the student's identifier
+     * @return {@code true} if the student has a pending request
+     */
     public boolean hasPendingRequestFrom(UUID studentId) {
         return getPendingRequests().stream().anyMatch(request -> request.getStudent().hasId(studentId));
     }
 
+    /**
+     * Finds an unanswered join request by its identifier.
+     *
+     * @param requestId the request identifier
+     * @return the matching pending request, or empty if none exists
+     */
     public Optional<MembershipRequest> findPendingRequest(UUID requestId) {
         return getPendingRequests().stream().filter(request -> requestId.equals(request.getId())).findFirst();
     }
 
-    /** A student asks to join. Anyone may do this, so it is public. */
+    /**
+     * Records a student's request to join this open group.
+     *
+     * @param student the student requesting membership
+     * @param message the optional message attached to the request
+     * @return the newly created pending request
+     * @throws BusinessRuleException if the group is closed or full, or the student is already a member
+     *         or already has a pending request
+     */
     public MembershipRequest requestToJoin(Student student, String message) {
         requireOpen();
         if (hasMember(student.getId())) {
@@ -236,7 +329,13 @@ public class StudyGroup extends BaseEntity {
         return request;
     }
 
-    /** A member leaves on their own. The leader has to hand the group over or close it first. */
+    /**
+     * Removes a member who chooses to leave the group.
+     *
+     * @param student the member leaving
+     * @throws BusinessRuleException if the group is closed, the student is not a member,
+     *         or the student is the leader
+     */
     public void leave(Student student) {
         requireOpen();
         if (isLedBy(student.getId())) {
@@ -325,6 +424,12 @@ public class StudyGroup extends BaseEntity {
         }
     }
 
+    /**
+     * Makes an existing active member the group's leader.
+     *
+     * @param successor the member who will lead the group
+     * @throws BusinessRuleException if the successor is inactive, not a member, or already the leader
+     */
     public void transferLeadershipTo(StudyGroupLeader successor) {
         if (!successor.isActive() || !hasMember(successor.getId()) || isLedBy(successor.getId())) {
             throw new BusinessRuleException("Choose another active member as the new group leader.");
@@ -332,6 +437,12 @@ public class StudyGroup extends BaseEntity {
         leader = successor;
     }
 
+    /**
+     * Removes a deleted student's membership, requests, and group availability.
+     *
+     * @param studentId the deleted student's identifier
+     * @throws BusinessRuleException if the deleted student is still the group leader
+     */
     public void removeDeletedAccount(UUID studentId) {
         if (isLedBy(studentId)) {
             throw new BusinessRuleException("Transfer group leadership before deleting this account.");

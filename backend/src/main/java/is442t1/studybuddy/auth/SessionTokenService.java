@@ -36,6 +36,12 @@ public class SessionTokenService {
     private final Clock clock;
     private final UserRepository userRepository;
 
+    /**
+     * Creates the token service with the system clock.
+     *
+     * @param properties the token lifetime settings
+     * @param userRepository the account repository
+     */
     @Autowired
     public SessionTokenService(AuthProperties properties, UserRepository userRepository) {
         this(properties, Clock.systemUTC(), userRepository);
@@ -47,6 +53,12 @@ public class SessionTokenService {
         this.userRepository = userRepository;
     }
 
+    /**
+     * Issues an in-memory token for an account.
+     *
+     * @param user the account
+     * @return the newly generated bearer token
+     */
     public synchronized String issue(User user) {
         byte[] bytes = new byte[TOKEN_BYTES];
         random.nextBytes(bytes);
@@ -56,6 +68,12 @@ public class SessionTokenService {
         return token;
     }
 
+    /**
+     * Resolves a token while checking expiration and the current account state.
+     *
+     * @param token the bearer token
+     * @return the authenticated user, or an empty result if the token is invalid
+     */
     @Transactional(readOnly = true)
     public Optional<AuthenticatedUser> resolve(String token) {
         Session session = sessions.get(token);
@@ -81,10 +99,20 @@ public class SessionTokenService {
         return Optional.of(new AuthenticatedUser(account.getId(), account.getRole()));
     }
 
+    /**
+     * Removes a token if it exists.
+     *
+     * @param token the bearer token to revoke
+     */
     public void revoke(String token) {
         sessions.remove(token);
     }
 
+    /**
+     * Revokes all sessions for an account, after commit when called in a transaction.
+     *
+     * @param userId the account identifier
+     */
     public void revokeAllForUser(UUID userId) {
         if (TransactionSynchronizationManager.isActualTransactionActive()
                 && TransactionSynchronizationManager.isSynchronizationActive()) {

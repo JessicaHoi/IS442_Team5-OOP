@@ -12,14 +12,35 @@ import org.springframework.stereotype.Repository;
 
 import is442t1.studybuddy.studysession.StudySession;
 
+/** Persistence queries for linked Telegram chats and sessions posted to them. */
 @Repository
 public interface GroupChatRepository extends JpaRepository<GroupChat, UUID> {
 
+    /**
+     * Finds the Telegram chat linked to a study group, if any.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @return linked chat, if one exists
+     */
     Optional<GroupChat> findByStudyGroup_Id(UUID groupId);
 
+    /**
+     * Finds the chat associated with a bot and Telegram chat identifier.
+     *
+     * @param botId Telegram bot identifier
+     * @param chatId Telegram chat identifier
+     * @return linked chat, if one exists
+     */
     Optional<GroupChat> findByBotIdAndChatId(long botId, long chatId);
 
-    /** Scheduled sessions starting soon, with no reminder sent, whose group has a working chat with this bot. */
+    /**
+     * Finds scheduled sessions starting in the supplied interval that have no reminder and an active chat.
+     *
+     * @param botId Telegram bot identifier
+     * @param now beginning of the interval
+     * @param until end of the interval
+     * @return sessions needing a reminder
+     */
     @Query("""
             select s from StudySession s, GroupChat c
              where c.studyGroup = s.studyGroup and c.botId = :botId
@@ -30,7 +51,13 @@ public interface GroupChatRepository extends JpaRepository<GroupChat, UUID> {
             """)
     List<StudySession> findSessionsStartingSoon(@Param("botId") long botId, @Param("now") Instant now, @Param("until") Instant until);
 
-    /** Scheduled sessions still to start, with no card posted, whose group has a working chat with this bot. */
+    /**
+     * Finds scheduled future sessions without a posted card in an active chat.
+     *
+     * @param botId Telegram bot identifier
+     * @param now current time; only sessions starting later are considered
+     * @return sessions needing an initial card
+     */
     @Query("""
             select s from StudySession s, GroupChat c
              where c.studyGroup = s.studyGroup and c.botId = :botId

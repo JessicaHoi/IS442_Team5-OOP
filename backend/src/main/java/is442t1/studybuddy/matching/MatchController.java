@@ -15,6 +15,7 @@ import is442t1.studybuddy.model.enums.StudyGoal;
 import is442t1.studybuddy.model.enums.StudyMode;
 import is442t1.studybuddy.model.enums.Role;
 
+/** Endpoint for searching ranked study buddy matches. */
 @RestController
 @RequestMapping("/api/matches")
 @RequireRole(Role.STUDENT)
@@ -22,10 +23,26 @@ public class MatchController {
 
     private final MatchingService matchingService;
 
+    /**
+     * Creates the matching controller.
+     *
+     * @param matchingService the matching service
+     */
     public MatchController(MatchingService matchingService) {
         this.matchingService = matchingService;
     }
 
+    /**
+     * Searches for matches with optional filters.
+     *
+     * @param caller the authenticated student
+     * @param course optional course code
+     * @param goal optional study goal
+     * @param day optional day filter
+     * @param studyMode optional meeting mode
+     * @param groupFormat optional group format
+     * @return ranked matching students
+     */
     @GetMapping
     public List<MatchResult> search(
             @CurrentUser AuthenticatedUser caller,

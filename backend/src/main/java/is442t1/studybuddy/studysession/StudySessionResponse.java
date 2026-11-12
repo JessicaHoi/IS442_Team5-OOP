@@ -9,7 +9,26 @@ import is442t1.studybuddy.model.enums.RsvpResponse;
 import is442t1.studybuddy.model.enums.SessionStatus;
 import is442t1.studybuddy.model.enums.StudyMode;
 
-/** A study session as members see it. Only members can reach it, so attendee names are not hidden. */
+/**
+ * A study session as members see it. Only members can reach it, so attendee names are not hidden.
+ *
+ * @param id the session identifier
+ * @param groupId the group's identifier
+ * @param groupName the group's name
+ * @param title the session title
+ * @param startsAt the session start time
+ * @param endsAt the session end time
+ * @param meetingMode the meeting mode
+ * @param location the meeting location
+ * @param note the session note
+ * @param meetingLink the meeting link
+ * @param groupVideoChat whether the group video chat is used
+ * @param status the session status
+ * @param myRsvp the viewer's response, if any
+ * @param goingCount the number of members going
+ * @param notGoingCount the number of members not going
+ * @param attendees the members who responded
+ */
 public record StudySessionResponse(
         UUID id,
         UUID groupId,
@@ -29,6 +48,13 @@ public record StudySessionResponse(
         List<Attendee> attendees
 ) {
 
+    /**
+     * A member's response to a session.
+     *
+     * @param id the student's identifier
+     * @param name the student's name
+     * @param response the student's response
+     */
     public record Attendee(UUID id, String name, RsvpResponse response) {
     }
 

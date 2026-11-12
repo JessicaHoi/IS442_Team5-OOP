@@ -10,19 +10,36 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/** Persistence queries for Telegram cards representing study sessions. */
 @Repository
 public interface SessionChatCardRepository extends JpaRepository<SessionChatCard, UUID> {
 
+    /**
+     * Finds the chat card for a study session, if one has been recorded.
+     *
+     * @param studySessionId StudyBuddy session identifier
+     * @return associated chat card, if one exists
+     */
     Optional<SessionChatCard> findByStudySession_Id(UUID studySessionId);
 
-    /** Posted cards in this chat, with their sessions. */
+    /**
+     * Finds posted cards in a chat together with their sessions.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @return posted cards for that chat
+     */
     @Query("""
             select card from SessionChatCard card join fetch card.studySession
              where card.groupChat.id = :groupChatId and card.messageId is not null
             """)
     List<SessionChatCard> findPosted(@Param("groupChatId") UUID groupChatId);
 
-    /** Posted cards that could still change phase, in chats where this bot can still edit them. */
+    /**
+     * Finds posted cards that may change phase in chats where this bot can still edit them.
+     *
+     * @param botId Telegram bot identifier
+     * @return unfinished cards belonging to the bot
+     */
     @Query("""
             select card from SessionChatCard card join fetch card.studySession
              where card.groupChat.botId = :botId and card.messageId is not null
@@ -31,7 +48,14 @@ public interface SessionChatCardRepository extends JpaRepository<SessionChatCard
             """)
     List<SessionChatCard> findUnfinished(@Param("botId") long botId);
 
-    /** Posted cards of scheduled sessions starting soon, with no nudge sent, in working chats with this bot. */
+    /**
+     * Finds posted cards of scheduled sessions in the supplied time interval that have not been nudged.
+     *
+     * @param botId Telegram bot identifier
+     * @param now beginning of the interval
+     * @param until end of the interval
+     * @return cards awaiting a nudge
+     */
     @Query("""
             select card from SessionChatCard card join fetch card.studySession session
              where card.groupChat.botId = :botId and card.messageId is not null and card.nudgeSentAt is null

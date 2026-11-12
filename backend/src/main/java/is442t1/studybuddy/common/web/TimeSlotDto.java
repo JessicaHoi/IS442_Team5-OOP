@@ -12,6 +12,10 @@ import is442t1.studybuddy.model.TimeSlot;
 
 /**
  * Availability slot as the API sends it: {@code {"day": "WED", "start": "19:00", "end": "21:00"}}.
+ *
+ * @param day the three-letter weekday code
+ * @param start the start time in 24-hour format
+ * @param end the end time in 24-hour format
  */
 public record TimeSlotDto(
         @NotNull(message = "Choose a day for each time slot.")
@@ -33,10 +37,22 @@ public record TimeSlotDto(
     private static final Comparator<TimeSlot> WEEK_ORDER =
             Comparator.comparing(TimeSlot::day).thenComparing(TimeSlot::startTime);
 
+    /**
+     * Converts this DTO to a domain time slot.
+     *
+     * @return the corresponding time slot
+     * @throws IllegalArgumentException if the day code is unknown
+     */
     public TimeSlot toTimeSlot() {
         return new TimeSlot(toDayOfWeek(day), LocalTime.parse(start), LocalTime.parse(end));
     }
 
+    /**
+     * Converts a domain time slot to its API representation.
+     *
+     * @param slot the domain time slot
+     * @return the corresponding DTO
+     */
     public static TimeSlotDto from(TimeSlot slot) {
         return new TimeSlotDto(
                 slot.day().name().substring(0, DAY_CODE_LENGTH),
@@ -44,11 +60,22 @@ public record TimeSlotDto(
                 slot.endTime().toString());
     }
 
+    /**
+     * Converts API time slots to domain time slots in the same order.
+     *
+     * @param slots the API time slots
+     * @return the corresponding domain time slots
+     */
     public static List<TimeSlot> toTimeSlots(List<TimeSlotDto> slots) {
         return slots.stream().map(TimeSlotDto::toTimeSlot).toList();
     }
 
-    /** Converts slots for a response, sorted Monday first, then by start time. */
+    /**
+     * Converts slots for a response, sorted Monday first, then by start time.
+     *
+     * @param slots the domain time slots
+     * @return the sorted API time slots
+     */
     public static List<TimeSlotDto> fromTimeSlots(List<TimeSlot> slots) {
         return slots.stream().sorted(WEEK_ORDER).map(TimeSlotDto::from).toList();
     }

@@ -13,10 +13,20 @@ public class PublicCourseController {
 
     private final CourseService courseService;
 
+    /**
+     * Creates the public course controller.
+     *
+     * @param courseService the course catalogue service
+     */
     public PublicCourseController(CourseService courseService) {
         this.courseService = courseService;
     }
 
+    /**
+     * Lists the public course catalogue.
+     *
+     * @return courses ordered by code
+     */
     @GetMapping
     public List<CourseResponse> listCourses() {
         return courseService.listCourses();

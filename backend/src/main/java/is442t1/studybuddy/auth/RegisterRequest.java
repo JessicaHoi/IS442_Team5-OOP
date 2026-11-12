@@ -13,6 +13,20 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import is442t1.studybuddy.course.CreateCourseRequest;
 
+/**
+ * Details supplied when registering a student account.
+ *
+ * @param name the student's name
+ * @param email the account email
+ * @param password the account password
+ * @param school the student's school
+ * @param programme the student's programme
+ * @param yearOfStudy the year of study, from 1 to 5
+ * @param contactNumber the student's phone number
+ * @param telegramHandle the optional Telegram handle
+ * @param courses the selected course codes
+ * @param newCourses courses to add to the catalogue, if any
+ */
 public record RegisterRequest(
         @NotBlank(message = "Enter your name.")
         @Size(max = 100, message = "Name must be at most 100 characters.")
@@ -50,6 +64,20 @@ public record RegisterRequest(
 
         List<@NotNull @Valid CreateCourseRequest> newCourses
 ) {
+    /**
+     * Creates registration details, trimming text fields and defaulting absent new courses to an empty list.
+     *
+     * @param name the student's name
+     * @param email the account email
+     * @param password the account password
+     * @param school the student's school
+     * @param programme the student's programme
+     * @param yearOfStudy the year of study
+     * @param contactNumber the student's phone number
+     * @param telegramHandle the optional Telegram handle
+     * @param courses the selected course codes
+     * @param newCourses courses to add to the catalogue, if any
+     */
     public RegisterRequest {
         name = name == null ? null : name.trim();
         email = email == null ? null : email.trim();

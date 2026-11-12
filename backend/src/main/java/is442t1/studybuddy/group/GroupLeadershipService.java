@@ -15,6 +15,9 @@ import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.UserRepository;
 import is442t1.studybuddy.student.Student;
 
+/**
+ * Transfers study group leadership between active student members.
+ */
 @Service
 @Transactional
 public class GroupLeadershipService {
@@ -24,6 +27,14 @@ public class GroupLeadershipService {
     private final StudyGroupLeaderRepository leaderRepository;
     private final ApplicationEventPublisher events;
 
+    /**
+     * Creates the leadership service.
+     *
+     * @param userRepository account lookup and locking operations
+     * @param groupRepository group lookup and locking operations
+     * @param leaderRepository leader promotion and demotion operations
+     * @param events publisher for leadership-transfer events
+     */
     public GroupLeadershipService(UserRepository userRepository, StudyGroupRepository groupRepository,
             StudyGroupLeaderRepository leaderRepository, ApplicationEventPublisher events) {
         this.userRepository = userRepository;
@@ -32,6 +43,22 @@ public class GroupLeadershipService {
         this.events = events;
     }
 
+    /**
+     * Transfers a group's leadership to another active student who is already a member.
+     *
+     * <p>When invoked by an administrator, a non-matching current leader is reported
+     * as a missing group, and the current leader need not have an active account.</p>
+     *
+     * @param leaderId the current leader's identifier
+     * @param groupId the group's identifier
+     * @param successorId the selected successor's identifier
+     * @param byAdministrator whether the transfer is being performed by an administrator
+     * @return the group's leadership details after the transfer
+     * @throws ResourceNotFoundException if the accounts or group do not exist, or an administrator's
+     *         target does not belong to that leader
+     * @throws PermissionDeniedException if a non-administrator is not the active current leader
+     * @throws ValidationException if the successor is not another active student member
+     */
     public LedGroupResponse transfer(UUID leaderId, UUID groupId, UUID successorId, boolean byAdministrator) {
         Stream.of(leaderId, successorId).distinct().sorted().forEach(id -> userRepository.lockAccount(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User account not found.")));

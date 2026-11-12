@@ -25,6 +25,7 @@ import is442t1.studybuddy.model.enums.GroupPreference;
 import is442t1.studybuddy.model.enums.StudyGoal;
 import is442t1.studybuddy.model.enums.StudyMode;
 
+/** A student's study preferences for one course. */
 @Entity
 @Table(
         name = "study_preference",
@@ -65,42 +66,92 @@ public class StudyPreference extends BaseEntity {
         this.course = course;
     }
 
+    /**
+     * Returns the student who owns the preference.
+     *
+     * @return the student who owns the preference
+     */
     public Student getStudent() {
         return student;
     }
 
+    /**
+     * Sets the student who owns the preference.
+     *
+     * @param student the student who owns the preference
+     */
     public void setStudent(Student student) {
         this.student = student;
     }
 
+    /**
+     * Returns the course.
+     *
+     * @return the course
+     */
     public Course getCourse() {
         return course;
     }
 
+    /**
+     * Sets the course.
+     *
+     * @param course the course
+     */
     public void setCourse(Course course) {
         this.course = course;
     }
 
+    /**
+     * Returns the preferred meeting mode.
+     *
+     * @return the preferred meeting mode
+     */
     public StudyMode getStudyMode() {
         return studyMode;
     }
 
+    /**
+     * Sets the preferred meeting mode.
+     *
+     * @param studyMode the preferred meeting mode
+     */
     public void setStudyMode(StudyMode studyMode) {
         this.studyMode = studyMode;
     }
 
+    /**
+     * Returns the preferred group format.
+     *
+     * @return the preferred group format
+     */
     public GroupPreference getGroupPreference() {
         return groupPreference;
     }
 
+    /**
+     * Sets the preferred group format.
+     *
+     * @param groupPreference the preferred group format
+     */
     public void setGroupPreference(GroupPreference groupPreference) {
         this.groupPreference = groupPreference;
     }
 
+    /**
+     * Returns an unmodifiable view of the weekly availability.
+     *
+     * @return an unmodifiable view of the weekly availability
+     */
     public List<TimeSlot> getAvailability() {
         return Collections.unmodifiableList(availability);
     }
 
+    /**
+     * Returns an unmodifiable view of the study goals.
+     *
+     * @return an unmodifiable view of the study goals
+     */
     public Set<StudyGoal> getStudyGoals() {
         return Collections.unmodifiableSet(studyGoals);
     }

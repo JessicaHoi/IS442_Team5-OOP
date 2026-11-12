@@ -44,6 +44,14 @@ public class GroupChatService {
     private final TelegramProperties properties;
     private final SecureRandom random = new SecureRandom();
 
+    /**
+     * Creates the service that synchronizes StudyBuddy groups with Telegram chats.
+     *
+     * @param store persistence operations for linked chats and memberships
+     * @param sender chat-aware Telegram message sender
+     * @param client Telegram Bot API client
+     * @param properties Telegram bot configuration
+     */
     public GroupChatService(ChatStore store, ChatSender sender, TelegramClient client, TelegramProperties properties) {
         this.store = store;
         this.sender = sender;
@@ -51,16 +59,36 @@ public class GroupChatService {
         this.properties = properties;
     }
 
+    /**
+     * Returns a member's view of a group's chat.
+     *
+     * @param viewerId requesting student's identifier
+     * @param groupId StudyBuddy group identifier
+     * @return the chat status and member-specific details
+     */
     public GroupChatResponse view(UUID viewerId, UUID groupId) {
         return store.view(viewerId, groupId);
     }
 
+    /**
+     * Starts chat setup for a group's leader.
+     *
+     * @param leaderId group leader's student identifier
+     * @param groupId StudyBuddy group identifier
+     * @return a one-time Telegram setup link
+     */
     public TelegramLinkResponse startSetup(UUID leaderId, UUID groupId) {
         requireEnabled();
         return store.startSetup(leaderId, groupId);
     }
 
-    /** Re-checks the bot's rights, for a leader who has just fixed them. */
+    /**
+     * Re-checks the bot's Telegram permissions after a leader changes them.
+     *
+     * @param leaderId group leader's student identifier
+     * @param groupId StudyBuddy group identifier
+     * @return the updated chat state
+     */
     public GroupChatResponse verify(UUID leaderId, UUID groupId) {
         requireEnabled();
         ChatRef chat = store.requireLedChat(leaderId, groupId);
@@ -106,7 +134,12 @@ public class GroupChatService {
         }
     }
 
-    /** Unlinks the chat: invites stop working and the bot leaves. The chat itself stays with its members. */
+    /**
+     * Unlinks the chat, revokes active invites, and asks the bot to leave while retaining the chat itself.
+     *
+     * @param leaderId group leader's student identifier
+     * @param groupId StudyBuddy group identifier
+     */
     public void detach(UUID leaderId, UUID groupId) {
         requireEnabled();
         ChatRef chat = store.requireLedChat(leaderId, groupId);
@@ -121,6 +154,11 @@ public class GroupChatService {
     /**
      * The student's way into the chat. {@code renew} replaces their link, or, once someone has joined with it,
      * removes that person: it's the "Not you?" button for an invite that reached the wrong hands.
+     *
+     * @param studentId requesting student's identifier
+     * @param groupId StudyBuddy group identifier
+     * @param renew whether to replace an invite or remove its unexpected joiner
+     * @return the updated chat state and this student's invite details
      */
     public GroupChatResponse invite(UUID studentId, UUID groupId, boolean renew) {
         requireEnabled();
@@ -171,7 +209,13 @@ public class GroupChatService {
         return link.inviteLink();
     }
 
-    /** A new member's row starts afresh. If they connected Telegram, the bot messages them their invite too. */
+    /**
+     * Resets a new group member's chat state and sends their invite privately when possible.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @param studentId newly joined student's identifier
+     * @param messageableTelegramUserId connected Telegram user allowed to receive a private message, or null
+     */
     public void onMemberJoined(UUID groupId, UUID studentId, Long messageableTelegramUserId) {
         store.resetForNewMember(groupId, studentId)
                 .filter(chat -> chat.status() == GroupChatStatus.ACTIVE)
@@ -185,12 +229,21 @@ public class GroupChatService {
                 });
     }
 
-    /** Takes someone who is no longer in the study group out of the chat. A refusal is shown to the leader. */
+    /**
+     * Removes a student who has left the StudyBuddy group from its Telegram chat.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @param studentId departing student's identifier
+     */
     public void onMemberLeft(UUID groupId, UUID studentId) {
         store.removalFor(groupId, studentId).ifPresent(this::remove);
     }
 
-    /** Runs after the account has gone, from what was read before, so there's no row left to update. */
+    /**
+     * Revokes invites and removes deleted accounts using membership data captured before deletion.
+     *
+     * @param removals chat memberships and Telegram identifiers captured before the account was deleted
+     */
     public void onAccountDeleted(List<Removal> removals) {
         for (Removal removal : removals) {
             if (removal.inviteLink() != null) {
@@ -245,7 +298,11 @@ public class GroupChatService {
         }
     }
 
-    /** Makes the chat read-only and stops its invites. Members keep the history. */
+    /**
+     * Closes the linked chat in Telegram and revokes its outstanding invites.
+     *
+     * @param groupId StudyBuddy group identifier
+     */
     public void onGroupClosed(UUID groupId) {
         store.findByGroup(groupId).filter(chat -> chat.status() != GroupChatStatus.DETACHED).ifPresent(chat -> {
             store.closeChat(chat.id()).forEach(link -> attempt("revoke an invite", () -> sender.runOnChat(chat, chatId -> client.revokeInviteLink(chatId, link))));
@@ -254,11 +311,22 @@ public class GroupChatService {
         });
     }
 
+    /**
+     * Updates the Telegram chat title and description after the StudyBuddy group is renamed.
+     *
+     * @param groupId renamed StudyBuddy group identifier
+     */
     public void onGroupRenamed(UUID groupId) {
         store.findByGroup(groupId).filter(chat -> chat.status() == GroupChatStatus.ACTIVE && !chat.lacks("CHANGE_INFO"))
                 .ifPresent(this::applyTitleAndDescription);
     }
 
+    /**
+     * Announces a new leader in the linked chat.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @param newLeaderName new leader's display name
+     */
     public void onLeadershipTransferred(UUID groupId, String newLeaderName) {
         store.findByGroup(groupId).filter(chat -> chat.status() == GroupChatStatus.ACTIVE).ifPresent(chat ->
                 attempt("post the leadership notice", () -> sender.send(chat, newLeaderName + " is now the leader of this study group.")));

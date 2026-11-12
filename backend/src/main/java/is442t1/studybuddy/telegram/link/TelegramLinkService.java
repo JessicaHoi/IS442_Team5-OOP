@@ -32,6 +32,14 @@ public class TelegramLinkService {
     private final TelegramProperties properties;
     private final SecureRandom random = new SecureRandom();
 
+    /**
+     * Creates account-link and group-setup token services for the configured bot.
+     *
+     * @param accountRepository persistence for connected Telegram accounts
+     * @param tokenRepository persistence for one-time link tokens
+     * @param studentService lookup for active StudyBuddy students
+     * @param properties Telegram bot configuration
+     */
     public TelegramLinkService(TelegramAccountRepository accountRepository, TelegramLinkTokenRepository tokenRepository,
             StudentService studentService, TelegramProperties properties) {
         this.accountRepository = accountRepository;
@@ -40,17 +48,34 @@ public class TelegramLinkService {
         this.properties = properties;
     }
 
+    /**
+     * Returns the signed-in student's Telegram connection state.
+     *
+     * @param studentId StudyBuddy student identifier
+     * @return connection details, or an unlinked response
+     */
     @Transactional(readOnly = true)
     public TelegramStatusResponse status(UUID studentId) {
         return findAccount(studentId).map(TelegramStatusResponse::of).orElseGet(TelegramStatusResponse::notLinked);
     }
 
-    /** The Telegram user connected to this student through this bot, if any. */
+    /**
+     * Returns the Telegram user connected to this student through this bot, if any.
+     *
+     * @param studentId StudyBuddy student identifier
+     * @return connected Telegram user identifier, or empty if the student is not linked
+     */
     @Transactional(readOnly = true)
     public Optional<Long> linkedTelegramUserId(UUID studentId) {
         return findAccount(studentId).map(TelegramAccount::getTelegramUserId);
     }
 
+    /**
+     * Creates a one-time deep link for the student to connect their Telegram account.
+     *
+     * @param studentId StudyBuddy student identifier
+     * @return the Telegram deep link and expiration time
+     */
     public TelegramLinkResponse createLink(UUID studentId) {
         if (!properties.enabled()) {
             throw new BusinessRuleException(TelegramProperties.OFF_MESSAGE);
@@ -68,6 +93,11 @@ public class TelegramLinkService {
         return new TelegramLinkResponse("https://t.me/" + properties.botUsername() + "?start=a_" + token, expiresAt);
     }
 
+    /**
+     * Removes the student's Telegram account connection, if one exists.
+     *
+     * @param studentId StudyBuddy student identifier
+     */
     public void unlink(UUID studentId) {
         findAccount(studentId).ifPresent(accountRepository::delete);
     }
@@ -75,6 +105,12 @@ public class TelegramLinkService {
     /**
      * Called when someone presses Start on a link. If this Telegram user was linked to another student, the latest
      * link wins. Returns false if the token is unknown, used or expired, or the student's account is no longer active.
+     *
+     * @param token one-time token from the Telegram deep link
+     * @param telegramUserId Telegram user who opened the link
+     * @param username Telegram username, or null if unavailable
+     * @param firstName Telegram first name
+     * @return true if the account was connected
      */
     public boolean completeLink(String token, long telegramUserId, String username, String firstName) {
         long botId = properties.botId();
@@ -103,7 +139,13 @@ public class TelegramLinkService {
         return true;
     }
 
-    /** A link the leader opens in Telegram to set up their group's chat. A new one replaces any earlier one. */
+    /**
+     * Creates a link the leader opens in Telegram to set up their group's chat. A new one replaces any earlier one.
+     *
+     * @param leader group leader creating the setup link
+     * @param group group whose chat will be linked
+     * @return a one-time Telegram setup link and its expiration time
+     */
     public TelegramLinkResponse createGroupSetupLink(Student leader, StudyGroup group) {
         Instant now = Instant.now();
         tokenRepository.deleteReplacedOrExpired(properties.botId(), leader.getId(), TelegramLinkPurpose.GROUP_SETUP, now);
@@ -119,6 +161,10 @@ public class TelegramLinkService {
      * Ties a setup link to the Telegram user who opened it and returns its first button id. Opening it again gives
      * the same id, so the buttons can be resent. Empty if the link isn't usable or belongs to someone else, the
      * student no longer leads the group, or the group has closed.
+     *
+     * @param token one-time group-setup token from the Telegram deep link
+     * @param telegramUserId Telegram user opening the setup link
+     * @return the first chat-selection button identifier, or empty when setup cannot proceed
      */
     public Optional<Integer> openGroupSetup(String token, long telegramUserId) {
         Instant now = Instant.now();
@@ -129,7 +175,13 @@ public class TelegramLinkService {
                 .map(TelegramLinkToken::getRequestId);
     }
 
-    /** The study group a chosen chat would be linked to, if the choice is valid. Leaves the link usable. */
+    /**
+     * Returns the study group a chosen chat would be linked to, if the choice is valid. Leaves the link usable.
+     *
+     * @param telegramUserId user who claimed the group-setup link
+     * @param requestId identifier from one of that setup link's chat-selection buttons
+     * @return the group identifier, or empty when the setup link is no longer valid
+     */
     @Transactional(readOnly = true)
     public Optional<UUID> groupInSetup(long telegramUserId, int requestId) {
         return tokenRepository.findSetupInProgress(properties.botId(), telegramUserId, requestId, Instant.now())
@@ -137,7 +189,12 @@ public class TelegramLinkService {
                 .map(found -> found.getStudyGroup().getId());
     }
 
-    /** Called once the chosen chat is saved, so a failure before that leaves the leader able to try again. */
+    /**
+     * Marks a group-setup link used after the chosen chat is saved.
+     *
+     * @param telegramUserId user who claimed the setup link
+     * @param requestId identifier from one of that setup link's chat-selection buttons
+     */
     public void useUpGroupSetup(long telegramUserId, int requestId) {
         Instant now = Instant.now();
         tokenRepository.findSetupInProgress(properties.botId(), telegramUserId, requestId, now).ifPresent(found -> found.markUsed(now));

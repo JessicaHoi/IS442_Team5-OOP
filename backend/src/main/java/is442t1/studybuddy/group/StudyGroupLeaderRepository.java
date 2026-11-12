@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/** Persistence operations for students promoted to group leaders. */
 @Repository
 public interface StudyGroupLeaderRepository extends JpaRepository<StudyGroupLeader, UUID> {
 
@@ -17,11 +18,18 @@ public interface StudyGroupLeaderRepository extends JpaRepository<StudyGroupLead
      * just an extra row keyed by the same id, so inserting that row is enough.
      * The persistence context is cleared afterwards so the student is
      * reloaded as a leader.
+     *
+     * @param studentId the existing student's identifier
      */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = "insert into study_group_leader (id) values (:studentId)", nativeQuery = true)
     void promoteStudent(@Param("studentId") UUID studentId);
 
+    /**
+     * Removes a leader's subclass row only if they no longer lead any groups.
+     *
+     * @param studentId the leader's identifier
+     */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             delete from study_group_leader where id = :studentId

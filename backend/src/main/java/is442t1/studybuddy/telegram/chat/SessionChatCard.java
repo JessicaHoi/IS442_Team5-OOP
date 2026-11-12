@@ -116,22 +116,47 @@ public class SessionChatCard extends BaseEntity {
         pinned = nowPinned;
     }
 
+    /**
+     * Returns the study session represented by this chat card.
+     *
+     * @return represented study session
+     */
     public StudySession getStudySession() {
         return studySession;
     }
 
+    /**
+     * Returns the Telegram message identifier, or null if no card is posted.
+     *
+     * @return posted message identifier, or null
+     */
     public Long getMessageId() {
         return messageId;
     }
 
+    /**
+     * Returns when the session's current start time was announced, or null if it has not been announced.
+     *
+     * @return announcement time, or null
+     */
     public Instant getAnnouncedAt() {
         return announcedAt;
     }
 
+    /**
+     * Returns the session phase most recently rendered on the card, or null if it has not been rendered.
+     *
+     * @return rendered card phase, or null
+     */
     public CardPhase getShownPhase() {
         return shownPhase;
     }
 
+    /**
+     * Returns whether the Telegram card is recorded as pinned.
+     *
+     * @return true if recorded as pinned
+     */
     public boolean isPinned() {
         return pinned;
     }

@@ -33,21 +33,48 @@ public class StudySessionController {
 
     private final StudySessionService sessionService;
 
+    /**
+     * Creates the session controller.
+     *
+     * @param sessionService the study session service
+     */
     public StudySessionController(StudySessionService sessionService) {
         this.sessionService = sessionService;
     }
 
+    /**
+     * Lists upcoming sessions across the caller's groups.
+     *
+     * @param caller the authenticated student
+     * @return the upcoming sessions
+     */
     @GetMapping("/sessions/upcoming")
     public List<StudySessionResponse> listUpcoming(@CurrentUser AuthenticatedUser caller) {
         return sessionService.listUpcomingForStudent(caller.id());
     }
 
+    /**
+     * Lists sessions for a group.
+     *
+     * @param caller the authenticated student
+     * @param groupId the group identifier
+     * @param scope the requested session scope
+     * @return the matching sessions
+     */
     @GetMapping("/groups/{groupId}/sessions")
     public List<StudySessionResponse> list(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @RequestParam(defaultValue = "upcoming") String scope) {
         return sessionService.listForGroup(caller.id(), groupId, scope);
     }
 
+    /**
+     * Schedules a group session.
+     *
+     * @param caller the authenticated student
+     * @param groupId the group identifier
+     * @param request the session details
+     * @return the scheduled session
+     */
     @PostMapping("/groups/{groupId}/sessions")
     @ResponseStatus(HttpStatus.CREATED)
     public StudySessionResponse schedule(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
@@ -55,24 +82,58 @@ public class StudySessionController {
         return sessionService.schedule(caller.id(), groupId, request.toDetails());
     }
 
+    /**
+     * Updates a group session.
+     *
+     * @param caller the authenticated student
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @param request the replacement session details
+     * @return the updated session
+     */
     @PutMapping("/groups/{groupId}/sessions/{sessionId}")
     public StudySessionResponse update(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @PathVariable UUID sessionId, @RequestBody StudySessionRequest request) {
         return sessionService.update(caller.id(), groupId, sessionId, request.toDetails());
     }
 
+    /**
+     * Cancels a group session.
+     *
+     * @param caller the authenticated student
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @return the cancelled session
+     */
     @PostMapping("/groups/{groupId}/sessions/{sessionId}/cancel")
     public StudySessionResponse cancel(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @PathVariable UUID sessionId) {
         return sessionService.cancel(caller.id(), groupId, sessionId);
     }
 
+    /**
+     * Records the caller's response to a session.
+     *
+     * @param caller the authenticated student
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @param request the response
+     * @return the updated session
+     */
     @PutMapping("/groups/{groupId}/sessions/{sessionId}/rsvp")
     public StudySessionResponse respond(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @PathVariable UUID sessionId, @RequestBody RsvpRequest request) {
         return sessionService.respond(caller.id(), groupId, sessionId, request);
     }
 
+    /**
+     * Downloads a session as a calendar file.
+     *
+     * @param caller the authenticated student
+     * @param groupId the group identifier
+     * @param sessionId the session identifier
+     * @return the calendar file response
+     */
     @GetMapping("/groups/{groupId}/sessions/{sessionId}/calendar.ics")
     public ResponseEntity<String> calendar(@CurrentUser AuthenticatedUser caller, @PathVariable UUID groupId,
             @PathVariable UUID sessionId) {

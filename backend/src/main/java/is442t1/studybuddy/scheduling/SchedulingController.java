@@ -14,6 +14,7 @@ import is442t1.studybuddy.auth.RequireRole;
 import is442t1.studybuddy.model.TimeSlot;
 import is442t1.studybuddy.model.enums.Role;
 
+/** Student endpoints for suggested meeting times. */
 @RestController
 @RequestMapping("/api")
 @RequireRole(Role.STUDENT)
@@ -21,17 +22,34 @@ public class SchedulingController {
 
     private final BestTimeService bestTimeService;
 
+    /**
+     * Creates the scheduling controller.
+     *
+     * @param bestTimeService the meeting-time service
+     */
     public SchedulingController(BestTimeService bestTimeService) {
         this.bestTimeService = bestTimeService;
     }
 
-    /** Suggested meeting times for an accepted study-buddy connection. */
+    /**
+     * Returns suggested meeting times for a study-buddy connection.
+     *
+     * @param caller the authenticated student
+     * @param id the connection identifier
+     * @return shared meeting windows
+     */
     @GetMapping("/connections/{id}/best-times")
     public List<TimeSlot> connectionBestTimes(@CurrentUser AuthenticatedUser caller, @PathVariable UUID id) {
         return bestTimeService.forConnection(id, caller.id());
     }
 
-    /** Suggested windows and the heatmap for a study group the caller belongs to. */
+    /**
+     * Returns suggested windows and the heatmap for a group the caller belongs to.
+     *
+     * @param caller the authenticated student
+     * @param id the group identifier
+     * @return the group suggestions and heatmap
+     */
     @GetMapping("/groups/{id}/best-times")
     public GroupBestTimes groupBestTimes(@CurrentUser AuthenticatedUser caller, @PathVariable UUID id) {
         return bestTimeService.forGroup(id, caller.id());

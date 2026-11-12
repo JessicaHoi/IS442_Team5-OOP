@@ -11,7 +11,7 @@
 	<groupId>is442t1</groupId>
 	<artifactId>studybuddy</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
+	<name>Study Buddy Matcher</name>
 	<description/>
 	<url/>
 	<licenses>
@@ -28,6 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<maven-javadoc-plugin.version>3.11.3</maven-javadoc-plugin.version>
+		<maven-site-plugin.version>3.12.1</maven-site-plugin.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -85,7 +87,45 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-site-plugin</artifactId>
+				<version>${maven-site-plugin.version}</version>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${maven-javadoc-plugin.version}</version>
+				<configuration>
+					<show>public</show>
+					<doclint>all</doclint>
+					<failOnWarnings>true</failOnWarnings>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
+
+	<reporting>
+		<excludeDefaults>true</excludeDefaults>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>${maven-javadoc-plugin.version}</version>
+				<configuration>
+					<show>public</show>
+					<doclint>all</doclint>
+					<failOnWarnings>true</failOnWarnings>
+				</configuration>
+				<reportSets>
+					<reportSet>
+						<reports>
+							<report>javadoc</report>
+						</reports>
+					</reportSet>
+				</reportSets>
+			</plugin>
+		</plugins>
+	</reporting>
 
 </project>

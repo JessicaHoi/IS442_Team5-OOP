@@ -23,6 +23,11 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     private final SessionTokenService tokenService;
 
+    /**
+     * Creates the interceptor.
+     *
+     * @param tokenService the service used to resolve bearer tokens
+     */
     public AuthInterceptor(SessionTokenService tokenService) {
         this.tokenService = tokenService;
     }

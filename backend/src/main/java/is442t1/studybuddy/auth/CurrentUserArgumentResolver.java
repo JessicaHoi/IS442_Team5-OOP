@@ -14,6 +14,10 @@ import is442t1.studybuddy.common.exception.AuthenticationException;
 @Component
 public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolver {
 
+    /** Creates the current-user argument resolver. */
+    public CurrentUserArgumentResolver() {
+    }
+
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
         return parameter.hasParameterAnnotation(CurrentUser.class)

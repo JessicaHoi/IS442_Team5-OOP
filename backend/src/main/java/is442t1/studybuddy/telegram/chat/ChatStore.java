@@ -65,6 +65,16 @@ public class ChatStore {
     private final TelegramLinkService linkService;
     private final TelegramProperties properties;
 
+    /**
+     * Creates the persistence service for linked group chats.
+     *
+     * @param chatRepository persistence for linked chats
+     * @param membershipRepository persistence for per-student chat membership
+     * @param groupRepository persistence for StudyBuddy groups
+     * @param studentRepository persistence for students
+     * @param linkService lookup for connected Telegram accounts and setup links
+     * @param properties Telegram bot configuration
+     */
     public ChatStore(GroupChatRepository chatRepository, ChatMembershipRepository membershipRepository,
             StudyGroupRepository groupRepository, StudentRepository studentRepository, TelegramLinkService linkService,
             TelegramProperties properties) {
@@ -76,6 +86,13 @@ public class ChatStore {
         this.properties = properties;
     }
 
+    /**
+     * Builds the caller's view of a group's chat, limiting member details to the leader.
+     *
+     * @param viewerId requesting student's identifier
+     * @param groupId StudyBuddy group identifier
+     * @return the caller's chat response
+     */
     @Transactional(readOnly = true)
     public GroupChatResponse view(UUID viewerId, UUID groupId) {
         StudyGroup group = requireMemberGroup(viewerId, groupId);
@@ -116,7 +133,13 @@ public class ChatStore {
                 .orElseGet(() -> new GroupChatResponse.Member(student.getId(), student.getName(), ChatMemberState.NOT_INVITED, null));
     }
 
-    /** Checks the leader may set up a chat and gives them the link to do it. */
+    /**
+     * Checks that the leader may set up a chat and creates a setup link.
+     *
+     * @param leaderId group leader's student identifier
+     * @param groupId StudyBuddy group identifier
+     * @return one-time Telegram setup link
+     */
     public TelegramLinkResponse startSetup(UUID leaderId, UUID groupId) {
         StudyGroup group = requireLedOpenGroup(leaderId, groupId);
         chatRepository.findByStudyGroup_Id(groupId).filter(chat -> chat.getStatus() != GroupChatStatus.DETACHED).ifPresent(chat -> {
@@ -125,6 +148,13 @@ public class ChatStore {
         return linkService.createGroupSetupLink(group.getLeader(), group);
     }
 
+    /**
+     * Checks whether a Telegram chat is already linked to a different study group for this bot.
+     *
+     * @param chatId Telegram chat identifier
+     * @param groupId StudyBuddy group identifier being set up
+     * @return true if the chat is linked to another group
+     */
     @Transactional(readOnly = true)
     public boolean linkedToAnotherGroup(long chatId, UUID groupId) {
         return chatRepository.findByBotIdAndChatId(properties.botId(), chatId)
@@ -132,7 +162,18 @@ public class ChatStore {
                 .isPresent();
     }
 
-    /** Saves the chat a leader chose, replacing a chat the bot was removed from. */
+    /**
+     * Saves the chosen chat, replacing any previous chat record for the group, and records the leader as joined.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @param chatId Telegram chat identifier
+     * @param chatType Telegram chat type
+     * @param title Telegram chat title
+     * @param leaderTelegramUserId leader's Telegram user identifier
+     * @param leaderName leader's display name in Telegram
+     * @param rights the bot's current rights in the chat
+     * @return a detached reference to the saved chat
+     */
     public ChatRef saveLinkedChat(UUID groupId, long chatId, String chatType, String title, long leaderTelegramUserId,
             String leaderName, ChatRights rights) {
         long botId = properties.botId();
@@ -151,6 +192,12 @@ public class ChatStore {
         return ChatRef.of(chat);
     }
 
+    /**
+     * Finds this bot's linked chat for a StudyBuddy group.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @return the chat reference, or empty if this bot has no linked chat
+     */
     @Transactional(readOnly = true)
     public Optional<ChatRef> findByGroup(UUID groupId) {
         return chatRepository.findByStudyGroup_Id(groupId)
@@ -158,41 +205,90 @@ public class ChatStore {
                 .map(ChatRef::of);
     }
 
+    /**
+     * Finds a linked chat by its Telegram identifier for this bot.
+     *
+     * @param chatId Telegram chat identifier
+     * @return the chat reference, or empty if this bot does not manage it
+     */
     @Transactional(readOnly = true)
     public Optional<ChatRef> findByChat(long chatId) {
         return chatRepository.findByBotIdAndChatId(properties.botId(), chatId).map(ChatRef::of);
     }
 
+    /**
+     * Requires the caller to lead the group and returns its managed chat.
+     *
+     * @param leaderId caller's student identifier
+     * @param groupId StudyBuddy group identifier
+     * @return the linked chat
+     * @throws BusinessRuleException if this bot has no linked chat
+     */
     @Transactional(readOnly = true)
     public ChatRef requireLedChat(UUID leaderId, UUID groupId) {
         requireLeader(leaderId, groupId);
         return findByGroup(groupId).orElseThrow(() -> new BusinessRuleException("This group has no linked chat."));
     }
 
+    /**
+     * Updates the saved chat identifier after Telegram upgrades a group.
+     *
+     * @param oldChatId previous Telegram chat identifier
+     * @param newChatId replacement Telegram chat identifier
+     */
     public void migrate(long oldChatId, long newChatId) {
         chatRepository.findByBotIdAndChatId(properties.botId(), oldChatId).ifPresent(chat -> chat.migrateTo(newChatId));
     }
 
-    /** Stores the bot's rights. Returns the chat if it's now usable and has never been set up. */
+    /**
+     * Stores the bot's rights and returns the chat when it becomes usable for the first time.
+     *
+     * @param chatId Telegram chat identifier
+     * @param rights the bot's current rights
+     * @return the chat when setup should run, otherwise empty
+     */
     public Optional<ChatRef> updateRights(long chatId, ChatRights rights) {
         return chatRepository.findByBotIdAndChatId(properties.botId(), chatId)
                 .filter(chat -> chat.applyRights(rights, Instant.now()))
                 .map(ChatRef::of);
     }
 
+    /**
+     * Stores a title after it is applied to Telegram.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @param title title now set in Telegram
+     */
     public void saveTitle(UUID groupChatId, String title) {
         chatRepository.findById(groupChatId).ifPresent(chat -> chat.rename(title));
     }
 
+    /**
+     * Marks a chat detached when Telegram reports that the bot has left.
+     *
+     * @param chatId Telegram chat identifier
+     */
     public void markDetached(long chatId) {
         chatRepository.findByBotIdAndChatId(properties.botId(), chatId).ifPresent(GroupChat::markDetached);
     }
 
+    /**
+     * Deletes the saved link between a StudyBuddy group and its Telegram chat.
+     *
+     * @param groupChatId linked-chat entity identifier
+     */
     public void delete(UUID groupChatId) {
         chatRepository.deleteById(groupChatId);
     }
 
-    /** Checks the caller may have an invite, and says where they stand. */
+    /**
+     * Checks that an active group member may have an invite and returns their current chat state.
+     *
+     * @param studentId requesting student's identifier
+     * @param groupId StudyBuddy group identifier
+     * @return the chat and student's invite and membership state
+     * @throws BusinessRuleException if the member is inactive, the group is closed, or the chat is unavailable
+     */
     @Transactional(readOnly = true)
     public InviteState inviteState(UUID studentId, UUID groupId) {
         StudyGroup group = requireMemberGroup(studentId, groupId);
@@ -213,23 +309,57 @@ public class ChatStore {
                 .orElseGet(() -> new InviteState(ChatRef.of(chat), ChatMemberState.NOT_INVITED, null, null, linked, taken, false));
     }
 
+    /**
+     * Saves or updates a student's personal invite.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @param studentId StudyBuddy student identifier
+     * @param link Telegram invite URL
+     * @param name Telegram invite label
+     * @param expiresAt invite expiration time
+     */
     public void saveInvite(UUID groupChatId, UUID studentId, String link, String name, Instant expiresAt) {
         membershipFor(groupChatId, studentId).invite(link, name, expiresAt, Instant.now());
     }
 
+    /**
+     * Records that a student joined through Telegram.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @param studentId StudyBuddy student identifier
+     * @param telegramUserId joining Telegram user identifier
+     * @param telegramName joining user's display name, or null when unavailable
+     */
     public void saveJoined(UUID groupChatId, UUID studentId, long telegramUserId, String telegramName) {
         membershipFor(groupChatId, studentId).markJoined(telegramUserId, telegramName, Instant.now());
     }
 
-    /** Telegram refused to let them in after all, so they start again with a new invite. */
+    /**
+     * Resets a membership after Telegram refuses the join approval, allowing a new invite to be issued.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @param studentId StudyBuddy student identifier
+     */
     public void saveJoinFailed(UUID groupChatId, UUID studentId) {
         membershipFor(groupChatId, studentId).reset(Instant.now());
     }
 
+    /**
+     * Records that the student was removed from the linked chat.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @param studentId StudyBuddy student identifier
+     */
     public void saveRemoved(UUID groupChatId, UUID studentId) {
         membershipFor(groupChatId, studentId).markRemoved(Instant.now());
     }
 
+    /**
+     * Records that Telegram refused an attempt to remove the student.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @param studentId StudyBuddy student identifier
+     */
     public void saveRemovalFailed(UUID groupChatId, UUID studentId) {
         membershipFor(groupChatId, studentId).markRemovalFailed(Instant.now());
     }
@@ -242,7 +372,15 @@ public class ChatStore {
         });
     }
 
-    /** Works out what to do about a join request. Changes nothing. */
+    /**
+     * Determines whether a Telegram join request should be approved, declined, or ignored without changing data.
+     *
+     * @param chatId Telegram chat identifier
+     * @param linkName invite label, or null when Telegram did not supply it
+     * @param link invite URL, or null when Telegram did not supply it
+     * @param askingUserId Telegram user asking to join
+     * @return the decision and, for a managed invite, the associated membership
+     */
     @Transactional(readOnly = true)
     public JoinOutcome decideJoin(long chatId, String linkName, String link, long askingUserId) {
         Optional<GroupChat> foundChat = chatRepository.findByBotIdAndChatId(properties.botId(), chatId);
@@ -272,7 +410,13 @@ public class ChatStore {
         return new JoinOutcome(membership.decideJoin(activeMember, linked, usedByAnother, askingUserId, Instant.now()), ref, studentId, link);
     }
 
-    /** Follows someone joining or leaving in Telegram. */
+    /**
+     * Updates a known membership when Telegram reports that its user joined or left.
+     *
+     * @param chatId Telegram chat identifier
+     * @param telegramUserId member's Telegram user identifier
+     * @param inChat whether Telegram reports the user as in the chat
+     */
     public void followChatMember(long chatId, long telegramUserId, boolean inChat) {
         chatRepository.findByBotIdAndChatId(properties.botId(), chatId)
                 .flatMap(chat -> membershipRepository.findByGroupChat_IdAndTelegramUserId(chat.getId(), telegramUserId))
@@ -288,7 +432,13 @@ public class ChatStore {
                 });
     }
 
-    /** A student who has just joined the study group starts afresh in the chat. Returns the chat if it's usable. */
+    /**
+     * Resets a newly added group member's previous chat membership and returns the chat for this bot, if any.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @param studentId newly joined student's identifier
+     * @return the linked chat for this bot, or empty when none exists
+     */
     public Optional<ChatRef> resetForNewMember(UUID groupId, UUID studentId) {
         return chatRepository.findByStudyGroup_Id(groupId)
                 .filter(chat -> chat.getBotId() == properties.botId())
@@ -299,7 +449,13 @@ public class ChatStore {
                 });
     }
 
-    /** Who to take out of this group's chat, if anyone, unless they've rejoined the study group since. */
+    /**
+     * Finds the removal details for a student no longer in the StudyBuddy group.
+     *
+     * @param groupId StudyBuddy group identifier
+     * @param studentId former member's identifier
+     * @return removal details, or empty if no removal is needed
+     */
     @Transactional(readOnly = true)
     public Optional<Removal> removalFor(UUID groupId, UUID studentId) {
         return chatRepository.findByStudyGroup_Id(groupId)
@@ -309,7 +465,12 @@ public class ChatStore {
                 .map(ChatStore::toRemoval);
     }
 
-    /** Everything needed to take a student out of every chat, read before their account is deleted. */
+    /**
+     * Reads the removal details for this bot's chats before deleting a student's account.
+     *
+     * @param studentId student whose account is being deleted
+     * @return saved memberships that may need invite revocation or removal
+     */
     @Transactional(readOnly = true)
     public List<Removal> removalsForDeletedAccount(UUID studentId) {
         return membershipRepository.findByStudent_Id(studentId).stream()
@@ -324,7 +485,12 @@ public class ChatStore {
                 membership.getTelegramUserId(), membership.getInviteLink(), membership.getState());
     }
 
-    /** Closes the chat's record and returns the invite links still to revoke. */
+    /**
+     * Marks the chat closed, resets outstanding invite states, and returns their links for revocation.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @return invite URLs that still need to be revoked through Telegram
+     */
     public List<String> closeChat(UUID groupChatId) {
         GroupChat chat = chatRepository.findById(groupChatId).orElseThrow();
         chat.markClosed();
@@ -336,7 +502,12 @@ public class ChatStore {
         return links;
     }
 
-    /** The links to revoke before unlinking a chat. */
+    /**
+     * Lists saved invite URLs that should be revoked before unlinking a chat.
+     *
+     * @param groupChatId linked-chat entity identifier
+     * @return non-null invite URLs saved for its members
+     */
     @Transactional(readOnly = true)
     public List<String> activeLinks(UUID groupChatId) {
         return membershipRepository.findByGroupChat_Id(groupChatId).stream()

@@ -27,6 +27,19 @@ public record TelegramProperties(boolean enabled, String botToken, String botUse
 
     private static final String TOKEN_FORMAT = "\\d+:[A-Za-z0-9_-]+";
 
+    /**
+     * Validates required credentials when Telegram is enabled.
+     *
+     * @param enabled whether the Telegram integration is enabled
+     * @param botToken bot token, required and validated when enabled
+     * @param botUsername bot username, required when enabled
+     * @param polling whether this instance polls for updates
+     * @param pollTimeout long-poll wait duration
+     * @param linkTokenTtl lifetime of account and group-setup links
+     * @param inviteTtl lifetime of personal group-chat invites
+     * @param reminderLead lead time for session reminders
+     * @param nudgeLead lead time for requests to answer session cards
+     */
     public TelegramProperties {
         if (enabled && (botToken == null || !botToken.matches(TOKEN_FORMAT))) {
             throw new IllegalArgumentException("TELEGRAM_BOT_TOKEN is missing or malformed.");
@@ -36,11 +49,16 @@ public record TelegramProperties(boolean enabled, String botToken, String botUse
         }
     }
 
-    /** The bot's Telegram id, the digits before the colon in its token. Only call this when enabled. */
+    /**
+     * Returns the bot's Telegram identifier, the digits before the colon in its token. Only call this when enabled.
+     *
+     * @return bot identifier parsed from the token
+     */
     public long botId() {
         return Long.parseLong(botToken.substring(0, botToken.indexOf(':')));
     }
 
+    /** Returns a safe representation that deliberately omits the bot token. */
     @Override
     public String toString() {
         return "TelegramProperties[enabled=" + enabled + ", botUsername=" + botUsername + ", polling=" + polling + "]";

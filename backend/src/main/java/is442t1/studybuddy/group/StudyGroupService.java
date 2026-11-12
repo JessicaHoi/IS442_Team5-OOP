@@ -32,6 +32,17 @@ public class StudyGroupService {
     private final GroupProperties properties;
     private final ApplicationEventPublisher events;
 
+    /**
+     * Creates the service and its persistence, mapping, course, and event collaborators.
+     *
+     * @param groupRepository repository for study groups
+     * @param leaderRepository repository for group leaders
+     * @param studentRepository repository for student accounts
+     * @param courseService service for resolving courses
+     * @param mapper mapper for group responses
+     * @param properties configured group-size limits
+     * @param events publisher for group lifecycle events
+     */
     public StudyGroupService(StudyGroupRepository groupRepository, StudyGroupLeaderRepository leaderRepository,
             StudentRepository studentRepository, CourseService courseService, StudyGroupMapper mapper,
             GroupProperties properties, ApplicationEventPublisher events) {
@@ -44,7 +55,14 @@ public class StudyGroupService {
         this.events = events;
     }
 
-    /** Open groups, optionally for one course, newest first. */
+    /**
+     * Lists open groups, optionally restricted to a course, newest first.
+     * A {@code null} or blank course code does not restrict the results.
+     *
+     * @param viewerId the caller's identifier, used to personalize each response
+     * @param courseCode optional course code filter
+     * @return the matching group summaries
+     */
     @Transactional(readOnly = true)
     public List<StudyGroupResponse> listOpenGroups(UUID viewerId, String courseCode) {
         List<StudyGroup> groups = courseCode == null || courseCode.isBlank()
@@ -53,7 +71,13 @@ public class StudyGroupService {
         return groups.stream().map(group -> mapper.toSummary(group, viewerId)).toList();
     }
 
-    /** Groups the caller leads or belongs to, in any status. Led groups come first. */
+    /**
+     * Lists groups the caller leads or belongs to, regardless of status.
+     * Groups led by the caller come first; each section is ordered by name.
+     *
+     * @param viewerId the caller's identifier
+     * @return the caller's group summaries
+     */
     @Transactional(readOnly = true)
     public List<StudyGroupResponse> listMyGroups(UUID viewerId) {
         return groupRepository.findByMemberId(viewerId).stream()
@@ -63,12 +87,29 @@ public class StudyGroupService {
                 .toList();
     }
 
+    /**
+     * Gets a group's detail representation for the caller.
+     *
+     * @param viewerId the caller's identifier
+     * @param groupId the group's identifier
+     * @return the group detail response
+     * @throws ResourceNotFoundException if the group does not exist
+     */
     @Transactional(readOnly = true)
     public StudyGroupResponse getGroup(UUID viewerId, UUID groupId) {
         return mapper.toDetail(requireGroup(groupId), viewerId);
     }
 
-    /** Creates a group led by the caller, promoting them to leader if this is their first group. */
+    /**
+     * Creates a group led by the caller, promoting them to leader if this is their first group.
+     *
+     * @param studentId the creator's identifier
+     * @param request the requested group settings
+     * @return the created group's detail response
+     * @throws ValidationException if no course code is supplied or the maximum size is outside
+     *         the configured range
+     * @throws ResourceNotFoundException if the course or student does not exist
+     */
     public StudyGroupResponse createGroup(UUID studentId, StudyGroupRequest request) {
         if (request.courseCode() == null || request.courseCode().isBlank()) {
             throw new ValidationException("Choose a course.");
@@ -80,7 +121,20 @@ public class StudyGroupService {
         return mapper.toDetail(group, studentId);
     }
 
-    /** Checks leadership before the new values, so a non-leader gets 403 whatever they send. */
+    /**
+     * Updates a group's editable settings after checking the caller's leadership.
+     *
+     * <p>The course cannot be changed. A name or description change publishes a
+     * {@link GroupRenamed} event.</p>
+     *
+     * @param studentId the caller's identifier
+     * @param groupId the group's identifier
+     * @param request the replacement group settings
+     * @return the updated group's detail response
+     * @throws ResourceNotFoundException if the group does not exist
+     * @throws PermissionDeniedException if the caller is not the group's leader
+     * @throws ValidationException if the requested maximum size is outside the configured range
+     */
     public StudyGroupResponse updateGroup(UUID studentId, UUID groupId, StudyGroupRequest request) {
         StudyGroup group = requireGroup(groupId);
         StudyGroupLeader leader = requireLeader(studentId);
@@ -97,6 +151,15 @@ public class StudyGroupService {
         return mapper.toDetail(group, studentId);
     }
 
+    /**
+     * Closes a group and publishes a {@link GroupClosed} event.
+     *
+     * @param studentId the caller's identifier
+     * @param groupId the group's identifier
+     * @return the closed group's detail response
+     * @throws ResourceNotFoundException if the group does not exist
+     * @throws PermissionDeniedException if the caller is not the group's leader
+     */
     public StudyGroupResponse closeGroup(UUID studentId, UUID groupId) {
         StudyGroup group = requireGroupForUpdate(groupId);
         requireLeader(studentId).closeGroup(group);
@@ -104,6 +167,15 @@ public class StudyGroupService {
         return mapper.toDetail(group, studentId);
     }
 
+    /**
+     * Gets leadership details for a group.
+     *
+     * @param studentId the caller's identifier
+     * @param groupId the group's identifier
+     * @return the group's current leader and eligible successors
+     * @throws ResourceNotFoundException if the group does not exist
+     * @throws PermissionDeniedException if the caller is not the group's leader
+     */
     @Transactional(readOnly = true)
     public LedGroupResponse getLeadership(UUID studentId, UUID groupId) {
         StudyGroup group = requireGroup(groupId);
@@ -118,12 +190,31 @@ public class StudyGroupService {
                 .orElseThrow(() -> new ResourceNotFoundException("Study group not found."));
     }
 
+    /**
+     * Sets the group's Telegram chat link.
+     *
+     * @param studentId the caller's identifier
+     * @param groupId the group's identifier
+     * @param url the Telegram URL to store
+     * @return the updated group's detail response
+     * @throws ResourceNotFoundException if the group does not exist
+     * @throws PermissionDeniedException if the caller is not the group's leader
+     * @throws ValidationException if the URL is not an accepted Telegram link
+     */
     public StudyGroupResponse setChatLink(UUID studentId, UUID groupId, String url) {
         StudyGroup group = requireGroupForUpdate(groupId);
         requireLeader(studentId).setChatLink(group, url);
         return mapper.toDetail(group, studentId);
     }
 
+    /**
+     * Clears the group's Telegram chat link.
+     *
+     * @param studentId the caller's identifier
+     * @param groupId the group's identifier
+     * @throws ResourceNotFoundException if the group does not exist
+     * @throws PermissionDeniedException if the caller is not the group's leader
+     */
     public void clearChatLink(UUID studentId, UUID groupId) {
         StudyGroup group = requireGroupForUpdate(groupId);
         requireLeader(studentId).clearChatLink(group);

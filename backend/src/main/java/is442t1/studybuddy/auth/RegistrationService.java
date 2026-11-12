@@ -17,6 +17,7 @@ import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentRepository;
 import is442t1.studybuddy.student.TelegramHandle;
 
+/** Registers student accounts and creates their initial sessions. */
 @Service
 @Transactional(readOnly = true)
 public class RegistrationService {
@@ -27,6 +28,15 @@ public class RegistrationService {
     private final PasswordEncoder passwordEncoder;
     private final SessionTokenService tokenService;
 
+    /**
+     * Creates the registration service.
+     *
+     * @param userRepository the account repository
+     * @param studentRepository the student repository
+     * @param courseService the course catalogue service
+     * @param passwordEncoder the password encoder
+     * @param tokenService the session token service
+     */
     public RegistrationService(UserRepository userRepository, StudentRepository studentRepository,
             CourseService courseService, PasswordEncoder passwordEncoder, SessionTokenService tokenService) {
         this.userRepository = userRepository;
@@ -36,6 +46,14 @@ public class RegistrationService {
         this.tokenService = tokenService;
     }
 
+    /**
+     * Creates a student account and signs it in.
+     *
+     * @param request the registration details
+     * @return the new session and student account details
+     * @throws BusinessRuleException if an account already uses the email address
+     * @throws ValidationException if the password or other submitted details are invalid
+     */
     @Transactional
     public LoginResponse register(RegisterRequest request) {
         if (userRepository.findByEmailIgnoreCase(request.email()).isPresent()) {

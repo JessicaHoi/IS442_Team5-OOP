@@ -14,5 +14,10 @@ import is442t1.studybuddy.model.enums.Role;
 @Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequireRole {
+    /**
+     * The role required to access the annotated controller or method.
+     *
+     * @return the required role
+     */
     Role value();
 }

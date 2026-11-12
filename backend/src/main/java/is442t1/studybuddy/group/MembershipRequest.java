@@ -23,6 +23,7 @@ import is442t1.studybuddy.student.Student;
 @Table(name = "membership_request")
 public class MembershipRequest extends BaseEntity {
 
+    /** Maximum number of characters accepted in a request message. */
     public static final int MESSAGE_MAX_LENGTH = 300;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -54,26 +55,44 @@ public class MembershipRequest extends BaseEntity {
         this.message = message;
     }
 
+    /** Gets the student who made the request.
+     * @return the requesting student
+     */
     public Student getStudent() {
         return student;
     }
 
+    /** Gets the group the student asked to join.
+     * @return the requested group
+     */
     public StudyGroup getStudyGroup() {
         return studyGroup;
     }
 
+    /** Gets the request message.
+     * @return the message, or {@code null} if none was supplied
+     */
     public String getMessage() {
         return message;
     }
 
+    /** Gets the request's decision status.
+     * @return whether the request is pending, accepted, or rejected
+     */
     public RequestStatus getStatus() {
         return status;
     }
 
+    /** Gets the request creation time.
+     * @return when the request was created
+     */
     public Instant getRequestDate() {
         return requestDate;
     }
 
+    /** Checks whether the request has not yet been answered.
+     * @return {@code true} if the request is pending
+     */
     public boolean isPending() {
         return status == RequestStatus.PENDING;
     }

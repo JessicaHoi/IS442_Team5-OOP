@@ -31,6 +31,14 @@ public class MatchingPreviewService {
     private final StudentRepository studentRepository;
     private final PreviewProperties properties;
 
+    /**
+     * Creates the preview service.
+     *
+     * @param matchingService the matching service
+     * @param configService the matching configuration service
+     * @param studentRepository the student repository
+     * @param properties the preview settings
+     */
     public MatchingPreviewService(MatchingService matchingService, MatchingConfigService configService,
             StudentRepository studentRepository, PreviewProperties properties) {
         this.matchingService = matchingService;
@@ -39,7 +47,11 @@ public class MatchingPreviewService {
         this.properties = properties;
     }
 
-    /** Students with at least one study preference, sorted by name. */
+    /**
+     * Lists students with at least one study preference.
+     *
+     * @return sample students sorted by name
+     */
     @Transactional(readOnly = true)
     public List<PreviewStudent> sampleStudents() {
         return studentRepository.findAll().stream()
@@ -52,6 +64,13 @@ public class MatchingPreviewService {
                 .toList();
     }
 
+    /**
+     * Compares saved and proposed matching rules without saving the proposed rules.
+     *
+     * @param request the sample student and proposed settings
+     * @return the two rankings
+     * @throws ResourceNotFoundException if the student does not exist
+     */
     @Transactional(readOnly = true)
     public PreviewResponse preview(PreviewRequest request) {
         MatchingRules proposedRules = configService.toRules(request.proposed());

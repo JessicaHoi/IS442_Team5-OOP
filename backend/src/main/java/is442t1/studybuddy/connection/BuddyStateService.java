@@ -16,12 +16,25 @@ public class BuddyStateService {
     private final StudyBuddyConnectionRepository connectionRepository;
     private final MatchRequestRepository matchRequestRepository;
 
+    /**
+     * Creates the relationship lookup service.
+     *
+     * @param connectionRepository the connection repository
+     * @param matchRequestRepository the match request repository
+     */
     public BuddyStateService(StudyBuddyConnectionRepository connectionRepository,
             MatchRequestRepository matchRequestRepository) {
         this.connectionRepository = connectionRepository;
         this.matchRequestRepository = matchRequestRepository;
     }
 
+    /**
+     * Finds the viewer's relationship with another student.
+     *
+     * @param viewerId the viewing student's identifier
+     * @param otherId the other student's identifier
+     * @return the active connection, pending request or no relationship
+     */
     public BuddyState stateBetween(UUID viewerId, UUID otherId) {
         if (viewerId.equals(otherId)) {
             return BuddyState.NONE;

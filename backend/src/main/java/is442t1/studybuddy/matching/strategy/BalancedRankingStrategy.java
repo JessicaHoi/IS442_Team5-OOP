@@ -14,6 +14,10 @@ import is442t1.studybuddy.model.enums.MatchingStrategy;
 @Component
 public class BalancedRankingStrategy implements RankingStrategy {
 
+    /** Creates the balanced ranking strategy. */
+    public BalancedRankingStrategy() {
+    }
+
     @Override
     public MatchingStrategy type() {
         return MatchingStrategy.BALANCED;

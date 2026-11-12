@@ -20,12 +20,22 @@ import is442t1.studybuddy.model.TimeSlot;
 @Service
 public class SchedulingService {
 
+    /** Creates the scheduling service. */
+    public SchedulingService() {
+    }
+
     private static final Duration MIN_DURATION = Duration.ofMinutes(30);
     private static final int MAX_SUGGESTIONS = 3;
     private static final int FIRST_HOUR = 7;   // heatmap starts at 07:00
     private static final int LAST_HOUR = 23;   // last cell is 22:00-23:00
 
-    /** Exact overlaps between two students, longest first. */
+    /**
+     * Finds up to three shared intervals of at least 30 minutes, longest first.
+     *
+     * @param a the first student's availability
+     * @param b the second student's availability
+     * @return the shared intervals
+     */
     public List<TimeSlot> suggestForPair(List<TimeSlot> a, List<TimeSlot> b) {
         return a.stream()
                 .flatMap(x -> b.stream().map(x::intersect))
@@ -36,7 +46,12 @@ public class SchedulingService {
                 .toList();
     }
 
-    /** How many members are free in each whole hour, Monday to Sunday. */
+    /**
+     * Counts members available for each whole hour from 07:00 to 23:00, Monday to Sunday.
+     *
+     * @param membersAvailability the availability slots for each member
+     * @return the hourly heatmap cells
+     */
     public List<HeatmapCell> heatmap(Collection<List<TimeSlot>> membersAvailability) {
         List<HeatmapCell> cells = new ArrayList<>();
         for (DayOfWeek day : DayOfWeek.values()) {
@@ -52,7 +67,12 @@ public class SchedulingService {
         return cells;
     }
 
-    /** Best windows for a group: runs of consecutive hours with the same head count (at least 2 people). */
+    /**
+     * Finds up to three runs of consecutive hours with the same head count of at least two people.
+     *
+     * @param membersAvailability the availability slots for each member
+     * @return the windows ordered by head count and duration
+     */
     public List<FreeWindow> suggestForGroup(Collection<List<TimeSlot>> membersAvailability) {
         List<HeatmapCell> cells = heatmap(membersAvailability);
         List<FreeWindow> windows = new ArrayList<>();
@@ -81,6 +101,12 @@ public class SchedulingService {
                 .toList();
     }
 
+    /**
+     * Builds half-hour availability cells from 07:00 to 23:00 for every day of the week.
+     *
+     * @param members each member and their availability slots
+     * @return the heatmap cells and available members
+     */
     public List<GroupHeatmapCell> groupHeatmap(Map<AvailableMember, List<TimeSlot>> members) {
         List<GroupHeatmapCell> cells = new ArrayList<>();
         for (DayOfWeek day : DayOfWeek.values()) {
@@ -98,6 +124,12 @@ public class SchedulingService {
         return cells;
     }
 
+    /**
+     * Finds up to three consecutive windows with the same available members.
+     *
+     * @param cells adjacent heatmap cells in weekday and time order
+     * @return windows with at least two available members, ranked by head count and duration
+     */
     public List<FreeWindow> groupSuggestions(List<GroupHeatmapCell> cells) {
         List<FreeWindow> windows = new ArrayList<>();
         for (int i = 0; i < cells.size();) {

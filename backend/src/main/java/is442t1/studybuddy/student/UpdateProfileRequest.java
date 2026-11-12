@@ -10,6 +10,17 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Details used to update a student's profile.
+ *
+ * @param name the student's name
+ * @param school the student's school
+ * @param programme the student's programme
+ * @param yearOfStudy the year of study, from 1 to 5
+ * @param contactNumber the student's phone number
+ * @param telegramHandle the optional Telegram handle
+ * @param courses the selected course codes
+ */
 public record UpdateProfileRequest(
         @NotBlank(message = "Enter your name.")
         @Size(max = 100, message = "Name must be at most 100 characters.")

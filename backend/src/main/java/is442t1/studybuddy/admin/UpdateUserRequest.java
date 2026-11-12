@@ -8,6 +8,15 @@ import jakarta.validation.constraints.Size;
 import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.Role;
 
+/**
+ * Account details supplied by an administrator.
+ *
+ * @param name the account holder's name
+ * @param email the account email
+ * @param password an optional replacement password
+ * @param role the account role
+ * @param status the account status
+ */
 public record UpdateUserRequest(
         @NotBlank(message = "Name is required.")
         @Size(max = 100, message = "Name must be at most 100 characters.") String name,
@@ -18,6 +27,15 @@ public record UpdateUserRequest(
         @NotNull(message = "Choose a role.") Role role,
         @NotNull(message = "Choose an account status.") AccountStatus status
 ) {
+    /**
+     * Creates updated account details, trimming the name and email.
+     *
+     * @param name the account holder's name
+     * @param email the account email
+     * @param password an optional replacement password
+     * @param role the account role
+     * @param status the account status
+     */
     public UpdateUserRequest {
         name = name == null ? null : name.trim();
         email = email == null ? null : email.trim();

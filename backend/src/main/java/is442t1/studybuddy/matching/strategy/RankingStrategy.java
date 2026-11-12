@@ -16,11 +16,20 @@ public interface RankingStrategy {
     Comparator<MatchResult> BY_NAME = Comparator.comparing(
             result -> result.student().name(), String.CASE_INSENSITIVE_ORDER);
 
+    /** Orders results by overall score, highest first. */
     Comparator<MatchResult> BY_SCORE = Comparator.comparingInt(MatchResult::score).reversed();
 
-    /** The strategy this class implements. */
+    /**
+     * Identifies the implemented strategy.
+     *
+     * @return the configured strategy type
+     */
     MatchingStrategy type();
 
-    /** Orders results best match first. */
+    /**
+     * Provides the ordering for results.
+     *
+     * @return a comparator that places the best match first
+     */
     Comparator<MatchResult> comparator();
 }

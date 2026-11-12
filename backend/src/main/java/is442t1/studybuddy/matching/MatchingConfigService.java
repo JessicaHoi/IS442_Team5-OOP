@@ -26,17 +26,35 @@ public class MatchingConfigService {
     private final MatchingConfigurationRepository repository;
     private final RankingStrategyResolver strategyResolver;
 
+    /**
+     * Creates the matching configuration service.
+     *
+     * @param repository the configuration repository
+     * @param strategyResolver the available strategy resolver
+     */
     public MatchingConfigService(MatchingConfigurationRepository repository,
             RankingStrategyResolver strategyResolver) {
         this.repository = repository;
         this.strategyResolver = strategyResolver;
     }
 
+    /**
+     * Gets the saved configuration, or the defaults when none is saved.
+     *
+     * @return the matching configuration
+     */
     @Transactional(readOnly = true)
     public MatchingConfigDto getConfig() {
         return toDto(current());
     }
 
+    /**
+     * Validates and saves a matching configuration.
+     *
+     * @param request the proposed configuration
+     * @return the saved configuration
+     * @throws ValidationException if the settings are invalid
+     */
     @Transactional
     public MatchingConfigDto updateConfig(MatchingConfigDto request) {
         MatchingRules rules = toRules(request);
@@ -54,6 +72,10 @@ public class MatchingConfigService {
     /**
      * Validates settings the administrator has not saved yet (e.g. for a preview)
      * and turns them into rules the matching engine can run.
+     *
+     * @param settings the proposed configuration
+     * @return the matching rules
+     * @throws ValidationException if the settings are invalid
      */
     public MatchingRules toRules(MatchingConfigDto settings) {
         if (!strategyResolver.supports(settings.strategy())) {
@@ -62,7 +84,11 @@ public class MatchingConfigService {
         return new MatchingRules(settings.strategy(), validatedWeights(settings.criteria()));
     }
 
-    /** The strategy and weights to use for a search. */
+    /**
+     * Gets the saved or default matching rules.
+     *
+     * @return the strategy and weights for a search
+     */
     @Transactional(readOnly = true)
     public MatchingRules currentRules() {
         MatchingConfiguration configuration = current();

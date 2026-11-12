@@ -16,6 +16,10 @@ import is442t1.studybuddy.matching.MatchingCriterion;
  */
 public abstract class CriterionFirstRankingStrategy implements RankingStrategy {
 
+    /** Creates a criterion-first ranking strategy. */
+    public CriterionFirstRankingStrategy() {
+    }
+
     private static final int TIERS = 4;
 
     /** The criterion this strategy ranks by first. */

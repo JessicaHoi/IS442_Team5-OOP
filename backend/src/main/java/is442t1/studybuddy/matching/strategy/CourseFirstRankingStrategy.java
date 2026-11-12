@@ -13,6 +13,10 @@ import is442t1.studybuddy.model.enums.MatchingStrategy;
 @Component
 public class CourseFirstRankingStrategy extends CriterionFirstRankingStrategy {
 
+    /** Creates the course-first strategy. */
+    public CourseFirstRankingStrategy() {
+    }
+
     @Override
     public MatchingStrategy type() {
         return MatchingStrategy.COURSE_FIRST;

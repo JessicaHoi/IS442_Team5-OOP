@@ -28,6 +28,13 @@ public class BestTimeService {
     private final StudyGroupRepository groupRepository;
     private final SchedulingService schedulingService;
 
+    /**
+     * Creates the service for connection and group meeting suggestions.
+     *
+     * @param connectionRepository the connection repository
+     * @param groupRepository the group repository
+     * @param schedulingService the availability calculation service
+     */
     public BestTimeService(StudyBuddyConnectionRepository connectionRepository,
                            StudyGroupRepository groupRepository,
                            SchedulingService schedulingService) {
@@ -37,6 +44,14 @@ public class BestTimeService {
     }
     private static final int MAX_SUGGESTIONS = 3;
 
+    /**
+     * Finds shared windows for common courses in a connection.
+     *
+     * @param connectionId the connection identifier
+     * @param callerId the requesting student's identifier
+     * @return up to three shared intervals, longest first
+     * @throws ResourceNotFoundException if the connection is missing or the caller is not a participant
+     */
     public List<TimeSlot> forConnection(UUID connectionId, UUID callerId) {
         StudyBuddyConnection connection = connectionRepository.findById(connectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Connection not found."));
@@ -60,6 +75,14 @@ public class BestTimeService {
                 .limit(MAX_SUGGESTIONS)
                 .toList();
     }
+    /**
+     * Calculates a group's availability heatmap and suggested windows.
+     *
+     * @param groupId the group identifier
+     * @param callerId the requesting student's identifier
+     * @return the heatmap and suggestions
+     * @throws ResourceNotFoundException if the group is missing or the caller is not a member
+     */
     public GroupBestTimes forGroup(UUID groupId, UUID callerId) {
         StudyGroup group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found."));

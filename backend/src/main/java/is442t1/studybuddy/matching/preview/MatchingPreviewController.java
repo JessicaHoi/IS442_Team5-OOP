@@ -21,15 +21,31 @@ public class MatchingPreviewController {
 
     private final MatchingPreviewService previewService;
 
+    /**
+     * Creates the matching preview controller.
+     *
+     * @param previewService the matching preview service
+     */
     public MatchingPreviewController(MatchingPreviewService previewService) {
         this.previewService = previewService;
     }
 
+    /**
+     * Lists students available for preview.
+     *
+     * @return the sample students
+     */
     @GetMapping("/students")
     public List<PreviewStudent> students() {
         return previewService.sampleStudents();
     }
 
+    /**
+     * Compares saved and proposed matching rules.
+     *
+     * @param request the sample student and proposed configuration
+     * @return the comparison
+     */
     @PostMapping
     public PreviewResponse preview(@Valid @RequestBody PreviewRequest request) {
         return previewService.preview(request);

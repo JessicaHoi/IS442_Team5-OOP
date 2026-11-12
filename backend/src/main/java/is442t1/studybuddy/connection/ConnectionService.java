@@ -30,6 +30,15 @@ public class ConnectionService {
     private final BuddyStateService buddyStateService;
     private final StudentProfileMapper profileMapper;
 
+    /**
+     * Creates the connection service.
+     *
+     * @param requestRepository the buddy request repository
+     * @param connectionRepository the connection repository
+     * @param studentService the student service
+     * @param buddyStateService the relationship lookup service
+     * @param profileMapper the student profile mapper
+     */
     public ConnectionService(MatchRequestRepository requestRepository,
             StudyBuddyConnectionRepository connectionRepository, StudentService studentService,
             BuddyStateService buddyStateService, StudentProfileMapper profileMapper) {
@@ -40,6 +49,15 @@ public class ConnectionService {
         this.profileMapper = profileMapper;
     }
 
+    /**
+     * Sends a buddy request between active students.
+     *
+     * @param senderId the sender's student identifier
+     * @param request the recipient and optional message
+     * @return the created request
+     * @throws ValidationException if the sender selects themselves
+     * @throws BusinessRuleException if either account is inactive or a request or connection already exists
+     */
     public ConnectionResponse sendRequest(UUID senderId, CreateMatchRequest request) {
         if (senderId.equals(request.toStudentId())) {
             throw new ValidationException("You cannot send a request to yourself.");
@@ -60,6 +78,14 @@ public class ConnectionService {
         return toRequestResponse(saved, senderId);
     }
 
+    /**
+     * Lists incoming requests, sent requests or active connections.
+     *
+     * @param viewerId the viewing student's identifier
+     * @param view one of {@code incoming}, {@code sent} or {@code active}
+     * @return the matching responses, newest first
+     * @throws ValidationException if the view is unsupported
+     */
     @Transactional(readOnly = true)
     public List<ConnectionResponse> list(UUID viewerId, String view) {
         return switch (view) {
@@ -81,6 +107,13 @@ public class ConnectionService {
         };
     }
 
+    /**
+     * Accepts a pending request and creates a connection.
+     *
+     * @param viewerId the recipient's student identifier
+     * @param requestId the request identifier
+     * @return the accepted request
+     */
     public ConnectionResponse accept(UUID viewerId, UUID requestId) {
         MatchRequest request = requireRequest(requestId);
         requireRecipient(viewerId, request);
@@ -100,6 +133,13 @@ public class ConnectionService {
         return toRequestResponse(request, viewerId);
     }
 
+    /**
+     * Declines a pending request.
+     *
+     * @param viewerId the recipient's student identifier
+     * @param requestId the request identifier
+     * @return the declined request
+     */
     public ConnectionResponse decline(UUID viewerId, UUID requestId) {
         MatchRequest request = requireRequest(requestId);
         requireRecipient(viewerId, request);
@@ -110,6 +150,12 @@ public class ConnectionService {
         return toRequestResponse(request, viewerId);
     }
 
+    /**
+     * Ends an active connection involving the viewer.
+     *
+     * @param viewerId the viewing student's identifier
+     * @param connectionId the connection identifier
+     */
     public void end(UUID viewerId, UUID connectionId) {
         StudyBuddyConnection connection = connectionRepository.findById(connectionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Connection not found."));

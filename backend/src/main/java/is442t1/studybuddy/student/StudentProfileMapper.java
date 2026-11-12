@@ -12,10 +12,27 @@ import is442t1.studybuddy.course.Course;
 @Component
 public class StudentProfileMapper {
 
+    /** Creates the profile mapper. */
+    public StudentProfileMapper() {
+    }
+
+    /**
+     * Builds the student's own profile, including email and contact information.
+     *
+     * @param student the student
+     * @return the profile response
+     */
     public StudentProfileResponse toOwnProfile(Student student) {
         return toResponse(student, student.getEmail(), true, BuddyState.NONE);
     }
 
+    /**
+     * Builds a profile for another student, exposing contact details only when connected.
+     *
+     * @param student the profile's student
+     * @param buddyState the viewer's relationship with the student
+     * @return the profile response
+     */
     public StudentProfileResponse toPublicProfile(Student student, BuddyState buddyState) {
         return toResponse(student, null, buddyState.isConnected(), buddyState);
     }

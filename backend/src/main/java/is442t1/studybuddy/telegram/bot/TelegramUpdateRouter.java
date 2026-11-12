@@ -36,6 +36,11 @@ public class TelegramUpdateRouter {
         this.sessionChat = sessionChat;
     }
 
+    /**
+     * Classifies an update and dispatches it to the relevant Telegram feature.
+     *
+     * @param update Telegram update to handle
+     */
     public void route(Update update) {
         switch (UpdateClassifier.classify(update)) {
             case BotEvent.StartCommand start when start.payload().startsWith(GROUP_SETUP_PREFIX) ->

@@ -104,7 +104,18 @@ public class StudySession extends BaseEntity {
     protected StudySession() {
     }
 
-    /** Checks leadership before the new values, so a non-leader gets 403 whatever they send. */
+    /**
+     * Creates a session for an open group, checking leadership before the submitted details.
+     *
+     * @param group the group holding the session
+     * @param callerId the requesting student's identifier
+     * @param details the session details
+     * @param now the current time
+     * @return the new session
+     * @throws PermissionDeniedException if the caller is not the leader
+     * @throws BusinessRuleException if the group is closed
+     * @throws ValidationException if the session details are invalid
+     */
     public static StudySession schedule(StudyGroup group, UUID callerId, SessionDetails details, Instant now) {
         requireLeader(group, callerId);
         if (!group.isOpen()) {
@@ -116,7 +127,17 @@ public class StudySession extends BaseEntity {
         return session;
     }
 
-    /** Says what changed. Saving without changes touches nothing, and moving the start clears answers given for the old time. */
+    /**
+     * Changes a session before it starts. Moving the start clears the existing answers.
+     *
+     * @param callerId the requesting student's identifier
+     * @param details the replacement session details
+     * @param now the current time
+     * @return what changed
+     * @throws PermissionDeniedException if the caller is not the leader
+     * @throws BusinessRuleException if the session cannot be changed
+     * @throws ValidationException if the details are invalid
+     */
     public SessionChange update(UUID callerId, SessionDetails details, Instant now) {
         requireLeader(studyGroup, callerId);
         requireChangeable(now);
@@ -140,7 +161,14 @@ public class StudySession extends BaseEntity {
         return Arrays.asList(title, startsAt, endsAt, meetingMode, location, note, meetingLink, groupVideoChat);
     }
 
-    /** Allowed for longer than changing a session, because a meeting can fall through after its start. Later than that, the record stands. */
+    /**
+     * Cancels a session up to one hour after its end.
+     *
+     * @param callerId the requesting student's identifier
+     * @param now the current time
+     * @throws PermissionDeniedException if the caller is not the leader
+     * @throws BusinessRuleException if already cancelled or too late to cancel
+     */
     public void cancel(UUID callerId, Instant now) {
         requireLeader(studyGroup, callerId);
         requireNotCancelled();
@@ -157,6 +185,16 @@ public class StudySession extends BaseEntity {
         }
     }
 
+    /**
+     * Records or replaces an active group member's response before the session starts.
+     *
+     * @param student the responding student
+     * @param response the response
+     * @param now the current time
+     * @throws PermissionDeniedException if the student is inactive or not a group member
+     * @throws BusinessRuleException if the session cannot be changed
+     * @throws ValidationException if no response is provided
+     */
     public void respond(Student student, RsvpResponse response, Instant now) {
         if (!studyGroup.hasMember(student.getId())) {
             throw new PermissionDeniedException("Only group members can respond.");
@@ -181,58 +219,129 @@ public class StudySession extends BaseEntity {
         rsvps.removeIf(rsvp -> rsvp.getStudent().hasId(studentId));
     }
 
+    /**
+     * Returns the group holding the session.
+     *
+     * @return the group holding the session
+     */
     public StudyGroup getStudyGroup() {
         return studyGroup;
     }
 
+    /**
+     * Returns the session title.
+     *
+     * @return the session title
+     */
     public String getTitle() {
         return title;
     }
 
+    /**
+     * Returns the session start time.
+     *
+     * @return the session start time
+     */
     public Instant getStartsAt() {
         return startsAt;
     }
 
+    /**
+     * Returns the session end time.
+     *
+     * @return the session end time
+     */
     public Instant getEndsAt() {
         return endsAt;
     }
 
+    /**
+     * Returns the meeting mode.
+     *
+     * @return the meeting mode
+     */
     public StudyMode getMeetingMode() {
         return meetingMode;
     }
 
+    /**
+     * Returns the meeting location, if provided.
+     *
+     * @return the meeting location, if provided
+     */
     public String getLocation() {
         return location;
     }
 
+    /**
+     * Returns the session note, if provided.
+     *
+     * @return the session note, if provided
+     */
     public String getNote() {
         return note;
     }
 
+    /**
+     * Returns the number of members who responded that they are going.
+     *
+     * @return the number of members who responded that they are going
+     */
     public long goingCount() {
         return rsvps.stream().filter(rsvp -> rsvp.getResponse() == RsvpResponse.GOING).count();
     }
 
+    /**
+     * Returns the online meeting link, if provided.
+     *
+     * @return the online meeting link, if provided
+     */
     public String getMeetingLink() {
         return meetingLink;
     }
 
+    /**
+     * Reports whether the session uses the group's video chat.
+     *
+     * @return whether the session uses the group's video chat
+     */
     public boolean isGroupVideoChat() {
         return groupVideoChat;
     }
 
+    /**
+     * Returns the session status.
+     *
+     * @return the session status
+     */
     public SessionStatus getStatus() {
         return status;
     }
 
+    /**
+     * Returns the calendar sequence number.
+     *
+     * @return the calendar sequence number
+     */
     public int getIcsSequence() {
         return icsSequence;
     }
 
+    /**
+     * Returns an unmodifiable list of responses.
+     *
+     * @return an unmodifiable list of responses
+     */
     public List<SessionRsvp> getRsvps() {
         return Collections.unmodifiableList(rsvps);
     }
 
+    /**
+     * Finds a student's response.
+     *
+     * @param studentId the student identifier
+     * @return the response, if present
+     */
     public Optional<SessionRsvp> findRsvp(UUID studentId) {
         return rsvps.stream().filter(rsvp -> rsvp.getStudent().hasId(studentId)).findFirst();
     }

@@ -23,6 +23,7 @@ import is442t1.studybuddy.model.enums.Role;
 import is442t1.studybuddy.group.LedGroupResponse;
 import is442t1.studybuddy.group.TransferLeadershipRequest;
 
+/** Administrator endpoints for account management and group leadership. */
 @RestController
 @RequestMapping("/api/admin/users")
 @RequireRole(Role.ADMIN)
@@ -30,43 +31,96 @@ public class UserAccountController {
 
     private final UserAccountService accountService;
 
+    /**
+     * Creates the controller.
+     *
+     * @param accountService the account-management service
+     */
     public UserAccountController(UserAccountService accountService) {
         this.accountService = accountService;
     }
 
+    /**
+     * Lists accounts for the administrator.
+     *
+     * @return account details and usage counts
+     */
     @GetMapping
     public List<UserAccountResponse> listAccounts() {
         return accountService.listAccounts();
     }
 
+    /**
+     * Creates an account.
+     *
+     * @param caller the signed-in administrator
+     * @param request the new account details
+     * @return the created account with HTTP 201
+     */
     @PostMapping
     public ResponseEntity<UserAccountResponse> createAccount(@CurrentUser AuthenticatedUser caller,
             @Valid @RequestBody CreateUserRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(accountService.createAccount(caller.id(), request));
     }
 
+    /**
+     * Updates an account.
+     *
+     * @param caller the signed-in administrator
+     * @param id the account identifier
+     * @param request the updated account details
+     * @return the updated account
+     */
     @PutMapping("/{id}")
     public UserAccountResponse updateAccount(@CurrentUser AuthenticatedUser caller, @PathVariable UUID id,
             @Valid @RequestBody UpdateUserRequest request) {
         return accountService.updateAccount(caller.id(), id, request);
     }
 
+    /**
+     * Deletes an account.
+     *
+     * @param caller the signed-in administrator
+     * @param id the account identifier
+     * @return an empty HTTP 204 response
+     */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteAccount(@CurrentUser AuthenticatedUser caller, @PathVariable UUID id) {
         accountService.deleteAccount(caller.id(), id);
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Lists a student's groups.
+     *
+     * @param id the account identifier
+     * @return the student's groups
+     */
     @GetMapping("/{id}/groups")
     public List<UserGroupResponse> listUserGroups(@PathVariable UUID id) {
         return accountService.listUserGroups(id);
     }
 
+    /**
+     * Lists a student's led groups.
+     *
+     * @param id the account identifier
+     * @return the groups led by the student
+     */
     @GetMapping("/{id}/led-groups")
     public List<LedGroupResponse> listLedGroups(@PathVariable UUID id) {
         return accountService.listLedGroups(id);
     }
 
+    /**
+     * Transfers leadership of one of a student's groups.
+     *
+     * @param caller the signed-in administrator
+     * @param id the current leader's account identifier
+     * @param groupId the group identifier
+     * @param request the selected new leader
+     * @return the updated leadership information
+     */
     @PutMapping("/{id}/led-groups/{groupId}/leader")
     public LedGroupResponse transferLeadership(@CurrentUser AuthenticatedUser caller, @PathVariable UUID id,
             @PathVariable UUID groupId, @Valid @RequestBody TransferLeadershipRequest request) {

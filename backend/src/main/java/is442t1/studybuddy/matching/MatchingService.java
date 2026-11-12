@@ -40,6 +40,15 @@ public class MatchingService {
     private final MatchingConfigService configService;
     private final RankingStrategyResolver strategyResolver;
 
+    /**
+     * Creates the matching service.
+     *
+     * @param studentRepository the student repository
+     * @param profileMapper the profile response mapper
+     * @param buddyStateService the relationship lookup service
+     * @param configService the matching configuration service
+     * @param strategyResolver the ranking strategy resolver
+     */
     public MatchingService(StudentRepository studentRepository, StudentProfileMapper profileMapper,
             BuddyStateService buddyStateService, MatchingConfigService configService,
             RankingStrategyResolver strategyResolver) {
@@ -50,6 +59,19 @@ public class MatchingService {
         this.strategyResolver = strategyResolver;
     }
 
+    /**
+     * Searches active students using the saved matching rules and optional filters.
+     *
+     * @param viewerId the searching student's identifier
+     * @param course optional course code
+     * @param goal optional study goal
+     * @param dayCode optional weekday code
+     * @param studyMode optional meeting mode
+     * @param groupFormat optional group format
+     * @return the ranked results
+     * @throws ResourceNotFoundException if the searching student does not exist
+     * @throws ValidationException if the day code is invalid
+     */
     @Transactional(readOnly = true)
     public List<MatchResult> search(UUID viewerId, String course, StudyGoal goal, String dayCode,
             StudyMode studyMode, GroupPreference groupFormat) {
@@ -59,6 +81,12 @@ public class MatchingService {
     /**
      * Ranks every candidate for a student under the given rules, which may be
      * settings the administrator has not saved yet. Used by the strategy preview.
+     *
+     * @param viewerId the searching student's identifier
+     * @param course optional course code
+     * @param rules the rules to use for ranking
+     * @return the ranked results
+     * @throws ResourceNotFoundException if the searching student does not exist
      */
     @Transactional(readOnly = true)
     public List<MatchResult> rankWith(UUID viewerId, String course, MatchingRules rules) {

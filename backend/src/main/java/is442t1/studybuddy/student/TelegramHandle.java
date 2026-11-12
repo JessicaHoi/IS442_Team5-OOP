@@ -13,7 +13,13 @@ public final class TelegramHandle {
     private TelegramHandle() {
     }
 
-    /** The bare username, or {@code null} if the student left the field empty. */
+    /**
+     * Normalizes a username or Telegram link to a bare username.
+     *
+     * @param raw the user-supplied handle or link
+     * @return the bare username, or {@code null} if the field is empty
+     * @throws ValidationException if the normalized username is invalid
+     */
     public static String normalize(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;

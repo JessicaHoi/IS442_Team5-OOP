@@ -88,10 +88,20 @@ public class TelegramLinkToken extends BaseEntity {
         usedAt = now;
     }
 
+    /**
+     * Returns the group being set up, or null for an account-link token.
+     *
+     * @return setup group, or null for an account-link token
+     */
     public StudyGroup getStudyGroup() {
         return studyGroup;
     }
 
+    /**
+     * Returns the first chat-selection button identifier, or null before setup is opened.
+     *
+     * @return first request identifier, or null
+     */
     public Integer getRequestId() {
         return requestId;
     }
@@ -103,6 +113,11 @@ public class TelegramLinkToken extends BaseEntity {
         this.expiresAt = expiresAt;
     }
 
+    /**
+     * Returns the student who requested this one-time link.
+     *
+     * @return requesting student
+     */
     public Student getStudent() {
         return student;
     }

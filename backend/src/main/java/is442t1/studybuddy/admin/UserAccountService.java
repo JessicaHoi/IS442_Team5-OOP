@@ -34,6 +34,7 @@ import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.Role;
 import is442t1.studybuddy.student.Student;
 
+/** Administrator operations for accounts and group leadership. */
 @Service
 @Transactional(readOnly = true)
 public class UserAccountService {
@@ -49,6 +50,20 @@ public class UserAccountService {
     private final MatchRequestRepository matchRequestRepository;
     private final ApplicationEventPublisher events;
 
+    /**
+     * Creates the account-management service.
+     *
+     * @param userRepository the account repository
+     * @param connectionRepository the connection repository
+     * @param groupRepository the group repository
+     * @param groupMapper the group response mapper
+     * @param passwordEncoder the password encoder
+     * @param tokenService the session token service
+     * @param leadershipService the group leadership service
+     * @param membershipRequestRepository the group membership request repository
+     * @param matchRequestRepository the buddy request repository
+     * @param events the domain event publisher
+     */
     public UserAccountService(UserRepository userRepository, StudyBuddyConnectionRepository connectionRepository,
             StudyGroupRepository groupRepository, StudyGroupMapper groupMapper, PasswordEncoder passwordEncoder,
             SessionTokenService tokenService,
@@ -67,6 +82,11 @@ public class UserAccountService {
         this.events = events;
     }
 
+    /**
+     * Lists accounts in email order with their usage counts.
+     *
+     * @return the account summaries
+     */
     public List<UserAccountResponse> listAccounts() {
         Map<UUID, Long> connections = countsByUser(connectionRepository.countActiveByStudent());
         Map<UUID, Long> groups = countsByUser(groupRepository.countMembershipsByStudent());
@@ -81,6 +101,13 @@ public class UserAccountService {
         return counts.stream().collect(Collectors.toMap(AccountUsageCount::getUserId, AccountUsageCount::getUsageCount));
     }
 
+    /**
+     * Creates an account as an active administrator.
+     *
+     * @param callerId the administrator's account identifier
+     * @param request the new account details
+     * @return the created account summary
+     */
     @Transactional
     public UserAccountResponse createAccount(UUID callerId, CreateUserRequest request) {
         requireActiveAdministrator(callerId);
@@ -95,6 +122,14 @@ public class UserAccountService {
         return UserAccountResponse.from(user, 0, 0, 0);
     }
 
+    /**
+     * Updates an account and revokes sessions after a password change or suspension.
+     *
+     * @param callerId the administrator's account identifier
+     * @param userId the account to update
+     * @param request the replacement account details
+     * @return the updated account summary
+     */
     @Transactional
     public UserAccountResponse updateAccount(UUID callerId, UUID userId, UpdateUserRequest request) {
         requireActiveAdministrator(callerId);
@@ -130,6 +165,13 @@ public class UserAccountService {
         }
     }
 
+    /**
+     * Lists a user's group memberships in name order.
+     *
+     * @param userId the account identifier
+     * @return the groups containing the user
+     * @throws ResourceNotFoundException if the account does not exist
+     */
     public List<UserGroupResponse> listUserGroups(UUID userId) {
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("User account not found.");
@@ -142,6 +184,13 @@ public class UserAccountService {
                 .toList();
     }
 
+    /**
+     * Lists the groups led by a user.
+     *
+     * @param userId the account identifier
+     * @return the led groups
+     * @throws ResourceNotFoundException if the account does not exist
+     */
     public List<LedGroupResponse> listLedGroups(UUID userId) {
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("User account not found.");
@@ -149,12 +198,29 @@ public class UserAccountService {
         return groupRepository.findByLeader_Id(userId).stream().map(LedGroupResponse::from).toList();
     }
 
+    /**
+     * Transfers leadership of a group as an administrator.
+     *
+     * @param callerId the administrator's account identifier
+     * @param userId the current leader's account identifier
+     * @param groupId the group identifier
+     * @param successorId the selected new leader
+     * @return the updated leadership information
+     */
     @Transactional
     public LedGroupResponse transferLeadership(UUID callerId, UUID userId, UUID groupId, UUID successorId) {
         requireActiveAdministrator(callerId);
         return leadershipService.transfer(userId, groupId, successorId, true);
     }
 
+    /**
+     * Deletes an account as an administrator.
+     *
+     * @param callerId the administrator's account identifier
+     * @param userId the account to delete
+     * @throws ValidationException if the administrator attempts to delete their own account
+     * @throws BusinessRuleException if the account still leads groups
+     */
     @Transactional
     public void deleteAccount(UUID callerId, UUID userId) {
         requireActiveAdministrator(callerId);

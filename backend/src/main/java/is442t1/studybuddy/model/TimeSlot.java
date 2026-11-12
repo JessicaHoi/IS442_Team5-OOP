@@ -12,6 +12,13 @@ import jakarta.persistence.Enumerated;
 
 import is442t1.studybuddy.common.exception.ValidationException;
 
+/**
+ * A time interval on one day of the week.
+ *
+ * @param day the weekday
+ * @param startTime the start of the interval
+ * @param endTime the end of the interval
+ */
 @Embeddable
 public record TimeSlot(
         // "day" is a reserved word in H2 db, so i used a alternative colname
@@ -26,11 +33,21 @@ public record TimeSlot(
         LocalTime endTime
 ) {
 
-    /** True when both slots are on the same day and share at least one minute. */
+    /**
+     * Checks whether two slots on the same day share time.
+     *
+     * @param other the slot to compare
+     * @return whether the intervals overlap
+     */
     public boolean overlaps(TimeSlot other) {
         return day == other.day && startTime.isBefore(other.endTime) && other.startTime.isBefore(endTime);
     }
-    /** For Timeslot indication */
+    /**
+     * Finds the common interval of two slots.
+     *
+     * @param other the slot to intersect
+     * @return the shared interval, or an empty result if they do not overlap
+     */
     public Optional<TimeSlot> intersect(TimeSlot other) {
         if (day != other.day) {
             return Optional.empty();
@@ -40,6 +57,11 @@ public record TimeSlot(
         return start.isBefore(end) ? Optional.of(new TimeSlot(day, start, end)) : Optional.empty();
     }
 
+    /**
+     * Calculates the time between the interval endpoints.
+     *
+     * @return the interval duration
+     */
     public Duration duration() {
         return Duration.between(startTime, endTime);
     }
@@ -47,6 +69,9 @@ public record TimeSlot(
     /**
      * Checks a weekly availability: at least one slot, each ending after it
      * starts, and no two slots overlapping on the same day.
+     *
+     * @param slots the availability intervals to validate
+     * @throws ValidationException if the list is empty, a slot is invalid, or slots overlap
      */
     public static void requireValidAvailability(List<TimeSlot> slots) {
         if (slots == null || slots.isEmpty()) {

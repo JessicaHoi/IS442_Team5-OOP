@@ -51,14 +51,29 @@ public class SessionRsvp extends BaseEntity {
         this.respondedAt = respondedAt;
     }
 
+    /**
+     * Returns the student who responded.
+     *
+     * @return the student who responded
+     */
     public Student getStudent() {
         return student;
     }
 
+    /**
+     * Returns the student's response.
+     *
+     * @return the student's response
+     */
     public RsvpResponse getResponse() {
         return response;
     }
 
+    /**
+     * Returns the time of the response.
+     *
+     * @return the time of the response
+     */
     public Instant getRespondedAt() {
         return respondedAt;
     }

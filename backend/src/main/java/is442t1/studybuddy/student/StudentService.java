@@ -25,6 +25,14 @@ public class StudentService {
     private final BuddyStateService buddyStateService;
     private final StudentProfileMapper profileMapper;
 
+    /**
+     * Creates the student service.
+     *
+     * @param studentRepository the student repository
+     * @param courseService the course catalogue service
+     * @param buddyStateService the relationship lookup service
+     * @param profileMapper the profile response mapper
+     */
     public StudentService(StudentRepository studentRepository, CourseService courseService,
             BuddyStateService buddyStateService, StudentProfileMapper profileMapper) {
         this.studentRepository = studentRepository;
@@ -33,11 +41,24 @@ public class StudentService {
         this.profileMapper = profileMapper;
     }
 
+    /**
+     * Gets a student's own profile.
+     *
+     * @param studentId the student identifier
+     * @return the student's profile
+     */
     @Transactional(readOnly = true)
     public StudentProfileResponse getOwnProfile(UUID studentId) {
         return profileMapper.toOwnProfile(requireStudent(studentId));
     }
 
+    /**
+     * Gets a profile using the viewer's relationship to determine contact visibility.
+     *
+     * @param viewerId the viewing student's identifier
+     * @param studentId the profile's student identifier
+     * @return the visible profile
+     */
     @Transactional(readOnly = true)
     public StudentProfileResponse getPublicProfile(UUID viewerId, UUID studentId) {
         if (viewerId.equals(studentId)) {
@@ -47,6 +68,13 @@ public class StudentService {
         return profileMapper.toPublicProfile(student, buddyStateService.stateBetween(viewerId, studentId));
     }
 
+    /**
+     * Replaces editable profile details and the selected courses.
+     *
+     * @param studentId the student identifier
+     * @param request the replacement profile details
+     * @return the updated profile
+     */
     public StudentProfileResponse updateProfile(UUID studentId, UpdateProfileRequest request) {
         Student student = requireStudent(studentId);
         student.setName(request.name().trim());
@@ -59,7 +87,14 @@ public class StudentService {
         return profileMapper.toOwnProfile(student);
     }
 
-    /** Replaces the student's study preferences with the given list (one per course). */
+    /**
+     * Replaces the student's study preferences with the given list, at most one per course.
+     *
+     * @param studentId the student identifier
+     * @param request the replacement preferences
+     * @return the updated profile
+     * @throws ValidationException if preferences contain a duplicate or untaken course
+     */
     public StudentProfileResponse updatePreferences(UUID studentId, UpdatePreferencesRequest request) {
         Student student = requireStudent(studentId);
         List<StudyPreferenceDto> preferences = request.preferences();
@@ -81,7 +116,13 @@ public class StudentService {
         return profileMapper.toOwnProfile(student);
     }
 
-    /** Loads a student, or fails with a 404. Shared with other services. */
+    /**
+     * Loads a student by identifier.
+     *
+     * @param studentId the student identifier
+     * @return the student
+     * @throws ResourceNotFoundException if the student does not exist
+     */
     @Transactional(readOnly = true)
     public Student requireStudent(UUID studentId) {
         return studentRepository.findById(studentId)

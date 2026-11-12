@@ -19,15 +19,31 @@ public class MatchingConfigController {
 
     private final MatchingConfigService configService;
 
+    /**
+     * Creates the matching configuration controller.
+     *
+     * @param configService the matching configuration service
+     */
     public MatchingConfigController(MatchingConfigService configService) {
         this.configService = configService;
     }
 
+    /**
+     * Gets the current matching configuration.
+     *
+     * @return the configuration
+     */
     @GetMapping
     public MatchingConfigDto get() {
         return configService.getConfig();
     }
 
+    /**
+     * Replaces the matching configuration.
+     *
+     * @param request the proposed configuration
+     * @return the saved configuration
+     */
     @PutMapping
     public MatchingConfigDto update(@Valid @RequestBody MatchingConfigDto request) {
         return configService.updateConfig(request);

@@ -68,26 +68,56 @@ public class TelegramAccount extends BaseEntity {
         this.linkedAt = now;
     }
 
+    /**
+     * Returns the StudyBuddy student connected to this Telegram account.
+     *
+     * @return connected student
+     */
     public Student getStudent() {
         return student;
     }
 
+    /**
+     * Returns the connected Telegram user identifier.
+     *
+     * @return Telegram user identifier
+     */
     public long getTelegramUserId() {
         return telegramUserId;
     }
 
+    /**
+     * Returns the Telegram username, or null if the account has none.
+     *
+     * @return username, or null
+     */
     public String getUsername() {
         return username;
     }
 
+    /**
+     * Returns the Telegram first name recorded at linking.
+     *
+     * @return recorded first name
+     */
     public String getFirstName() {
         return firstName;
     }
 
+    /**
+     * Returns whether the user has opened the bot and can receive its private messages.
+     *
+     * @return true if the bot may message this account
+     */
     public boolean canMessage() {
         return canMessage;
     }
 
+    /**
+     * Returns when this Telegram account was most recently linked.
+     *
+     * @return most recent link time
+     */
     public Instant getLinkedAt() {
         return linkedAt;
     }

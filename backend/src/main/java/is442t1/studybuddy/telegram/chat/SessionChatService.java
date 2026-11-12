@@ -82,7 +82,11 @@ public class SessionChatService {
         store.upcomingSessions(groupId, Instant.now()).forEach(refresher::markDirty);
     }
 
-    /** Everything that happens because time has passed. */
+    /**
+     * Marks due cards for refresh and sends any reminders or nudges due at the supplied time.
+     *
+     * @param now current time used for due-time checks
+     */
     public void sweep(Instant now) {
         store.cardsToRefresh(now).forEach(refresher::markDirty);
         sendDueReminders(now);
@@ -93,7 +97,13 @@ public class SessionChatService {
         return chatStore.findByGroup(session.groupId()).filter(chat -> chat.status() == GroupChatStatus.ACTIVE);
     }
 
-    /** Every press gets an answer, even after an unexpected error, or the button keeps spinning. */
+    /**
+     * Handles a callback button press and always attempts to stop Telegram's loading indicator.
+     *
+     * @param callbackQueryId Telegram callback-query identifier
+     * @param telegramUserId user who pressed the button
+     * @param data callback data attached to the button
+     */
     public void buttonPressed(String callbackQueryId, long telegramUserId, String data) {
         try {
             answerPress(callbackQueryId, telegramUserId, data);
@@ -131,6 +141,8 @@ public class SessionChatService {
     /**
      * Posts every reminder now due. Each is marked as sent first, so a crash can't send it twice, and unmarked if
      * Telegram refuses, so the next run tries again. One failure doesn't stop the rest.
+     *
+     * @param now current time used to select due reminders
      */
     public void sendDueReminders(Instant now) {
         for (UUID sessionId : store.dueReminders(now)) {
@@ -158,6 +170,8 @@ public class SessionChatService {
     /**
      * Asks each chat now due for its missing answers, once per session, the same way as reminders: marked first, unmarked
      * if Telegram refuses. A session where nobody can be tagged still counts, because its leader may need to hear about it.
+     *
+     * @param now current time used to select due nudges
      */
     public void sendDueNudges(Instant now) {
         for (UUID sessionId : store.dueNudges(now)) {
@@ -202,6 +216,9 @@ public class SessionChatService {
     /**
      * Someone started a call in a chat. If a video chat session is due, tags the others going. Telegram gives bots no
      * way to start a call or invite anyone to one, so this is as close as StudyBuddy can get.
+     *
+     * @param chatId Telegram chat where the video chat started
+     * @param startedBy Telegram user who started it, or null when Telegram did not identify them
      */
     public void videoChatStarted(long chatId, Long startedBy) {
         chatStore.findByChat(chatId).filter(chat -> chat.status() == GroupChatStatus.ACTIVE).ifPresent(chat ->

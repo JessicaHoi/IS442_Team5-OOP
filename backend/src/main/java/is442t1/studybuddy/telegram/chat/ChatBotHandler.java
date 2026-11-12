@@ -70,7 +70,13 @@ public class ChatBotHandler {
         this.properties = properties;
     }
 
-    /** A leader opened their setup link: show the buttons, which they can do as often as they need. */
+    /**
+     * Shows chat-selection buttons after a leader opens a valid setup link.
+     *
+     * @param privateChatId Telegram private-chat identifier for the leader
+     * @param telegramUserId leader's Telegram user identifier
+     * @param token setup token from the Telegram deep link
+     */
     public void openSetup(long privateChatId, long telegramUserId, String token) {
         Optional<Integer> requestId = linkService.openGroupSetup(token, telegramUserId);
         if (requestId.isEmpty()) {
@@ -89,7 +95,15 @@ public class ChatBotHandler {
                 List.of(new ReplyMarkup.ChatRequestButton("Use an existing group", existing))), true, true);
     }
 
-    /** The leader picked a chat. Only the person who opened the link, answering its own buttons, gets this far. */
+    /**
+     * Processes the chat selected by the user who opened the setup link.
+     *
+     * @param privateChatId leader's Telegram private-chat identifier
+     * @param telegramUserId selecting leader's Telegram user identifier
+     * @param firstName leader's Telegram first name
+     * @param requestId identifier from the chat-selection button
+     * @param chatId selected Telegram chat identifier
+     */
     public void chatChosen(long privateChatId, long telegramUserId, String firstName, int requestId, long chatId) {
         Optional<ChosenChat> read = readChosenChat(chatId, telegramUserId);
         if (read.isEmpty()) {
@@ -151,7 +165,11 @@ public class ChatBotHandler {
                 ChatRights.of(client.getChatMember(chatId, properties.botId())));
     }
 
-    /** Someone used an invite link. */
+    /**
+     * Approves, declines, or ignores a Telegram join request according to the linked invite.
+     *
+     * @param request Telegram join request and the invite link used
+     */
     public void joinRequested(Update.ChatJoinRequest request) {
         long chatId = request.chat().id();
         long userId = request.from().id();
@@ -193,7 +211,12 @@ public class ChatBotHandler {
         }
     }
 
-    /** The bot itself was added, promoted or removed. */
+    /**
+     * Updates the saved chat state when Telegram reports a change to the bot's membership.
+     *
+     * @param chatId affected Telegram chat identifier
+     * @param now bot's current member status and rights
+     */
     public void botChanged(long chatId, ChatMember now) {
         if ("left".equals(now.status()) || "kicked".equals(now.status())) {
             store.markDetached(chatId);
@@ -202,10 +225,23 @@ public class ChatBotHandler {
         store.updateRights(chatId, ChatRights.of(now)).ifPresent(chatService::finishSetup);
     }
 
+    /**
+     * Follows a known member joining or leaving a managed Telegram chat.
+     *
+     * @param chatId affected Telegram chat identifier
+     * @param telegramUserId member's Telegram user identifier
+     * @param inChat whether Telegram reports the member as present
+     */
     public void memberChanged(long chatId, long telegramUserId, boolean inChat) {
         store.followChatMember(chatId, telegramUserId, inChat);
     }
 
+    /**
+     * Saves Telegram's replacement identifier after a basic group is upgraded.
+     *
+     * @param oldChatId previous Telegram chat identifier
+     * @param newChatId replacement Telegram chat identifier
+     */
     public void chatMigrated(long oldChatId, long newChatId) {
         store.migrate(oldChatId, newChatId);
     }
