@@ -4,6 +4,9 @@
 // The frontend and backend are separate during development. For production, the
 // Vue build is packaged as static assets in the Spring Boot application.
 // The backend uses either local H2 or Supabase PostgreSQL, not both at once.
+// This model shows backend-enabled mode. With VITE_USE_MOCK=true, the Axios
+// adapter answers requests inside the browser without the Java backend or database.
+// Local development uses HTTP. HTTPS requires deployment infrastructure.
 
 workspace "StudyBuddy" "Architecture of the Study Buddy Matcher System." {
     model {
@@ -27,7 +30,7 @@ workspace "StudyBuddy" "Architecture of the Study Buddy Matcher System." {
                 telegramIntegration = component "Telegram Integration" "Link Telegram accounts and coordinate group chats, session cards, reminders, and bot updates when enabled." "Telegram Bot API client"
             }
 
-            localDatabase = container "Local Database" "Persistent application data when running with the local profile." "H2, file-backed relational database" {
+            localDatabase = container "Local Database" "Persistent application data in the default local configuration." "H2, file-backed relational database" {
                 tags "Database"
             }
         }
@@ -40,15 +43,15 @@ workspace "StudyBuddy" "Architecture of the Study Buddy Matcher System." {
             tags "External"
         }
 
-        student -> webApp "Uses the StudyBuddy interface" "HTTPS"
-        administrator -> webApp "Uses account and matching administration features" "HTTPS"
-        webApp -> api "Calls authenticated and public endpoints" "JSON over HTTPS (/api)"
-        api -> localDatabase "Reads and writes application data (local profile only)" "JPA/JDBC"
+        student -> webApp "Uses the StudyBuddy interface" "HTTP(S)"
+        administrator -> webApp "Uses account and matching administration features" "HTTP(S)"
+        webApp -> api "Calls authenticated and public endpoints" "JSON over HTTP(S) (/api)"
+        api -> localDatabase "Reads and writes application data (default local configuration)" "JPA/JDBC"
         api -> supabase "Reads and writes application data (Supabase profile only)" "JDBC over PostgreSQL"
         api -> telegram "Uses the Bot API when the optional integration is enabled" "HTTPS"
 
-        webApp -> restControllers "Calls REST endpoints" "JSON over HTTPS"
-        restControllers -> identity "Authenticates requests and resolves the current user"
+        webApp -> restControllers "Calls REST endpoints" "JSON over HTTP(S)"
+        restControllers -> identity "Uses current-user resolution; the request interceptor authenticates before dispatch"
         restControllers -> studentCourses "Delegates profile and course requests"
         restControllers -> matchingConnections "Delegates matching and connection requests"
         restControllers -> groupsSessions "Delegates group and study-session requests"
@@ -62,9 +65,9 @@ workspace "StudyBuddy" "Architecture of the Study Buddy Matcher System." {
         administration -> repositories "Reads and writes accounts and matching configuration"
         groupsSessions -> telegramIntegration "Coordinates group chat and session messaging when enabled"
         telegramIntegration -> repositories "Reads and updates Telegram links and chat state"
-        repositories -> localDatabase "Persists application data (local profile only)" "JPA/JDBC"
+        repositories -> localDatabase "Persists application data (default local configuration)" "JPA/JDBC"
         repositories -> supabase "Persists application data (Supabase profile only)" "JPA/JDBC"
-        telegramIntegration -> telegram "Calls the Bot API and receives bot updates" "HTTPS"
+        telegramIntegration -> telegram "Calls the Bot API and polls for bot updates" "HTTPS"
     }
 
     views {

@@ -10,11 +10,11 @@ There are three ways to run the app:
 
 | | Data comes from | Needs the backend? | Use it for |
 |---|---|---|---|
-| [A. Mock data](#option-a-mock-data-frontend-only) | Built-in mock API in the browser | No | UI work, and every page works |
+| [A. Mock data](#option-a-mock-data-frontend-only) | Built-in mock API in the browser | No | UI work with simulated API data |
 | [B. Supabase](#option-b-supabase-database) | The team's shared Supabase database | Yes | Testing against real, shared data |
 | [C. Local database](#option-c-local-database-h2) | An H2 file on your machine | Yes | Backend work without touching shared data |
 
-All three load the same demo accounts (see [Demo accounts](#demo-accounts)). The backend supports registration and sign-in, profiles and preferences, study-buddy matching and connections, study groups, scheduling and study sessions, account administration, and optional Telegram integration.
+All three share demo catalogue and student profile data, with [three account-status differences](backend/supabase/README.md#demo-account-statuses) (see [Demo accounts](#demo-accounts)). The backend supports registration and sign-in, profiles and preferences, study-buddy matching and connections, study groups, scheduling and study sessions, account administration, and optional Telegram integration.
 
 New students can create an account and complete their profile with their school, programme, year, contact number and courses; they are signed in immediately. Administrators continue to create administrator accounts.
 
@@ -40,7 +40,7 @@ npm install        # first time only
 npm run dev        # http://localhost:5173
 ```
 
-If you made a `frontend/.env.development.local` for option B or C, delete it (or set `VITE_USE_MOCK=true` in it) and restart `npm run dev`.
+Create or update `frontend/.env.development.local` with `VITE_USE_MOCK=true` before starting the dev server. Restart `npm run dev` after changing this flag.
 
 ### Option B: Supabase database
 
@@ -142,7 +142,7 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 
 | Variable | Purpose | Default |
 |---|---|---|
-| `VITE_USE_MOCK` | `true` answers `/api/*` from the in-memory mock, `false` calls the real backend | `true` in dev, `false` in production |
+| `VITE_USE_MOCK` | `true` answers `/api/*` from the in-memory mock, `false` calls the real backend | `false` in development and production |
 | `VITE_API_BASE_URL` | Base path of the API | `/api` |
 | `VITE_APP_NAME` | Name shown in the navbar and page titles | `StudyBuddy` |
 | `BACKEND_URL` | Where `vite dev` proxies `/api` when the mock is off | `http://localhost:9090` |
@@ -151,7 +151,7 @@ Nothing environment-specific is hard-coded. Settings live in `.env.development`,
 | `APP_TIME_ZONE` | The zone for times written out in Telegram messages. | `Asia/Singapore` |
 | `TELEGRAM_ENABLED`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `TELEGRAM_POLLING`, `TELEGRAM_REMINDER_LEAD`, `TELEGRAM_NUDGE_LEAD` | Backend settings for the optional bot. See [Telegram (optional)](#telegram-optional). | off |
 
-To use the real backend during development, put `VITE_USE_MOCK=false` in `frontend/.env.development.local` and start the Spring Boot app on port 9090 (see [Quick start](#quick-start)).
+Development uses the real backend by default. Start the Spring Boot app on port 9090 (see [Quick start](#quick-start)), or set `VITE_USE_MOCK=true` in `frontend/.env.development.local` to use the browser mock.
 
 ## Telegram (optional)
 
@@ -322,7 +322,7 @@ The API endpoints below are all under `/api`. The mock in `frontend/src/api/mock
 | | `GET /connections?view=incoming\|sent\|active` | Lists pending requests or active connections. |
 | | `POST /connections/{id}/accept` and `/decline` | Recipient only. Accepting creates an active connection and reveals contact details to both students. |
 | | `DELETE /connections/{id}` | Either student can end an active connection. `204`; contact details are hidden again. |
-| | `GET /connections/{id}/best-times` | Either participant. Uses the active connection ID, not a request ID. Returns up to three distinct shared slots of at least 30 minutes across courses where both have preferences, longest first. `404` if missing or the caller is not a participant. |
+| | `GET /connections/{id}/best-times` | Backend only; no current Vue action or mock route. Either participant supplies a connection ID, not a request ID. Returns up to three distinct shared slots of at least 30 minutes across courses where both have preferences, longest first. `404` if missing or the caller is not a participant. Connection status is not checked. |
 | Groups | `GET /groups?course=` | Open groups only. |
 | | `GET /groups/mine` | Groups the caller leads or belongs to, any status. |
 | | `POST /groups` | Caller becomes leader and first member. `201`. |
