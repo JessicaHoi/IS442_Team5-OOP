@@ -29,10 +29,10 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: mvn test
+        run: sh ./mvnw test
 
       - name: Build
-        run: mvn package -DskipTests
+        run: sh ./mvnw package -DskipTests
 
   frontend:
     name: Frontend CI
