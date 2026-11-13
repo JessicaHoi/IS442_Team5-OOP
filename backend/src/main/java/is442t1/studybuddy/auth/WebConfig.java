@@ -7,7 +7,10 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/** Puts the API behind the token check, except the login endpoint. */
+/**
+ * Requires bearer tokens for API requests except login, student registration,
+ * and the public course catalogue used during signup.
+ */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 

@@ -17,6 +17,10 @@ import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.enums.RequestStatus;
 import is442t1.studybuddy.student.Student;
 
+/**
+ * Persisted invitation from one student to another. A pending request can be accepted or rejected;
+ *     acceptance creates a separate StudyBuddyConnection.
+ */
 @Entity
 @Table(name = "match_request")
 public class MatchRequest extends BaseEntity {

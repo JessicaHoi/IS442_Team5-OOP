@@ -5,11 +5,11 @@ import { useAuthStore } from '../stores/auth';
 import { useLookupsStore } from '../stores/lookups';
 import { SCHOOLS, YEARS_OF_STUDY } from '../utils/constants';
 import { INVALID_HANDLE_MESSAGE, normalizeTelegramHandle } from '../utils/telegram';
+import { courseInputError, passwordError, PHONE_PATTERN } from '../utils/validation';
 import FormField from '../components/ui/FormField.vue';
 import ChipSelect from '../components/ui/ChipSelect.vue';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_PATTERN = /^\+?[\d\s-]{8,15}$/;
 
 const auth = useAuthStore();
 const lookups = useLookupsStore();
@@ -59,14 +59,8 @@ function addCourse() {
 	newCourseError.value = '';
 	const code = newCourseCode.value.trim().toUpperCase();
 	const name = newCourseName.value.trim();
-	if (!/^[A-Z0-9]{1,20}$/.test(code)) {
-		newCourseError.value = 'Enter a course code using up to 20 letters or numbers.';
-		return;
-	}
-	if (!name || name.length > 255) {
-		newCourseError.value = 'Enter a course name of at most 255 characters.';
-		return;
-	}
+	newCourseError.value = courseInputError(code, name) ?? '';
+	if (newCourseError.value) return;
 	if ([...lookups.courses, ...newCourses.value].some((course) => course.code === code)) {
 		newCourseError.value = 'That course code is already listed. Select it above.';
 		return;
@@ -81,8 +75,8 @@ function validate() {
 	const found = {};
 	if (!form.name.trim() || form.name.trim().length > 100) found.name = 'Enter a name of at most 100 characters.';
 	if (!EMAIL_PATTERN.test(form.email.trim()) || form.email.trim().length > 255) found.email = 'Enter a valid email address.';
-	if (!form.password.trim() || form.password.length < 6) found.password = 'Use at least 6 characters.';
-	else if (new TextEncoder().encode(form.password).length > 72) found.password = 'Password is too long. Use fewer characters.';
+	const invalidPassword = passwordError(form.password);
+	if (invalidPassword) found.password = invalidPassword;
 	if (form.confirmPassword !== form.password) found.confirmPassword = 'Passwords do not match.';
 	if (!form.school) found.school = 'Choose your school.';
 	if (!form.programme.trim() || form.programme.trim().length > 100) found.programme = 'Enter a programme of at most 100 characters.';

@@ -1,6 +1,5 @@
 package is442t1.studybuddy.admin;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -14,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import is442t1.studybuddy.auth.PasswordPolicy;
 import is442t1.studybuddy.auth.SessionTokenService;
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.PermissionDeniedException;
@@ -34,6 +34,10 @@ import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.Role;
 import is442t1.studybuddy.student.Student;
 
+/**
+ * Coordinates administrator account management, usage counts and deletion cleanup. Prevents
+ *     self-suspension, self-deletion and deletion while an account leads a group.
+ */
 @Service
 @Transactional(readOnly = true)
 public class UserAccountService {
@@ -85,7 +89,7 @@ public class UserAccountService {
     public UserAccountResponse createAccount(UUID callerId, CreateUserRequest request) {
         requireActiveAdministrator(callerId);
         requireAvailableEmail(request.email(), null);
-        validatePassword(request.password());
+        PasswordPolicy.validate(request.password());
         User user = request.role() == Role.STUDENT ? new Student() : new SystemAdministrator();
         setName(user, request.name());
         user.setEmail(request.email());
@@ -108,7 +112,7 @@ public class UserAccountService {
         requireAvailableEmail(request.email(), userId);
         boolean changePassword = request.password() != null && !request.password().isEmpty();
         if (changePassword) {
-            validatePassword(request.password());
+            PasswordPolicy.validate(request.password());
             user.setPassword(passwordEncoder.encode(request.password()));
         }
         setName(user, request.name());
@@ -191,15 +195,6 @@ public class UserAccountService {
                 .ifPresent(user -> {
                     throw new BusinessRuleException("Another account already uses this email address.");
                 });
-    }
-
-    private static void validatePassword(String password) {
-        if (password == null || password.isBlank() || password.length() < 6) {
-            throw new ValidationException("Password must be at least 6 characters and must not be blank.");
-        }
-        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new ValidationException("Password is too long. Use fewer characters.");
-        }
     }
 
     private static void setName(User user, String name) {

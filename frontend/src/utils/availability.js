@@ -8,11 +8,6 @@ export function toMinutes(time) {
 	return hours * 60 + minutes;
 }
 
-/** Length of one slot in minutes. */
-export function slotMinutes(slot) {
-	return toMinutes(slot.end) - toMinutes(slot.start);
-}
-
 /** Sort slots by day of week, then by start time. Returns a new array. */
 export function sortSlots(slots) {
 	return [...slots].sort(
@@ -32,11 +27,6 @@ export function overlapMinutes(slotsA, slotsB) {
 		}
 	}
 	return total;
-}
-
-/** Sum of all slot lengths, in minutes. */
-export function totalMinutes(slots) {
-	return slots.reduce((sum, slot) => sum + Math.max(0, slotMinutes(slot)), 0);
 }
 
 /**

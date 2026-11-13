@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import is442t1.studybuddy.model.UserRepository;
 import is442t1.studybuddy.model.enums.AccountStatus;
@@ -37,6 +38,20 @@ class SessionTokenServiceTest {
         tokenService = new SessionTokenService(new AuthProperties(Duration.ofMinutes(1)), clock, userRepository);
         account = account(UUID.randomUUID(), "password-hash");
         when(userRepository.findById(account.getId())).thenReturn(Optional.of(account));
+    }
+
+    @Test
+    void issuingRemovesAbandonedExpiredTokensAndKeepsUnexpiredOnes() {
+        String abandoned = tokenService.issue(account);
+        when(clock.instant()).thenReturn(now.plusSeconds(30));
+        String live = tokenService.issue(account);
+        when(clock.instant()).thenReturn(now.plusSeconds(60));
+        String fresh = tokenService.issue(account);
+        assertThat((java.util.Map<?, ?>) ReflectionTestUtils.getField(tokenService, "sessions"))
+                .hasSize(2);
+        assertThat(tokenService.resolve(abandoned)).isEmpty();
+        assertThat(tokenService.resolve(live)).isPresent();
+        assertThat(tokenService.resolve(fresh)).isPresent();
     }
 
     @Test

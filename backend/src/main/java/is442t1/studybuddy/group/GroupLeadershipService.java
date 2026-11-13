@@ -15,6 +15,11 @@ import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.UserRepository;
 import is442t1.studybuddy.student.Student;
 
+/**
+ * Transfers leadership to another active member, promoting the successor and demoting a former
+ *     leader who has no groups. Administrators may transfer leadership from suspended leaders;
+ *     closed groups can also be transferred.
+ */
 @Service
 @Transactional
 public class GroupLeadershipService {

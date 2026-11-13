@@ -11,6 +11,10 @@ import org.springframework.stereotype.Repository;
 
 import is442t1.studybuddy.model.AccountUsageCount;
 
+/**
+ * Persistence and participant queries for buddy connections, including active connections used for
+ *     relationship and privacy decisions.
+ */
 @Repository
 public interface StudyBuddyConnectionRepository extends JpaRepository<StudyBuddyConnection, UUID> {
 

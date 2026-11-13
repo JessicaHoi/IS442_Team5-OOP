@@ -15,6 +15,10 @@ import is442t1.studybuddy.model.enums.StudyGoal;
 import is442t1.studybuddy.model.enums.StudyMode;
 import is442t1.studybuddy.model.enums.Role;
 
+/**
+ * Student-only matching searches with optional course, goal, day, meeting-mode and group-format
+ *     filters.
+ */
 @RestController
 @RequestMapping("/api/matches")
 @RequireRole(Role.STUDENT)
@@ -26,6 +30,21 @@ public class MatchController {
         this.matchingService = matchingService;
     }
 
+    /**
+     * Ranks candidate students: {@code GET /api/matches}, student only.
+     * Optional filters are course, goal, day (MON through SUN), studyMode and groupFormat.
+     * Returns HTTP 200 ordered by the saved ranking strategy; inactive students and the caller are
+     *     excluded.
+     * Contact visibility follows accepted connections. Invalid filter values are 400.
+     *
+     * @param caller authenticated caller injected from the bearer token
+     * @param course optional course-code filter
+     * @param goal optional study-goal filter
+     * @param day optional three-letter day filter
+     * @param studyMode optional meeting-mode filter
+     * @param groupFormat optional group-format filter
+     * @return response described above, with the documented HTTP status and payload
+     */
     @GetMapping
     public List<MatchResult> search(
             @CurrentUser AuthenticatedUser caller,

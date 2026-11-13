@@ -2,7 +2,9 @@ package is442t1.studybuddy.matching;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -25,6 +27,57 @@ class MatchingConfigApiTest extends ApiTestSupport {
     @AfterEach
     void restoreDefaults() {
         configurationRepository.deleteAll();
+    }
+
+    @Test
+    void saveAndPreviewRejectMalformedSettingsWithoutChangingSavedConfiguration() throws Exception {
+        String adminToken = login(createAdministrator());
+        String studentId = idOf(createStudent("Strict Config", COURSE)).toString();
+        String valid = config("BALANCED", true, true);
+        String saved = mockMvc.perform(as(adminToken, get("/api/admin/matching-config")))
+                .andReturn().getResponse().getContentAsString();
+        String[] invalid = {
+                valid.replace("\"enabled\":true", "\"enabled\":\"false\""),
+                valid.replace("\"enabled\":true", "\"enabled\":null"),
+                valid.replace("\"enabled\":true", "\"enabled\":1"),
+                valid.replace("\"enabled\":true,", ""),
+                valid.replace("\"weight\":30", "\"weight\":\"30\""),
+                valid.replace("\"weight\":30", "\"weight\":1.5"),
+                valid.replace("\"weight\":30", "\"weight\":null"),
+                valid.replace("\"weight\":30", "\"weight\":true"),
+                valid.replace(",\"weight\":30", ""),
+                valid.replace("\"weight\":30", "\"weight\":-1"),
+                valid.replace("\"weight\":30", "\"weight\":101"),
+                valid.replace("\"weight\":30", "\"weight\":2147483648"),
+                valid.replace("\"key\":\"course\"", "\"key\":\"unknown\""),
+                valid.replace("\"key\":\"groupSize\"", "\"key\":\"course\""),
+                valid.replace("{\"key\":\"course\",\"enabled\":true,\"weight\":30}", "null"),
+                "{\"strategy\":\"BALANCED\",\"criteria\":null}",
+                "{\"strategy\":\"BALANCED\",\"criteria\":[]}"
+        };
+        for (String settings : invalid) {
+            mockMvc.perform(as(adminToken, put("/api/admin/matching-config")).content(settings))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(as(adminToken, post("/api/admin/matching-config/preview"))
+                            .content("{\"studentId\":\"" + studentId + "\",\"proposed\":" + settings + "}"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(as(adminToken, get("/api/admin/matching-config")))
+                    .andExpect(content().json(saved));
+        }
+    }
+
+    @Test
+    void acceptsWholeNumberJsonWeightsInSaveAndPreview() throws Exception {
+        String adminToken = login(createAdministrator());
+        String studentId = idOf(createStudent("Whole Number Config", COURSE)).toString();
+        for (String literal : new String[] { "0", "100", "30.0", "3e1" }) {
+            String settings = config("BALANCED", true, true).replace("\"weight\":30", "\"weight\":" + literal);
+            mockMvc.perform(as(adminToken, put("/api/admin/matching-config")).content(settings))
+                    .andExpect(status().isOk());
+            mockMvc.perform(as(adminToken, post("/api/admin/matching-config/preview"))
+                            .content("{\"studentId\":\"" + studentId + "\",\"proposed\":" + settings + "}"))
+                    .andExpect(status().isOk());
+        }
     }
 
     @Test

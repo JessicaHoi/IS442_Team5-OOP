@@ -1,4 +1,5 @@
 import { createSeedData } from './seed';
+import { purgeExpiredSessions } from './sessions';
 
 // Bump the version whenever the stored shape changes, so old browser data is not reused.
 const STORAGE_KEY = 'studybuddy-mock-db-v3';
@@ -21,6 +22,7 @@ export function getDb() {
 
 /** Persist changes so a page refresh does not wipe a live demo. */
 export function saveDb() {
+	purgeExpiredSessions(getDb());
 	try {
 		globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(getDb()));
 	} catch {

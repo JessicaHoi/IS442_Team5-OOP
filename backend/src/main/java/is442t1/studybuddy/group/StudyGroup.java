@@ -39,9 +39,10 @@ import is442t1.studybuddy.model.enums.StudyMode;
 import is442t1.studybuddy.student.Student;
 
 /**
- * A study group for one course. The leader is always a member. Changes that
- * only the leader may make are package-private and reached through
- * {@link StudyGroupLeader}, which checks leadership first.
+ * A study group for one course. The leader is always a member. Routine leader
+ * operations are package-private and reached through {@link StudyGroupLeader}.
+ * Leadership transfers are authorised by {@link GroupLeadershipService}, which
+ * also supports administrator transfers, before changing this entity.
  */
 @Entity
 @Table(name = "study_group")
@@ -236,11 +237,14 @@ public class StudyGroup extends BaseEntity {
         return request;
     }
 
-    /** A member leaves on their own. The leader has to hand the group over or close it first. */
+    /**
+     * Removes a member from an open group. A leader must transfer leadership
+     * before leaving. Closing a group preserves its membership and prevents leaving.
+     */
     public void leave(Student student) {
         requireOpen();
         if (isLedBy(student.getId())) {
-            throw new BusinessRuleException("The group leader cannot leave. Transfer leadership or close the group first.");
+            throw new BusinessRuleException("The group leader must transfer leadership before leaving.");
         }
         if (!dropMember(student)) {
             throw new BusinessRuleException("You are not a member of this group.");

@@ -12,6 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import is442t1.studybuddy.common.exception.BusinessRuleException;
 import is442t1.studybuddy.common.exception.ValidationException;
 
+/**
+ * Lists the catalogue in code order, creates new courses and validates selected course codes.
+ *     Unknown selected courses are validation errors rather than missing-resource errors.
+ */
 @Service
 @Transactional(readOnly = true)
 public class CourseService {

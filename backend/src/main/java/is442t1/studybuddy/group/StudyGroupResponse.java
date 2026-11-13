@@ -39,9 +39,15 @@ public record StudyGroupResponse(
         List<Member> members
 ) {
 
+    /**
+     * Public ID and display name of the group leader.
+     */
     public record Leader(UUID id, String name) {
     }
 
+    /**
+     * Member identity and programme details, with an explicit flag identifying the leader.
+     */
     public record Member(UUID id, String name, String programme, Integer yearOfStudy, boolean isLeader) {
     }
 

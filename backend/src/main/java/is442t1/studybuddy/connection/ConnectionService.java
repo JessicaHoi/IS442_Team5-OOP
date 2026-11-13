@@ -16,7 +16,6 @@ import is442t1.studybuddy.model.enums.ConnectionStatus;
 import is442t1.studybuddy.model.enums.RequestStatus;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentProfileMapper;
-import is442t1.studybuddy.student.StudentProfileResponse;
 import is442t1.studybuddy.student.StudentService;
 
 /** Creates buddy requests, responds to them, and manages accepted connections. */

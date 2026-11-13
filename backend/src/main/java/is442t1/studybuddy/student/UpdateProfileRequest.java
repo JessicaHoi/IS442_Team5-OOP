@@ -10,6 +10,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Own-profile replacement payload: name, school, programme, year, contact number, optional Telegram
+ *     handle and selected course codes. Courses removed here lose their study preferences.
+ */
 public record UpdateProfileRequest(
         @NotBlank(message = "Enter your name.")
         @Size(max = 100, message = "Name must be at most 100 characters.")

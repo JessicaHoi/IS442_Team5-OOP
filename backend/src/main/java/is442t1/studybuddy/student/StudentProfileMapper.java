@@ -23,7 +23,8 @@ public class StudentProfileMapper {
     }
 
     /**
-     * Builds another student's profile without exposing their email or contact details.
+     * Builds another student's profile with their email hidden. Contact number
+     * and Telegram handle are visible only when {@code buddyState} is connected.
      *
      * @param student the student whose profile is being viewed
      * @param buddyState the signed-in student's connection state with this student

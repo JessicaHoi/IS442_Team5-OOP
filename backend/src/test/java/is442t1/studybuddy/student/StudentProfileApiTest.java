@@ -42,6 +42,19 @@ class StudentProfileApiTest extends ApiTestSupport {
     }
 
     @Test
+    void canSaveProfileDetailsWithNoStudyPreferences() throws Exception {
+        String token = login(createStudent("No Preferences", "IS442"));
+        mockMvc.perform(as(token, put("/api/students/me/preferences")).content("{\"preferences\":[]}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.preferences", hasSize(0)));
+        mockMvc.perform(as(token, put("/api/students/me/profile")).content("""
+                        {"name":"No Preferences","school":"S","programme":"P","yearOfStudy":2,
+                         "contactNumber":"+65 8000 0000","courses":["IS442"]}"""))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contactNumber").value("+65 8000 0000"))
+                .andExpect(jsonPath("$.preferences", hasSize(0)));
+    }
+
+    @Test
     void updatesTheProfile() throws Exception {
         String token = login(createStudent("Aisha Rahman", "IS442"));
         ensureCourses("IS212", "STAT101");

@@ -16,6 +16,10 @@ import jakarta.persistence.Table;
 import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.enums.MatchingStrategy;
 
+/**
+ * Persisted administrator-selected ranking strategy and criterion weights. Defaults apply until a
+ *     configuration is saved; a zero weight disables a criterion.
+ */
 @Entity
 @Table(name = "matching_configuration")
 public class MatchingConfiguration extends BaseEntity {

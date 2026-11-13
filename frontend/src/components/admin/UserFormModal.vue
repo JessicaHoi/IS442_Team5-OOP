@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import AppModal from '../ui/AppModal.vue';
 import FormField from '../ui/FormField.vue';
 import { ROLES, USER_STATUSES } from '../../utils/constants';
+import { passwordError } from '../../utils/validation';
 
 const props = defineProps({
 	modelValue: Boolean,
@@ -16,7 +17,6 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'submit']);
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 6;
 
 const isEditing = computed(() => props.user !== null);
 const form = reactive({ name: '', email: '', role: ROLES.STUDENT, status: 'ACTIVE', password: '' });
@@ -44,13 +44,8 @@ function validate() {
 	if (!EMAIL_PATTERN.test(form.email.trim())) found.email = 'Enter a valid email address.';
 	else if (form.email.trim().length > 255) found.email = 'Email must be at most 255 characters.';
 	const needsPassword = !isEditing.value || form.password.length > 0;
-	if (needsPassword && form.password.length < MIN_PASSWORD_LENGTH) {
-		found.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
-	}
-	if (needsPassword && !form.password.trim()) found.password = 'Password must not be blank.';
-	if (needsPassword && new TextEncoder().encode(form.password).length > 72) {
-		found.password = 'Password is too long. Use fewer characters.';
-	}
+	const invalidPassword = needsPassword ? passwordError(form.password) : null;
+	if (invalidPassword) found.password = invalidPassword;
 	errors.value = found;
 	return Object.keys(found).length === 0;
 }

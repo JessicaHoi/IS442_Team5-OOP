@@ -6,8 +6,15 @@ import java.util.UUID;
 
 import is442t1.studybuddy.model.enums.GroupStatus;
 
+/**
+ * Leadership-management view of a group, including its status and active members eligible to
+ *     succeed the current leader.
+ */
 public record LedGroupResponse(UUID id, String name, GroupStatus status, List<Member> eligibleMembers) {
 
+    /**
+     * Active group member eligible to succeed the current leader.
+     */
     public record Member(UUID id, String name) {
     }
 

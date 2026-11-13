@@ -23,11 +23,26 @@ public class MatchingConfigController {
         this.configService = configService;
     }
 
+    /**
+     * Reads saved or default rules: {@code GET /api/admin/matching-config}, administrator only.
+     * Returns HTTP 200 with strategy and all criterion settings.
+     *
+     * @return response described above, with the documented HTTP status and payload
+     */
     @GetMapping
     public MatchingConfigDto get() {
         return configService.getConfig();
     }
 
+    /**
+     * Replaces matching rules: {@code PUT /api/admin/matching-config}, administrator only.
+     * The body is {@link MatchingConfigDto} . Include every criterion once, with weights from 0 to
+     *     100
+     * and at least one enabled positive weight. Returns HTTP 200; invalid settings are 400.
+     *
+     * @param request JSON body described above
+     * @return response described above, with the documented HTTP status and payload
+     */
     @PutMapping
     public MatchingConfigDto update(@Valid @RequestBody MatchingConfigDto request) {
         return configService.updateConfig(request);

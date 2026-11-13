@@ -4,6 +4,7 @@ import { toOwnProfile, toPublicProfile } from '../serializers';
 import { validateSlots } from '../../../utils/availability';
 import { INVALID_HANDLE_MESSAGE, normalizeTelegramHandle } from '../../../utils/telegram';
 import { MEETING_MODES, GROUP_FORMATS, STUDY_GOALS } from '../../../utils/constants';
+import { PHONE_PATTERN } from '../../../utils/validation';
 
 const isOneOf = (options, value) => options.some((option) => option.value === value);
 
@@ -14,9 +15,17 @@ route(
 	'/students/me/profile',
 	({ db, user, body }) => {
 		const { name, school, programme, yearOfStudy, contactNumber, courses } = body;
-		if (!name?.trim() || !school || !programme?.trim() || !yearOfStudy || !contactNumber?.trim()) {
+		if (typeof name !== 'string' || !name.trim() || typeof school !== 'string' || !school.trim()
+			|| typeof programme !== 'string' || !programme.trim() || !yearOfStudy || typeof contactNumber !== 'string' || !contactNumber.trim()) {
 			throw badRequest('Name, school, programme, year of study and contact number are required.');
 		}
+		if (name.length > 100) throw badRequest('Name must be at most 100 characters.');
+		if (!school.trim()) throw badRequest('Choose your school.');
+		if (programme.length > 100) throw badRequest('Programme must be at most 100 characters.');
+		if (!['number', 'string'].includes(typeof yearOfStudy) || !Number.isInteger(Number(yearOfStudy)) || Number(yearOfStudy) < 1 || Number(yearOfStudy) > 5) {
+			throw badRequest('Year of study must be between 1 and 5.');
+		}
+		if (!PHONE_PATTERN.test(contactNumber)) throw badRequest('Enter a valid phone number, e.g. +65 9123 4567.');
 		if (!Array.isArray(courses) || courses.length === 0) throw badRequest('Select at least one course.');
 		if (courses.some((code) => !db.courses.some((course) => course.code === code))) {
 			throw badRequest('Unknown course selected.');

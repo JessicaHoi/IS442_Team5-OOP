@@ -14,6 +14,10 @@ import is442t1.studybuddy.model.enums.GroupStatus;
 import is442t1.studybuddy.model.AccountUsageCount;
 import jakarta.persistence.LockModeType;
 
+/**
+ * Group persistence, membership and catalogue queries, and locking reads used to serialise group
+ *     mutations.
+ */
 @Repository
 public interface StudyGroupRepository extends JpaRepository<StudyGroup, UUID> {
 

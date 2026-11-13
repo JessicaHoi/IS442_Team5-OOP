@@ -29,12 +29,6 @@ export function timeAgo(isoString) {
 	return 'Just now';
 }
 
-/** "1 Mar 2026" */
-export function formatDate(isoString) {
-	if (!isoString) return '';
-	return new Date(isoString).toLocaleDateString('en-SG', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
 /** "Wed, 4 Nov 2026 · 7:00 pm – 9:00 pm", in the viewer's time zone. */
 export function formatSessionTime(startsAt, endsAt) {
 	const start = new Date(startsAt);

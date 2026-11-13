@@ -7,6 +7,10 @@ import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.Role;
 
+/**
+ * Account summary for administrators, including account status, login and creation timestamps, and
+ *     connection, group and leadership counts.
+ */
 public record UserAccountResponse(
         UUID id,
         String name,

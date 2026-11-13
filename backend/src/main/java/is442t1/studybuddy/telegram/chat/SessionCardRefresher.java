@@ -27,10 +27,14 @@ import is442t1.studybuddy.telegram.chat.SessionChatStore.PinnedCard;
 import is442t1.studybuddy.telegram.chat.SessionChatStore.SessionRef;
 
 /**
- * The one place that makes a session's card in the chat match the session. Anything that changes a session just marks
- * it dirty. Every few seconds one thread renders each dirty session from current data and posts or edits its card.
- * That merges a burst of presses into one edit, stays inside Telegram's limits, and means an older edit can never
- * overwrite a newer one. Dirty marks are only in memory: a restart loses at most a few seconds, and the next change or
+ * The one place that makes a session's card in the chat match the session. Anything that changes a
+ *     session just marks
+ * it dirty. Every few seconds one thread renders each dirty session from current data and posts or
+ *     edits its card.
+ * That merges a burst of presses into one edit, stays inside Telegram's limits, and means an older
+ *     edit can never
+ * overwrite a newer one. Dirty marks are only in memory: a restart loses at most a few seconds, and
+ *     the next change or
  * the sweep puts it right.
  */
 @Component
@@ -166,6 +170,10 @@ public class SessionCardRefresher {
         }
     }
 
+    /**
+     * Enables scheduled card refresh and time-based session-chat jobs when Telegram integration is
+     *     enabled.
+     */
     @Configuration(proxyBeanMethods = false)
     @EnableScheduling
     @ConditionalOnProperty(prefix = "studybuddy.telegram", name = "enabled", havingValue = "true")

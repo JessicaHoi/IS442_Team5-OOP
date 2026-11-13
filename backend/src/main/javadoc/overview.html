@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><title>StudyBuddy Backend</title></head>
+<body>
+<h1>Backend guide</h1>
+<p>StudyBuddy matches students with study buddies and supports study groups,
+meeting suggestions, scheduled sessions, account administration, and optional
+Telegram account linking and group chats.</p>
+<h2>Reading this reference</h2>
+<p>Packages are organised by feature. Each feature keeps its controllers,
+application services, domain entities, repositories, and request/response records
+together. The model package contains shared persistence types, not every entity.
+Package-private types are included to explain internal workflows; their presence
+does not make them HTTP endpoints. Private implementation members are omitted.</p>
+<p>Start with a feature's package summary, then its controller for HTTP operations.
+Request and response records describe payloads. Services coordinate transactions
+and permissions; entities enforce domain rules. The repository README contains
+setup instructions, an endpoint catalogue, and JSON examples.</p>
+<h2>HTTP conventions</h2>
+<p>All endpoints use the <code>/api</code> prefix. A bearer token is required except
+for <code>POST /api/auth/login</code>, <code>POST /api/auth/register</code>, and
+<code>GET /api/public/courses</code>. Tokens expire after the configured lifetime
+(12 hours by default), live in memory, and are invalidated by server restarts.
+Student and administrator roles are separate; group leaders retain the student role.</p>
+<p>Unless a controller states otherwise, successful operations return HTTP 200
+with JSON. Creation operations document HTTP 201 and deletion operations document
+whether they return JSON or HTTP 204. UUIDs are opaque identifiers. Weekly
+availability DTOs use abbreviated days such as <code>WED</code> and
+<code>HH:mm</code>; scheduling results use Java day names such as
+<code>WEDNESDAY</code> and local-time strings. Session timestamps are ISO-8601 instants.</p>
+<p>Application errors mapped by GlobalExceptionHandler contain a JSON
+<code>message</code>: validation 400, authentication 401, permission 403,
+missing resources 404, state conflicts 409, and external-service failures 503.
+Some framework errors retain Spring's default handling and response format.</p>
+<h2>Privacy and integration boundaries</h2>
+<p>Another student's email is hidden. Their contact number and Telegram handle
+are visible only to accepted buddies; the owner sees their own details. Group
+member lists and manually entered chat links are restricted to members.
+Managed Telegram chat metadata is exposed through a separate chat endpoint.</p>
+<p>Telegram is optional. Group and session events connect domain workflows to
+chat synchronisation. Event listeners, polling, calendar export, and background
+jobs are included in this reference to make these relationships visible.</p>
+</body>
+</html>

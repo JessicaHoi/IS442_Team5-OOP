@@ -19,6 +19,9 @@ sealed interface BotEvent {
     record ChatChosen(long privateChatId, long telegramUserId, String firstName, int requestId, long chatId) implements BotEvent {
     }
 
+    /**
+     * Classified request to join a Telegram chat through an invite.
+     */
     record JoinRequested(Update.ChatJoinRequest request) implements BotEvent {
     }
 
@@ -38,7 +41,11 @@ sealed interface BotEvent {
     record ButtonPressed(String callbackQueryId, long telegramUserId, String data) implements BotEvent {
     }
 
-    /** @param startedBy null when Telegram doesn't say who started it */
+    /**
+     * Classified notice that a call started in a Telegram group.
+     *
+     * @param startedBy null when Telegram doesn't say who started it
+     */
     record VideoChatStarted(long chatId, Long startedBy) implements BotEvent {
     }
 

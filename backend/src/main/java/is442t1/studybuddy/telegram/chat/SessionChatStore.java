@@ -36,6 +36,10 @@ class SessionChatStore {
     /** How early a call can start and still count as being for the next session. */
     private static final Duration VIDEO_CHAT_EARLY_START = Duration.ofMinutes(30);
 
+    /**
+     * Session snapshot containing its owning group, status and message details, safe to use
+     * outside a database transaction.
+     */
     record SessionRef(UUID groupId, SessionStatus status, SessionMessages.Details details) {
     }
 
@@ -97,7 +101,8 @@ class SessionChatStore {
     }
 
     /**
-     * Who pressed a button: the student they joined this group's chat as, otherwise the student who connected that
+     * Who pressed a button: the student they joined this group's chat as, otherwise the student who
+     *     connected that
      * Telegram account. Being a member is checked when the answer is saved.
      */
     @Transactional(readOnly = true)
@@ -159,8 +164,10 @@ class SessionChatStore {
     }
 
     /**
-     * Where to message the leader privately: their connected account, otherwise their account in the chat. Setting up a
-     * chat means starting the bot, which it needs to message them, but someone made leader later may never have.
+     * Where to message the leader privately: their connected account, otherwise their account in
+     *     the chat. Setting up a
+     * chat means starting the bot, which it needs to message them, but someone made leader later
+     *     may never have.
      */
     @Transactional(readOnly = true)
     public Optional<Long> leaderTelegramId(UUID sessionId) {
@@ -181,8 +188,10 @@ class SessionChatStore {
     }
 
     /**
-     * Sessions whose reminder should go out now. It's a reply to the card, so a session needs a card first. One whose
-     * card was posted or moved after the reminder window opened has only just been announced, so it gets no reminder as well.
+     * Sessions whose reminder should go out now. It's a reply to the card, so a session needs a
+     *     card first. One whose
+     * card was posted or moved after the reminder window opened has only just been announced, so it
+     *     gets no reminder as well.
      */
     @Transactional(readOnly = true)
     public List<UUID> dueReminders(Instant now) {
@@ -207,8 +216,10 @@ class SessionChatStore {
     }
 
     /**
-     * Sessions whose card needs attention without anything having changed: upcoming ones with no card, such as after a
-     * failed post or linking a chat late, and ones whose card shows a phase that time has moved on from.
+     * Sessions whose card needs attention without anything having changed: upcoming ones with no
+     *     card, such as after a
+     * failed post or linking a chat late, and ones whose card shows a phase that time has moved on
+     *     from.
      */
     @Transactional(readOnly = true)
     public List<UUID> cardsToRefresh(Instant now) {

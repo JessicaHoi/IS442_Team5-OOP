@@ -8,6 +8,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Persistence and joined-inheritance promotion/demotion operations for student leaders. Demotion
+ *     removes the leader subtype only when no group still refers to it.
+ */
 @Repository
 public interface StudyGroupLeaderRepository extends JpaRepository<StudyGroupLeader, UUID> {
 

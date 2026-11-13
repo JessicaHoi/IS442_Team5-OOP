@@ -48,10 +48,13 @@ public class SessionTokenService {
     }
 
     public synchronized String issue(User user) {
+        Instant now = clock.instant();
+        // Sweep abandoned tokens during sign-in as well as checking presented tokens below.
+        sessions.entrySet().removeIf(entry -> !entry.getValue().expiresAt().isAfter(now));
         byte[] bytes = new byte[TOKEN_BYTES];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        Instant expiresAt = clock.instant().plus(properties.tokenTtl());
+        Instant expiresAt = now.plus(properties.tokenTtl());
         sessions.put(token, new Session(new AuthenticatedUser(user.getId(), user.getRole()), user.getPassword(), expiresAt));
         return token;
     }

@@ -7,12 +7,16 @@ import java.util.Map;
 public sealed interface ReplyMarkup {
 
     /**
-     * Buttons under the message box. {@code isPersistent} stops Telegram tucking them away behind the keyboard icon,
+     * Buttons under the message box. {@code isPersistent} stops Telegram tucking them away behind
+     *     the keyboard icon,
      * and they stay until {@link RemoveKeyboard}, so a leader who backs out can try again.
      */
     record Keyboard(List<List<ChatRequestButton>> keyboard, boolean isPersistent, boolean resizeKeyboard) implements ReplyMarkup {
     }
 
+    /**
+     * Reply markup requesting removal of the persistent setup keyboard.
+     */
     record RemoveKeyboard(boolean removeKeyboard) implements ReplyMarkup {
     }
 
@@ -23,6 +27,9 @@ public sealed interface ReplyMarkup {
             return new LinkButton(List.of(List.of(new Url(text, url))));
         }
 
+        /**
+         * Inline link button display text and target URL.
+         */
         public record Url(String text, String url) {
         }
     }
@@ -34,15 +41,27 @@ public sealed interface ReplyMarkup {
             return new ActionButtons(List.of(List.of(actions)));
         }
 
-        /** @param callbackData at most 64 bytes */
+        /**
+         * Inline callback button with display text and callback data.
+         *
+         * @param callbackData at most 64 bytes
+         */
         public record Action(String text, String callbackData) {
         }
     }
 
+    /**
+     * Keyboard button that opens Telegram's group picker using the supplied constraints.
+     */
     record ChatRequestButton(String text, ChatRequest requestChat) {
     }
 
-    /** @param botAdministratorRights null lists every group the user owns, and the bot then joins without admin rights */
+    /**
+     * Telegram chat-picker constraints and request identifier used during group setup.
+     *
+     * @param botAdministratorRights null lists every group the user owns, and the bot then joins
+     *     without admin rights
+     */
     record ChatRequest(int requestId, boolean chatIsChannel, boolean botIsMember,
             Map<String, Boolean> userAdministratorRights, Map<String, Boolean> botAdministratorRights) {
     }

@@ -25,7 +25,13 @@ public class SchedulingService {
     private static final int FIRST_HOUR = 7;   // heatmap starts at 07:00
     private static final int LAST_HOUR = 23;   // last cell is 22:00-23:00
 
-    /** Exact overlaps between two students, longest first. */
+    /**
+     * Returns up to three exact pair overlaps of at least 30 minutes, longest first.
+     *
+     * @param a first student's weekly slots for one course
+     * @param b second student's weekly slots for the same course
+     * @return shared intervals meeting the minimum duration
+     */
     public List<TimeSlot> suggestForPair(List<TimeSlot> a, List<TimeSlot> b) {
         return a.stream()
                 .flatMap(x -> b.stream().map(x::intersect))
@@ -36,7 +42,14 @@ public class SchedulingService {
                 .toList();
     }
 
-    /** How many members are free in each whole hour, Monday to Sunday. */
+    /**
+     * Counts available members in whole-hour cells, 07:00 to 23:00 Monday to Sunday.
+     * This count-only helper is separate from the 30-minute production group endpoint,
+     * which uses {@link #groupHeatmap(Map)} and retains member identities.
+     *
+     * @param membersAvailability one weekly slot list per member
+     * @return hourly counts, including zero-count cells
+     */
     public List<HeatmapCell> heatmap(Collection<List<TimeSlot>> membersAvailability) {
         List<HeatmapCell> cells = new ArrayList<>();
         for (DayOfWeek day : DayOfWeek.values()) {
@@ -52,7 +65,15 @@ public class SchedulingService {
         return cells;
     }
 
-    /** Best windows for a group: runs of consecutive hours with the same head count (at least 2 people). */
+    /**
+     * Returns up to three count-based windows from the hourly helper, merging
+     * consecutive cells with the same head count of at least two. Equal counts
+     * need not represent the same people, so the production group endpoint uses
+     * {@link #groupSuggestions(List)} instead.
+     *
+     * @param membersAvailability one weekly slot list per member
+     * @return windows ordered by free count, then duration, descending
+     */
     public List<FreeWindow> suggestForGroup(Collection<List<TimeSlot>> membersAvailability) {
         List<HeatmapCell> cells = heatmap(membersAvailability);
         List<FreeWindow> windows = new ArrayList<>();
@@ -81,6 +102,14 @@ public class SchedulingService {
                 .toList();
     }
 
+    /**
+     * Builds the production group heatmap in 30-minute blocks from 07:00 to 23:00,
+     * Monday through Sunday. A member must cover the entire block; touching
+     * availability intervals can jointly cover it. Members in each cell are sorted by name and ID.
+     *
+     * @param members effective availability per member, using group overrides or profile fallback
+     * @return every block, including blocks with no available members
+     */
     public List<GroupHeatmapCell> groupHeatmap(Map<AvailableMember, List<TimeSlot>> members) {
         List<GroupHeatmapCell> cells = new ArrayList<>();
         for (DayOfWeek day : DayOfWeek.values()) {
@@ -98,6 +127,15 @@ public class SchedulingService {
         return cells;
     }
 
+    /**
+     * Merges adjacent blocks on the same day only when their available-member
+     * lists match. Windows require at least two members; this avoids suggesting
+     * a long window whose head count stays constant while the people change.
+     *
+     * @param cells chronologically ordered cells produced by {@link #groupHeatmap(Map)}
+     * @return up to three windows, ordered by free count and duration descending,
+     *         then day and start time ascending
+     */
     public List<FreeWindow> groupSuggestions(List<GroupHeatmapCell> cells) {
         List<FreeWindow> windows = new ArrayList<>();
         for (int i = 0; i < cells.size();) {

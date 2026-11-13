@@ -21,7 +21,11 @@ export function mergeAvailability(slots) {
 }
 
 export function coversBlock(slots, day, minute) {
-	return mergeAvailability(slots).some((slot) => slot.day === day && toMinutes(slot.start) <= minute && toMinutes(slot.end) >= minute + BLOCK_MINUTES);
+	return coversMergedBlock(mergeAvailability(slots), day, minute);
+}
+
+function coversMergedBlock(slots, day, minute) {
+	return slots.some((slot) => slot.day === day && toMinutes(slot.start) <= minute && toMinutes(slot.end) >= minute + BLOCK_MINUTES);
 }
 
 export function paintAvailability(slots, anchor, target, adding) {
@@ -48,10 +52,11 @@ export function heatmapColor(freeCount, memberCount) {
 }
 
 export function buildGroupHeatmap(members) {
+	const normalizedMembers = members.map((member) => ({ ...member, availability: mergeAvailability(member.availability) }));
 	const heatmap = [];
 	for (const day of DAYS) {
 		for (const minute of GRID_TIMES) {
-			const availableMembers = members.filter((member) => coversBlock(member.availability, day.value, minute))
+			const availableMembers = normalizedMembers.filter((member) => coversMergedBlock(member.availability, day.value, minute))
 				.map(({ id, name }) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name) || String(a.id).localeCompare(String(b.id)));
 			heatmap.push({ day: day.value, startTime: minuteLabel(minute), endTime: minuteLabel(minute + BLOCK_MINUTES), freeCount: availableMembers.length, availableMembers });
 		}

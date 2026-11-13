@@ -159,7 +159,7 @@ export function createSeedData() {
 	function addSecondPreference(student) {
 		const [first] = student.preferences;
 		const otherCourse = student.courses.find((code) => code !== first.course);
-		if (otherCourse) student.preferences = [first, { ...first, course: otherCourse, availability: first.availability.map((slot) => ({ ...slot })) }];
+		if (otherCourse) student.preferences = [first, { ...first, course: otherCourse, goals: [...first.goals], availability: first.availability.map((slot) => ({ ...slot })) }];
 	}
 
 	// ---- Accounts and student profiles -------------------------------------
@@ -398,7 +398,7 @@ export function createSeedData() {
 			joinRequest: joinRequests.length + 1,
 			studySession: 1,
 		},
-		courses: COURSES,
+		courses: COURSES.map((course) => ({ ...course })),
 		users,
 		students,
 		connections,

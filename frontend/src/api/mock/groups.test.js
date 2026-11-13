@@ -96,7 +96,9 @@ describe('group leadership and member access', () => {
 	});
 
 	it('lets a member leave, but not the leader', async () => {
-		expect((await call('post', `/groups/${group.id}/leave`, { token: leaderToken })).status).toBe(409);
+		const rejected = await call('post', `/groups/${group.id}/leave`, { token: leaderToken });
+		expect(rejected.status).toBe(409);
+		expect(rejected.data.message).toBe('The group leader must transfer leadership before leaving.');
 		expect((await call('post', `/groups/${group.id}/leave`, { token: memberToken })).status).toBe(204);
 		expect(group.memberIds).not.toContain(member.id);
 		expect((await call('post', `/groups/${group.id}/leave`, { token: memberToken })).status).toBe(409);

@@ -8,9 +8,12 @@ The app must work with Telegram off, and a Telegram outage must never break or s
 
 ```
 Browser ──> Controller ──> Service ──> Database
-                              │ publishes an event
-                              ▼ after the commit, on a background thread
-                       ChatSyncListener ──> SessionChatService / GroupChatService ──> Telegram
+                              │ publishes events inside the transaction
+                              ├──> GroupEventListener (synchronous domain updates)
+                              └──> ChatSyncListener
+                                     ├── after commit, synchronous: mark cards dirty
+                                     └── after commit, asynchronous: Telegram operations
+                                           └──> SessionChatService / GroupChatService ──> Telegram
 
 Telegram ──> TelegramUpdatePoller ──> UpdateClassifier ──> TelegramUpdateRouter ──> handlers ──> Database and Telegram
 
@@ -28,13 +31,15 @@ So there are three ways in: a person using the app, a person using Telegram, and
 | `telegram/chat/` | Group chats, invites, session posts and reminders. |
 | `studysession/` | Sessions, RSVPs and calendar files. It knows nothing about Telegram. |
 
-`telegram/` depends on `group/` and `studysession/`, and never the other way round. Those packages just publish events, such as `SessionScheduled` or `MemberLeft`, without knowing whether anyone is listening. With Telegram off, nothing is.
+`telegram/` depends on `group/` and `studysession/`, and never the other way round. Those packages publish events, such as `SessionScheduled` or `MemberLeft`, without depending on Telegram listeners. With Telegram off, `ChatSyncListener` is absent, but `studysession/GroupEventListener` still handles group events synchronously to maintain session state.
 
 ## Four rules worth being able to explain
 
 **1. Telegram calls never happen inside a database transaction.** Supabase gives us 3 connections, and a Telegram call can take up to 60 seconds. Holding a connection that long could stall the whole app. That's why `ChatStore` and `SessionChatStore` hold short transactions, while `GroupChatService` and `SessionChatService` are not transactional and call Telegram between them.
 
-**2. Events run after the commit, on a background thread.** `ChatSyncListener` uses `@TransactionalEventListener` and `@Async`. If the save rolls back, Telegram never hears about it. If Telegram fails, the save still stands. The `telegramExecutor` runs two at a time with up to 200 waiting, so a slow Telegram never slows a web request. If even that fills up, the update is dropped and logged.
+**2. Listener timing depends on the work.** Ordinary `@EventListener` methods run synchronously in the publishing transaction: `GroupEventListener` cancels future sessions when a group closes and removes future RSVPs when a member leaves. In `ChatSyncListener`, `@TransactionalEventListener` defaults to after commit. The session-event methods without `@Async` synchronously mark cards dirty; they do no Telegram I/O. Methods with `@Async("telegramExecutor")` perform Telegram operations after commit on background threads. If the transaction rolls back, those after-commit actions do not run. Telegram failures cannot roll back the saved domain change. The executor runs two tasks at a time with up to 200 waiting; a full queue drops and logs the update.
+
+Account deletion deliberately captures data before commit. `UserAccountService` publishes `AccountDeleting` before deleting the student. `ChatSyncListener` handles it with a synchronous `@EventListener` inside that transaction, reads the chat removal information while the rows still exist, and publishes `AccountDeleted`. Only the latter's after-commit asynchronous handler calls Telegram. A rollback therefore prevents the external removal too.
 
 **3. Handlers read the current state instead of trusting the event.** Background events can arrive out of order, so a reply about a session cancelled a moment later must not go out as if it were still on. That's why `replyToCard` checks the session's status first, and the card is always rendered from current data.
 
@@ -64,7 +69,7 @@ So there are three ways in: a person using the app, a person using Telegram, and
 ### The session card
 This is the flow worth knowing best. Each session has one message in the chat, its card, and **one class changes it**: `SessionCardRefresher`.
 
-1. Anything that affects a card only marks the session dirty: scheduling, changing or cancelling it, someone answering, a member joining or leaving. `ChatSyncListener` does this straight after the commit. It's just adding an id to a set in memory.
+1. Scheduling, changing or cancelling a session, and someone answering, synchronously mark its card dirty after commit through `ChatSyncListener`. Marking only adds an id to a set in memory. Group membership and closure events use asynchronous after-commit handlers to refresh upcoming cards and synchronize the chat; changes and cancellations also have asynchronous handlers for notifying replies.
 2. Every 3 seconds, one thread takes each dirty session, reads its **current** state and renders the text with `SessionMessages.card`.
 3. No message yet and the session is still to come: it posts one, and `recordPost` saves the message id on `SessionChatCard`. Otherwise it edits the message. Editing never notifies anyone.
 4. It saves the phase it just showed, then `syncPins` makes sure the soonest upcoming session is the pinned one.
@@ -167,7 +172,9 @@ The app carries on and the failure is logged. Cards and reminders try again by t
 
 **Why does the leader get a private message rather than a chat post?** It lets them act before the group sees a session looking thin. A bot can only message someone who has started it. Connecting an account or setting up the chat both do that, but someone made leader later may have done neither, so their warning fails and is only logged.
 
-## Changes
+## Historical changes
+
+The before/after notes below describe earlier revisions. The listener timing above describes the current implementation.
 
 ### Moving reminder state out of `StudySession`
 **Before:** `StudySession` held `reminderClaimedAt` and `reminderSentAt`, and two repository queries claimed a reminder so several instances wouldn't both send it.

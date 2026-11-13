@@ -5,6 +5,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Shared catalogue entry identified by course code, with a course name and optional school.
+ *     Students take courses and may set one study preference per course.
+ */
 @Entity
 @Table(name = "course")
 public class Course {

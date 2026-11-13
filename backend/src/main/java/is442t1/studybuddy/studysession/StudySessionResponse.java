@@ -29,6 +29,9 @@ public record StudySessionResponse(
         List<Attendee> attendees
 ) {
 
+    /**
+     * Student who has answered and their saved RSVP response. Members without an answer are omitted.
+     */
     public record Attendee(UUID id, String name, RsvpResponse response) {
     }
 

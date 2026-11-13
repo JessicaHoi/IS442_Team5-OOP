@@ -5,6 +5,10 @@ import java.util.List;
 import is442t1.studybuddy.connection.BuddyStatus;
 import is442t1.studybuddy.student.StudentProfileResponse;
 
+/**
+ * Ranked candidate response with the privacy-filtered student profile, overall 0-100 score,
+ *     component scores, overlap minutes, shared courses and viewer relationship.
+ */
 public record MatchResult(
         StudentProfileResponse student,
         int score,

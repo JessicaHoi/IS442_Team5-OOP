@@ -17,6 +17,10 @@ import jakarta.persistence.Table;
 import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.Role;
 
+/**
+ * Abstract persisted account shared by students and administrators, with BCrypt password hash,
+ *     account status and activity timestamps. Concrete subtypes determine the access-control role.
+ */
 @Entity 
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)

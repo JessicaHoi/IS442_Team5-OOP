@@ -17,6 +17,12 @@ public class PublicCourseController {
         this.courseService = courseService;
     }
 
+    /**
+     * Lists the signup course catalogue: {@code GET /api/public/courses}, public.
+     * Returns HTTP 200 with the same code-sorted course records as the authenticated catalogue.
+     *
+     * @return response described above, with the documented HTTP status and payload
+     */
     @GetMapping
     public List<CourseResponse> listCourses() {
         return courseService.listCourses();

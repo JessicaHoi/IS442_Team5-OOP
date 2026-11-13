@@ -1,4 +1,4 @@
-# Temporary during Phases 1–8; restore port 8080 after Phase 8.
+# Default backend port; matches the frontend development proxy and documented URLs.
 server:
   port: 9090
 

@@ -25,6 +25,10 @@ import is442t1.studybuddy.model.enums.GroupPreference;
 import is442t1.studybuddy.model.enums.StudyGoal;
 import is442t1.studybuddy.model.enums.StudyMode;
 
+/**
+ * One student's meeting mode, group format, goals and weekly availability for one course. Updates
+ *     preserve the unique student/course row.
+ */
 @Entity
 @Table(
         name = "study_preference",
@@ -69,32 +73,16 @@ public class StudyPreference extends BaseEntity {
         return student;
     }
 
-    public void setStudent(Student student) {
-        this.student = student;
-    }
-
     public Course getCourse() {
         return course;
-    }
-
-    public void setCourse(Course course) {
-        this.course = course;
     }
 
     public StudyMode getStudyMode() {
         return studyMode;
     }
 
-    public void setStudyMode(StudyMode studyMode) {
-        this.studyMode = studyMode;
-    }
-
     public GroupPreference getGroupPreference() {
         return groupPreference;
-    }
-
-    public void setGroupPreference(GroupPreference groupPreference) {
-        this.groupPreference = groupPreference;
     }
 
     public List<TimeSlot> getAvailability() {

@@ -18,6 +18,11 @@ import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.TimeSlot;
 import is442t1.studybuddy.student.Student;
 
+/**
+ * One student's availability override for one group. Each replacement generates a new UUID
+ *     revision; an empty override means unavailable, while removing the entity restores profile
+ *     fallback.
+ */
 @Entity
 @Table(name = "group_member_availability", uniqueConstraints = @UniqueConstraint(columnNames = {"study_group_id", "student_id"}))
 public class GroupMemberAvailability extends BaseEntity {
