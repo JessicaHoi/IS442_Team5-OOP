@@ -8,6 +8,10 @@ import jakarta.validation.constraints.Size;
 import is442t1.studybuddy.model.enums.AccountStatus;
 import is442t1.studybuddy.model.enums.Role;
 
+/**
+ * Administrator account-update payload. Password is optional; role cannot change after creation.
+ *     Password changes and suspension revoke existing sessions after commit.
+ */
 public record UpdateUserRequest(
         @NotBlank(message = "Name is required.")
         @Size(max = 100, message = "Name must be at most 100 characters.") String name,

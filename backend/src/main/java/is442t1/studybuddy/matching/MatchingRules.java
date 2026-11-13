@@ -14,10 +14,6 @@ public record MatchingRules(MatchingStrategy strategy, Map<MatchingCriterion, In
         weights = Map.copyOf(weights);
     }
 
-    public int weightOf(MatchingCriterion criterion) {
-        return weights.getOrDefault(criterion, 0);
-    }
-
     /** Weighted average of the enabled criteria, as a whole number from 0 to 100. */
     public int score(MatchScoreBreakdown breakdown) {
         int totalWeight = weights.values().stream().mapToInt(Integer::intValue).sum();

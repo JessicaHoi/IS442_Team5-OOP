@@ -13,6 +13,10 @@ import is442t1.studybuddy.common.exception.PermissionDeniedException;
 import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.UserRepository;
 
+/**
+ * Checks BCrypt credentials, records successful sign-ins and manages the current authenticated
+ *     session. Suspended accounts cannot sign in.
+ */
 @Service
 @Transactional(readOnly = true)
 public class AuthService {

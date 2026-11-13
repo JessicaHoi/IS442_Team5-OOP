@@ -12,10 +12,24 @@ import is442t1.studybuddy.course.Course;
 @Component
 public class StudentProfileMapper {
 
+    /**
+     * Builds the signed-in student's profile, including their email and contact details.
+     *
+     * @param student the student whose profile is being viewed
+     * @return the profile response with contact details visible
+     */
     public StudentProfileResponse toOwnProfile(Student student) {
         return toResponse(student, student.getEmail(), true, BuddyState.NONE);
     }
 
+    /**
+     * Builds another student's profile with their email hidden. Contact number
+     * and Telegram handle are visible only when {@code buddyState} is connected.
+     *
+     * @param student the student whose profile is being viewed
+     * @param buddyState the signed-in student's connection state with this student
+     * @return the public profile response with connection information
+     */
     public StudentProfileResponse toPublicProfile(Student student, BuddyState buddyState) {
         return toResponse(student, null, buddyState.isConnected(), buddyState);
     }

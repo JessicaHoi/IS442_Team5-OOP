@@ -17,6 +17,10 @@ import is442t1.studybuddy.model.BaseEntity;
 import is442t1.studybuddy.model.enums.ConnectionStatus;
 import is442t1.studybuddy.student.Student;
 
+/**
+ * Persisted buddy connection created after a request is accepted. ACTIVE connections reveal contact
+ *     details; ending one preserves its record with status ENDED.
+ */
 @Entity
 @Table(name = "study_buddy_connection")
 public class StudyBuddyConnection extends BaseEntity {

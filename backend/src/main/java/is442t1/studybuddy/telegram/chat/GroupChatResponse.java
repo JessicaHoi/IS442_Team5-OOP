@@ -5,20 +5,29 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A group's chat as one member sees it. Its own endpoint, so group responses never carry Telegram data.
+ * A group's managed Telegram chat as one member sees it. Managed chat metadata
+ * has its own endpoint; group detail responses may separately contain the
+ * leader's manually entered {@code chatLink}.
  *
  * @param status             NOT_LINKED, MANAGED_BY_OTHER_BOT, or a {@link GroupChatStatus}
  * @param missingRights      leader only; null for anyone else
- * @param ownedByFormerLeader leader only: the chat was set up by someone else, who probably still owns it
+ * @param ownedByFormerLeader leader only: the chat was set up by someone else, who probably still
+ *     owns it
  * @param me                 null unless a chat this bot manages is linked
  * @param members            leader only; null for anyone else
  */
 public record GroupChatResponse(String status, String title, String chatType, List<String> missingRights,
         boolean ownedByFormerLeader, Me me, List<Member> members) {
 
+    /**
+     * Caller's managed chat membership, Telegram display name and personal invite with expiry.
+     */
     public record Me(ChatMemberState state, String telegramName, String inviteUrl, Instant inviteExpiresAt) {
     }
 
+    /**
+     * Leader-visible association between a study-group member and their Telegram chat state.
+     */
     public record Member(UUID studentId, String name, ChatMemberState state, String telegramName) {
     }
 

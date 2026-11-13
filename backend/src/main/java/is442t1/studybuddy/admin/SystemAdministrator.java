@@ -9,6 +9,10 @@ import jakarta.persistence.Table;
 import is442t1.studybuddy.model.User;
 import is442t1.studybuddy.model.enums.Role;
 
+/**
+ * Administrator account subtype. Its ADMIN role permits account management and matching
+ *     configuration, rather than student-only operations.
+ */
 @Entity
 @Table(name = "systemadministrator")
 public class SystemAdministrator extends User {

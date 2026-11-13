@@ -12,7 +12,8 @@ import is442t1.studybuddy.common.exception.AuthenticationException;
 import is442t1.studybuddy.common.exception.PermissionDeniedException;
 
 /**
- * Guards the API: every request needs a valid bearer token, and handlers
+ * Guards the API routes registered by {@link WebConfig} : each intercepted request needs a valid
+ *     bearer token, and handlers
  * marked with {@link RequireRole} also need the matching role.
  */
 @Component

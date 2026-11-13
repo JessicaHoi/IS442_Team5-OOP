@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { buildGroupHeatmap, coversBlock, heatmapColor, paintAvailability } from './groupAvailability';
+import { buildGroupHeatmap, coversBlock, GRID_TIMES, heatmapColor, minuteLabel, paintAvailability } from './groupAvailability';
+import { DAYS } from './constants';
 
 describe('availability grid selection', () => {
 	it.each([
@@ -35,6 +36,24 @@ describe('availability grid selection', () => {
 });
 
 describe('group heatmap', () => {
+	it('preserves coverage for unsorted, overlapping, adjacent and exact slots without mutating inputs', () => {
+		const members = [
+			{ id: 2, name: 'B', availability: [{ day: 'MON', start: '09:45', end: '10:15' }, { day: 'MON', start: '09:15', end: '09:45' }, { day: 'MON', start: '10:00', end: '11:00' }, { day: 'SUN', start: '22:45', end: '23:15' }] },
+			{ id: 1, name: 'A', availability: [{ day: 'MON', start: '05:00', end: '10:30' }, { day: 'SUN', start: '22:00', end: '23:30' }] },
+			{ id: 3, name: 'C', availability: [] },
+		];
+		const original = structuredClone(members);
+		const result = buildGroupHeatmap(members);
+		const expected = DAYS.flatMap(({ value: day }) => GRID_TIMES.map((minute) => {
+			const availableMembers = members.filter((member) => coversBlock(member.availability, day, minute))
+				.map(({ id, name }) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+			return { day, startTime: minuteLabel(minute), endTime: minuteLabel(minute + 30), freeCount: availableMembers.length, availableMembers };
+		}));
+		expect(result.heatmap).toEqual(expected);
+		expect(result.suggestions).toEqual([{ slot: { day: 'MON', start: '09:30', end: '10:30' }, freeCount: 2 }]);
+		expect(members).toEqual(original);
+		expect(buildGroupHeatmap([]).suggestions).toEqual([]);
+	});
 	it('uses white for nobody, percentage opacity for partial attendance, and full opacity for everyone', () => {
 		expect(heatmapColor(0, 5)).toBe('#fff');
 		expect(heatmapColor(1, 5)).toBe('rgba(var(--bs-primary-rgb), 0.2)');

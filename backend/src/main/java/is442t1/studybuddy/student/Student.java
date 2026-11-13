@@ -27,6 +27,10 @@ import is442t1.studybuddy.model.enums.Role;
 import is442t1.studybuddy.model.enums.StudyGoal;
 import is442t1.studybuddy.model.enums.StudyMode;
 
+/**
+ * Student account with profile fields, courses taken and one study preference per course. Removing
+ *     a course also removes its study preference; group leadership is represented by a subtype.
+ */
 @Entity
 @Table(name = "student")
 public class Student extends User {

@@ -10,6 +10,10 @@ import org.springframework.stereotype.Repository;
 
 import is442t1.studybuddy.model.enums.RequestStatus;
 
+/**
+ * Queries buddy requests by participant and status, including pending requests in either direction
+ *     between two students.
+ */
 @Repository
 public interface MatchRequestRepository extends JpaRepository<MatchRequest, UUID> {
 

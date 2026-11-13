@@ -1,8 +1,14 @@
 # Supabase demo data
 
-`seed-demo-data.sql` loads the demo data into the team's Supabase database: 10 courses, 50 students (17 with two course preferences), 1 administrator, 6 study groups with members and join requests, 12 buddy requests (7 accepted) and the default matching configuration. It's the same data the front-end mock and the local H2 database use. Every account's password is `password`.
+`seed-demo-data.sql` loads the demo data into the team's Supabase database: 10 courses, 50 students (17 with two course preferences), 1 administrator, 6 study groups with members and join requests, 12 buddy requests (7 accepted) and the default matching configuration. Catalogue and profile data match the front-end mock and local H2 database; account statuses have the difference documented below. Every account's password is `password`.
 
 > **The script wipes every Study Buddy table before loading.** Anything else in the shared database is lost, so tell the team before you run it. Run it again any time to reset the demo.
+
+## Demo account statuses
+
+The mock independently generates the shared catalogue/profile data and suspends Rachel Soh, Mohammed Faiz and Xin Yi Lim. The backend JSON fixture has no student status field: local H2 seeding uses the entity's `ACTIVE` default, and SQL generation writes `ACTIVE` for all demo students. These three students therefore cannot sign in in mock mode, but start active in a freshly seeded backend database.
+
+This existing difference is preserved pending a team decision about the intended statuses. Updating the documentation does not change seed values or existing accounts. Treat the JSON as the canonical backend/SQL fixture; any future shared status change must be reflected in the seeder and generator, with the SQL regenerated from the JSON.
 
 ## Load it
 

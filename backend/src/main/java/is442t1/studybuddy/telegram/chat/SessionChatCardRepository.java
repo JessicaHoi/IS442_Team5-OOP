@@ -10,6 +10,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Persistence access for session-card message references and scheduled queries for phase changes
+ *     and nudges.
+ */
 @Repository
 public interface SessionChatCardRepository extends JpaRepository<SessionChatCard, UUID> {
 

@@ -12,6 +12,10 @@ import jakarta.persistence.Enumerated;
 
 import is442t1.studybuddy.common.exception.ValidationException;
 
+/**
+ * Weekly interval on one day using local start and end times. Valid availability ends after it
+ *     starts and cannot overlap on the same day; overnight intervals are not supported.
+ */
 @Embeddable
 public record TimeSlot(
         // "day" is a reserved word in H2 db, so i used a alternative colname
@@ -26,11 +30,11 @@ public record TimeSlot(
         LocalTime endTime
 ) {
 
-    /** True when both slots are on the same day and share at least one minute. */
+    /** True when both slots are on the same day and have a positive overlap; touching endpoints do not overlap. */
     public boolean overlaps(TimeSlot other) {
         return day == other.day && startTime.isBefore(other.endTime) && other.startTime.isBefore(endTime);
     }
-    /** For Timeslot indication */
+    /** Returns the shared interval on the same day, or empty when the intervals do not overlap. */
     public Optional<TimeSlot> intersect(TimeSlot other) {
         if (day != other.day) {
             return Optional.empty();

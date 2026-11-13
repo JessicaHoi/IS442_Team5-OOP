@@ -2,11 +2,14 @@
 """
 Generate seed-demo-data.sql from src/main/resources/seed/demo-data.json.
 
-The JSON is the single source of the demo data. The front-end mock and the
-backend's DemoDataSeeder use the same data, so regenerate this file whenever
-the JSON changes:
+The JSON is the canonical fixture for the backend's DemoDataSeeder and this
+SQL generator. Regenerate the SQL whenever the JSON changes:
 
     python3 backend/supabase/generate_seed_sql.py
+
+The front-end mock independently generates matching catalogue/profile data.
+Its three suspended demo accounts differ from the backend's ACTIVE defaults;
+see backend/supabase/README.md for the documented demo-account status difference.
 
 Ids are UUIDv5 values derived from stable keys, so the output is identical on
 every run and easy to diff.

@@ -11,8 +11,8 @@
 	<groupId>is442t1</groupId>
 	<artifactId>studybuddy</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>StudyBuddy</name>
+	<description>Study buddy matching, study groups, scheduling and optional Telegram integration.</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -81,6 +81,19 @@
 
 	<build>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.11.2</version>
+				<configuration>
+					<source>${java.version}</source>
+					<show>package</show>
+					<doctitle>StudyBuddy Backend API and Architecture</doctitle>
+					<windowtitle>StudyBuddy Backend Documentation</windowtitle>
+					<overview>${project.basedir}/src/main/javadoc/overview.html</overview>
+					<doclint>all,-missing</doclint>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

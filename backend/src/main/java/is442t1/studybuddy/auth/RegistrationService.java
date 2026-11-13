@@ -1,6 +1,5 @@
 package is442t1.studybuddy.auth;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -10,13 +9,17 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import is442t1.studybuddy.common.exception.BusinessRuleException;
-import is442t1.studybuddy.common.exception.ValidationException;
 import is442t1.studybuddy.course.CourseService;
 import is442t1.studybuddy.model.UserRepository;
 import is442t1.studybuddy.student.Student;
 import is442t1.studybuddy.student.StudentRepository;
 import is442t1.studybuddy.student.TelegramHandle;
 
+/**
+ * Creates active student accounts with a complete profile and optional new courses in one
+ *     transaction. Returns a signed-in session and revokes the issued token if the transaction
+ *     fails.
+ */
 @Service
 @Transactional(readOnly = true)
 public class RegistrationService {
@@ -41,7 +44,7 @@ public class RegistrationService {
         if (userRepository.findByEmailIgnoreCase(request.email()).isPresent()) {
             throw new BusinessRuleException("Another account already uses this email address.");
         }
-        validatePassword(request.password());
+        PasswordPolicy.validate(request.password());
         request.newCourses().forEach(courseService::createCourse);
 
         Student student = new Student();
@@ -67,14 +70,5 @@ public class RegistrationService {
             }
         });
         return new LoginResponse(token, SessionUser.from(student));
-    }
-
-    private static void validatePassword(String password) {
-        if (password.isBlank() || password.length() < 6) {
-            throw new ValidationException("Password must be at least 6 characters and must not be blank.");
-        }
-        if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
-            throw new ValidationException("Password is too long. Use fewer characters.");
-        }
     }
 }

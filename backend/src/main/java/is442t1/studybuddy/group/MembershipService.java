@@ -44,7 +44,7 @@ public class MembershipService {
         return mapper.toSummary(group, studentId);
     }
 
-    /** Pending requests, oldest first. Leader only. */
+    /** Pending requests, oldest first. Members may read them; only the leader may answer them. */
     @Transactional(readOnly = true)
     public List<JoinRequestResponse> listPendingRequests(UUID studentId, UUID groupId) {
         StudyGroup group = groupService.requireGroup(groupId);

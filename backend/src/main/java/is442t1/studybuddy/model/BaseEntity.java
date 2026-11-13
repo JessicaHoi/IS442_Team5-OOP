@@ -6,6 +6,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.MappedSuperclass;
 import java.util.UUID;
 
+/**
+ * Shared UUID identity and new-entity detection for persisted entities.
+ */
 @MappedSuperclass
 public abstract class BaseEntity {
 

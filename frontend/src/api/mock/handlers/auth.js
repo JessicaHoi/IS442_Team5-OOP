@@ -3,16 +3,16 @@ import { route } from '../router';
 import { nextId, saveDb } from '../db';
 import { issueSession, revokeSession } from '../sessions';
 import { INVALID_HANDLE_MESSAGE, normalizeTelegramHandle } from '../../../utils/telegram';
+import { courseInputError, passwordError, PHONE_PATTERN } from '../../../utils/validation';
 
 const toSessionUser = (user) => ({ id: user.id, name: user.name, email: user.email, role: user.role });
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_PATTERN = /^\+?[\d\s-]{8,15}$/;
 
 function normalizeCourse(course) {
 	const courseCode = typeof course?.courseCode === 'string' ? course.courseCode.trim().toUpperCase() : '';
 	const courseName = typeof course?.courseName === 'string' ? course.courseName.trim() : '';
-	if (!/^[A-Z0-9]{1,20}$/.test(courseCode)) throw badRequest('Enter a course code using up to 20 letters or numbers.');
-	if (!courseName || courseName.length > 255) throw badRequest('Enter a course name of at most 255 characters.');
+	const error = courseInputError(courseCode, courseName);
+	if (error) throw badRequest(error);
 	return { code: courseCode, name: courseName, school: null };
 }
 
@@ -30,8 +30,8 @@ route(
 
 		if (!name || name.length > 100) throw badRequest('Enter a valid name of at most 100 characters.');
 		if (!EMAIL_PATTERN.test(email) || email.length > 255) throw badRequest('Enter a valid email address.');
-		if (!password.trim() || password.length < 6) throw badRequest('Password must be at least 6 characters and must not be blank.');
-		if (new TextEncoder().encode(password).length > 72) throw badRequest('Password is too long. Use fewer characters.');
+		const invalidPassword = passwordError(password);
+		if (invalidPassword) throw badRequest(invalidPassword);
 		if (db.users.some((user) => user.email.toLowerCase() === email.toLowerCase())) {
 			throw conflict('Another account already uses this email address.');
 		}

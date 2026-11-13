@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration, formatSlot, overlapMinutes, sortSlots, totalMinutes, validateSlots } from './availability';
+import { formatDuration, formatSlot, overlapMinutes, sortSlots, validateSlots } from './availability';
 
 describe('overlapMinutes', () => {
 	it('matches the Appendix A example: Wed 7-9pm shared gives a 2-hour overlap', () => {
@@ -44,10 +44,9 @@ describe('formatting helpers', () => {
 		expect(sorted.map(formatSlot)).toEqual(['Mon 09:00–10:00', 'Mon 15:00–16:00', 'Fri 09:00–10:00']);
 	});
 
-	it('formats durations and totals', () => {
+	it('formats durations', () => {
 		expect(formatDuration(150)).toBe('2h 30m');
 		expect(formatDuration(60)).toBe('1h');
 		expect(formatDuration(0)).toBe('0h');
-		expect(totalMinutes([{ day: 'MON', start: '10:00', end: '11:30' }])).toBe(90);
 	});
 });

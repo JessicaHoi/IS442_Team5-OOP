@@ -7,6 +7,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Persistence access for one student's bot-managed group-chat invite and membership state.
+ */
 @Repository
 public interface ChatMembershipRepository extends JpaRepository<ChatMembership, UUID> {
 

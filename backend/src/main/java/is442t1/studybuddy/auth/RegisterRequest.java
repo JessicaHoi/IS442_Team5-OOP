@@ -13,6 +13,12 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import is442t1.studybuddy.course.CreateCourseRequest;
 
+/**
+ * Public student-signup payload with a complete profile, selected course codes and optional new
+ *     courses. New courses use courseCode and courseName, and can be selected in the same request.
+ * Passwords require at least 6 characters and at most 72 UTF-8 bytes; year of study is 1 through 5.
+ *     A missing newCourses list becomes an empty list.
+ */
 public record RegisterRequest(
         @NotBlank(message = "Enter your name.")
         @Size(max = 100, message = "Name must be at most 100 characters.")

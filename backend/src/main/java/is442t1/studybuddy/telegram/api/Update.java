@@ -17,7 +17,13 @@ public record Update(long updateId, Message message, ChatMemberUpdated myChatMem
         this(updateId, message, myChatMember, chatMember, chatJoinRequest, null);
     }
 
-    /** @param from null for messages sent on behalf of a channel; {@code text} is null for non-text messages */
+    /**
+     * Subset of a Telegram message used for commands, chat selection, migration and video-chat
+     *     notices.
+     *
+     * @param from null for messages sent on behalf of a channel; {@code text} is null for non-text
+     *     messages
+     */
     public record Message(long messageId, Sender from, Chat chat, String text, ChatShared chatShared,
             Long migrateToChatId, Long migrateFromChatId, VideoChatStarted videoChatStarted) {
 
@@ -35,15 +41,27 @@ public record Update(long updateId, Message message, ChatMemberUpdated myChatMem
     public record VideoChatStarted() {
     }
 
+    /**
+     * Group chosen through the setup picker, paired with the originating request ID.
+     */
     public record ChatShared(long chatId, int requestId) {
     }
 
-    /** @param inviteLink how they joined, when that applies */
+    /**
+     * Telegram membership change, including previous/new membership and any invite used.
+     *
+     * @param inviteLink how they joined, when that applies
+     */
     public record ChatMemberUpdated(Chat chat, Sender from, ChatMember oldChatMember, ChatMember newChatMember,
             ChatInviteLink inviteLink) {
     }
 
-    /** @param userChatId where the bot may message this person for the next few minutes, even if they never pressed Start */
+    /**
+     * Telegram notification that a user requested entry through a chat invite.
+     *
+     * @param userChatId where the bot may message this person for the next few minutes, even if
+     *     they never pressed Start
+     */
     public record ChatJoinRequest(Chat chat, Sender from, long userChatId, ChatInviteLink inviteLink) {
     }
 
@@ -51,10 +69,17 @@ public record Update(long updateId, Message message, ChatMemberUpdated myChatMem
     public record CallbackQuery(String id, Sender from, String data) {
     }
 
-    /** @param username null when the person has none */
+    /**
+     * Telegram sender identity; a username is optional and distinct from the numeric user ID.
+     *
+     * @param username null when the person has none
+     */
     public record Sender(long id, boolean isBot, String firstName, String username) {
     }
 
+    /**
+     * Telegram chat identifier and type, with a helper for private-chat checks.
+     */
     public record Chat(long id, String type) {
 
         public boolean isPrivate() {

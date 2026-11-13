@@ -6,6 +6,9 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Persistence access for administrator account entities in the joined user hierarchy.
+ */
 @Repository
 public interface SystemAdministratorRepository extends JpaRepository<SystemAdministrator, UUID> {
     Optional<SystemAdministrator> findByEmail(String email);

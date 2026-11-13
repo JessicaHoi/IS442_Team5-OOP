@@ -5,11 +5,12 @@ import { nextId } from '../db';
 import { revokeUserSessions } from '../sessions';
 import { toAccountView, toStudentRef } from '../serializers';
 import { ledGroupView, transferGroupLeadership } from '../groupLeadership';
-import { MATCHING_CRITERIA, MATCHING_STRATEGIES, ROLES, USER_STATUSES } from '../../../utils/constants';
+import { ROLES, USER_STATUSES } from '../../../utils/constants';
+import { validateMatchingConfig } from '../matchingConfig';
+import { passwordError } from '../../../utils/validation';
 
 const ADMIN_ONLY = { role: 'ADMIN' };
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 6;
 
 const emptyStudentProfile = () => ({
 	school: '',
@@ -37,8 +38,8 @@ function validateAccount(db, { name, email, role, status }, existingId) {
 }
 
 function validatePassword(password) {
-	if (typeof password !== 'string' || !password.trim() || password.length < MIN_PASSWORD_LENGTH) throw badRequest('Password must be at least 6 characters and must not be blank.');
-	if (new TextEncoder().encode(password).length > 72) throw badRequest('Password is too long. Use fewer characters.');
+	const error = passwordError(password);
+	if (error) throw badRequest(error);
 }
 
 route('GET', '/admin/users/:id/groups', ({ db, params }) => {
@@ -146,19 +147,7 @@ route(
 	'PUT',
 	'/admin/matching-config',
 	({ db, body }) => {
-		if (!MATCHING_STRATEGIES.some((s) => s.value === body.strategy)) throw badRequest('Choose a matching strategy.');
-		const criteria = MATCHING_CRITERIA.map(({ key }) => body.criteria?.find((c) => c.key === key));
-		if (criteria.some((c) => !c)) throw badRequest('Every matching criterion must be configured.');
-		if (criteria.some((c) => !Number.isInteger(c.weight) || c.weight < 0 || c.weight > 100)) {
-			throw badRequest('Weights must be whole numbers from 0 to 100.');
-		}
-		if (!criteria.some((c) => c.enabled && c.weight > 0)) {
-			throw badRequest('Enable at least one criterion with a weight above 0.');
-		}
-		db.matchingConfig = {
-			strategy: body.strategy,
-			criteria: criteria.map(({ key, enabled, weight }) => ({ key, enabled: Boolean(enabled), weight })),
-		};
+		db.matchingConfig = validateMatchingConfig(body);
 		return db.matchingConfig;
 	},
 	ADMIN_ONLY,

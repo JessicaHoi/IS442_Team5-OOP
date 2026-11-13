@@ -18,8 +18,7 @@ import LoadingState from '../../components/ui/LoadingState.vue';
 import ErrorState from '../../components/ui/ErrorState.vue';
 
 import { INVALID_HANDLE_MESSAGE, normalizeTelegramHandle } from '../../utils/telegram';
-
-const PHONE_PATTERN = /^\+?[\d\s-]{8,15}$/;
+import { courseInputError, PHONE_PATTERN } from '../../utils/validation';
 
 const lookups = useLookupsStore();
 const auth = useAuthStore();
@@ -91,14 +90,8 @@ async function createCourse() {
 	courseCreationError.value = '';
 	const courseCode = newCourseCode.value.trim().toUpperCase();
 	const courseName = newCourseName.value.trim();
-	if (!/^[A-Z0-9]{1,20}$/.test(courseCode)) {
-		courseCreationError.value = 'Enter a course code using up to 20 letters or numbers.';
-		return;
-	}
-	if (!courseName || courseName.length > 255) {
-		courseCreationError.value = 'Enter a course name of at most 255 characters.';
-		return;
-	}
+	courseCreationError.value = courseInputError(courseCode, courseName) ?? '';
+	if (courseCreationError.value) return;
 	if (lookups.courses.some((course) => course.code === courseCode)) {
 		courseCreationError.value = 'That course code is already listed. Select it above.';
 		return;
@@ -135,7 +128,6 @@ function validate() {
 	if (!PHONE_PATTERN.test(profile.contactNumber.trim())) found.contactNumber = 'Enter a valid phone number, e.g. +65 9123 4567.';
 	if (normalizeTelegramHandle(profile.telegramHandle) === null) found.telegramHandle = INVALID_HANDLE_MESSAGE;
 	if (profile.courses.length === 0) found.courses = 'Select at least one course.';
-	if (prefs.value.length === 0) found.preferences = 'Add a preference for at least one course you need a study buddy for.';
 
 	const foundPerCourse = {};
 	for (const preference of prefs.value) {
@@ -267,7 +259,7 @@ async function save() {
 
 			<section class="card-flat p-4 mb-4">
 				<h2 class="h6 mb-1">Study preferences</h2>
-				<p class="text-muted small mb-3">Add one preference for each course you need a study buddy for. Matches for a course use that course's preference.</p>
+				<p class="text-muted small mb-3">Study preferences are optional. Add one for each course you need a study buddy for. Matches for a course use that course's preference.</p>
 
 				<div class="d-flex flex-column gap-3 mb-3">
 					<PreferenceEditor
@@ -299,7 +291,6 @@ async function save() {
 						</button>
 					</div>
 				</div>
-				<div v-if="errors.preferences" class="invalid-feedback d-block">{{ errors.preferences }}</div>
 			</section>
 
 			<div class="save-bar d-flex justify-content-end align-items-center gap-3 py-3">

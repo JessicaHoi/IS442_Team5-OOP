@@ -5,6 +5,9 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Persistence access for the application's shared matching configuration.
+ */
 @Repository
 public interface MatchingConfigurationRepository extends JpaRepository<MatchingConfiguration, UUID> {
 }

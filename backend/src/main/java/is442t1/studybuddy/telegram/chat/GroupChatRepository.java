@@ -12,6 +12,9 @@ import org.springframework.stereotype.Repository;
 
 import is442t1.studybuddy.studysession.StudySession;
 
+/**
+ * Persistence access for managed group chats and queries for sessions needing cards or reminders.
+ */
 @Repository
 public interface GroupChatRepository extends JpaRepository<GroupChat, UUID> {
 

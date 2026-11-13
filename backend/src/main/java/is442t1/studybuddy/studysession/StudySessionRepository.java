@@ -10,6 +10,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Session persistence and time-based queries for group lists, a student's upcoming sessions and
+ *     Telegram video-chat coordination.
+ */
 @Repository
 public interface StudySessionRepository extends JpaRepository<StudySession, UUID> {
 

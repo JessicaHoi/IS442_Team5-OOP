@@ -2,10 +2,19 @@ const TOKEN_PREFIX = 'mock-token-';
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 export function issueSession(db, user) {
+	purgeExpiredSessions(db);
 	const token = `${TOKEN_PREFIX}${crypto.randomUUID()}`;
 	db.sessions ??= {};
 	db.sessions[token] = { userId: user.id, version: user.sessionVersion ?? 0, expiresAt: Date.now() + SESSION_TTL_MS };
 	return token;
+}
+
+/** Also used before persistence so abandoned tokens do not accumulate in browser storage. */
+export function purgeExpiredSessions(db) {
+	const now = Date.now();
+	for (const [token, session] of Object.entries(db.sessions ?? {})) {
+		if (session.expiresAt <= now) delete db.sessions[token];
+	}
 }
 
 export function resolveSession(db, token) {

@@ -42,8 +42,17 @@ describe('mock strategy preview', () => {
 		expect(saved.strategy).toBe('BALANCED');
 	});
 
-	it('rejects strategies that are not built yet and non-admin callers', async () => {
+	it('previews Course-First without saving it', async () => {
 		const proposed = { ...structuredClone(DEFAULT_MATCHING_CONFIG), strategy: 'COURSE_FIRST' };
+		const response = await call('post', '/admin/matching-config/preview', { token: adminToken, data: { studentId: 2, course: 'IS442', proposed } });
+		expect(response.status).toBe(200);
+		expect(response.data.proposed.strategy).toBe('COURSE_FIRST');
+		expect(response.data.proposed.results.length).toBeGreaterThan(0);
+		expect((await call('get', '/admin/matching-config', { token: adminToken })).data.strategy).toBe('BALANCED');
+	});
+
+	it('rejects unsupported strategies and non-admin callers', async () => {
+		const proposed = { ...structuredClone(DEFAULT_MATCHING_CONFIG), strategy: 'UNKNOWN' };
 		const { status } = await call('post', '/admin/matching-config/preview', { token: adminToken, data: { studentId: 2, proposed } });
 		expect(status).toBe(400);
 		const studentToken = await login('aisha.rahman@smu.edu.sg');

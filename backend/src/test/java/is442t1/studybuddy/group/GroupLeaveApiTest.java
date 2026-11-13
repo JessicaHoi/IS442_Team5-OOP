@@ -59,7 +59,7 @@ class GroupLeaveApiTest extends ApiTestSupport {
     void theLeaderAndNonMembersCannotLeave() throws Exception {
         mockMvc.perform(as(leaderToken, post(path("/leave"))))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("The group leader cannot leave. Transfer leadership or close the group first."));
+                .andExpect(jsonPath("$.message").value("The group leader must transfer leadership before leaving."));
         mockMvc.perform(as(strangerToken, post(path("/leave"))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("You are not a member of this group."));

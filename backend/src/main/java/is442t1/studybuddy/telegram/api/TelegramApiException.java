@@ -3,8 +3,9 @@ package is442t1.studybuddy.telegram.api;
 /**
  * A failed Bot API call. Deliberately has no cause: HTTP client exceptions quote the request URL, which contains
  * the bot token, and a cause would carry that into the logs.
+ * When no usable reply arrives, {@link #NO_REPLY} is used as the error code.
  *
- * @see #code() Telegram's error code, or {@link #NO_REPLY} if no usable reply arrived
+ * @see #code()
  */
 public class TelegramApiException extends RuntimeException {
 

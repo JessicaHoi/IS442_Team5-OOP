@@ -5,6 +5,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/**
+ * Shared BCrypt password encoder configuration for account creation, password changes and
+ *     credential checks.
+ */
 @Configuration
 public class PasswordConfig {
 

@@ -14,7 +14,7 @@ There are three ways to run the app:
 | [B. Supabase](#option-b-supabase-database) | The team's shared Supabase database | Yes | Testing against real, shared data |
 | [C. Local database](#option-c-local-database-h2) | An H2 file on your machine | Yes | Backend work without touching shared data |
 
-All three load the same demo accounts (see [Demo accounts](#demo-accounts)). The backend supports sign-in, profiles and preferences, study-buddy matching and connection management, and study groups. In B and C, pages that call other missing endpoints show an error until those are built.
+All three load the same demo accounts (see [Demo accounts](#demo-accounts)). The backend supports registration and sign-in, profiles and preferences, study-buddy matching and connections, study groups, scheduling and study sessions, account administration, and optional Telegram integration.
 
 New students can create an account and complete their profile with their school, programme, year, contact number and courses; they are signed in immediately. Administrators continue to create administrator accounts.
 
@@ -105,7 +105,7 @@ The password for every account is `password`. The login page has one-click butto
 | Student (also a group leader) | `aisha.rahman@smu.edu.sg` |
 | System administrator | `admin@smu.edu.sg` |
 
-Any other seeded student can sign in with `<first>.<last>@smu.edu.sg`, e.g. `wei.jie.tan@smu.edu.sg`. The backend and the mock use the same demo data.
+Other active seeded students can sign in with `<first>.<last>@smu.edu.sg`, e.g. `wei.jie.tan@smu.edu.sg`. The backend and mock share catalogue and profile data, with a preserved [difference in three demo account statuses](backend/supabase/README.md#demo-account-statuses).
 
 To reset the demo data:
 
@@ -122,6 +122,19 @@ cd backend && ./mvnw test      # backend tests
 cd frontend && npm test        # frontend unit tests (Vitest)
 cd frontend && npm run build   # production bundle into backend/src/main/resources/static
 ```
+
+### Backend API documentation
+
+The backend uses Maven's Javadoc plugin to generate HTML API documentation from Java source comments. From the repository root, run:
+
+```bash
+cd backend
+./mvnw javadoc:javadoc
+```
+
+In Windows PowerShell, use `.\mvnw.cmd javadoc:javadoc` from the `backend` folder. Open `backend/target/reports/apidocs/index.html` to browse the generated documentation. Run the goal again after changing Java source comments.
+
+The reference includes public, protected and package-private types so it covers internal architecture as well as controllers. Private members are omitted. Packages are organised by feature; domain entities intentionally live alongside their services rather than all being placed in `model`. Package summaries explain each area's responsibility, and the overview describes authentication, errors, privacy and payload conventions. Edit Java comments, `package-info.java`, or `backend/src/main/javadoc/overview.html`; the generated files under `target` are build output.
 
 ## Configuration
 
@@ -164,7 +177,7 @@ The app works fully with Telegram off, which is the default. Turning it on lets 
 
 ## Monolith packaging
 
-`npm run build` writes the bundle straight into Spring Boot's static resources, so the single jar serves both the API and the UI. The router uses hash URLs (`/#/matches`), so Spring only has to serve `index.html`. No server-side route fallback is needed. `pom.xml` is unchanged. Run the frontend build before `mvn package`.
+`npm run build` writes the bundle straight into Spring Boot's static resources, so the single jar serves both the API and the UI. The router uses hash URLs (`/#/matches`), so Spring only has to serve `index.html`. No server-side route fallback is needed. Run the frontend build before packaging with the Maven wrapper (`./mvnw package` from `backend/`).
 
 ## Backend database
 
@@ -179,7 +192,7 @@ cd backend
 
 In Windows PowerShell, quote the flag: `.\mvnw spring-boot:run "-Dspring-boot.run.profiles=supabase"`. In an IDE, set the active profile to `supabase` in the run configuration. If startup fails with `'url' must start with "jdbc"`, either the app didn't find `backend/.env` (check that the file exists and that the app runs from the `backend` folder), or `SUPABASE_DB_URL` was pasted in the dashboard's `postgresql://user:password@host` form. It must be `jdbc:postgresql://<host>:5432/postgres?sslmode=require`, with the username and password on their own lines.
 
-- **Demo data.** To load the same demo accounts, courses and groups as the mock into Supabase, follow [backend/supabase/README.md](backend/supabase/README.md). It's a SQL script that wipes and reloads the Study Buddy tables.
+- **Demo data.** To load the shared demo profiles, courses and groups into Supabase, follow [backend/supabase/README.md](backend/supabase/README.md), including its account-status notes. It's a SQL script that wipes and reloads the Study Buddy tables.
 - **Schema.** The profile only validates the tables (`ddl-auto: validate`), so nobody changes the shared schema by accident. To create the tables the first time, run once with `SUPABASE_DDL_AUTO=update` and then remove it. For later entity changes, see [Changing an entity](#changing-an-entity).
 - **Use the session pooler (port 5432).** The direct connection is IPv6-only, which many networks can't reach. The transaction pooler (port 6543) needs extra JDBC driver settings.
 - **Connections.** Each running backend holds up to 3 connections, and the free tier's pooler limit is shared by the whole team. Stop the app when you aren't using it.
@@ -228,10 +241,10 @@ Spring Boot, layered by feature (`student/`, `group/`, `course/`, `auth/`, ...).
 
 - **Rich domain model.** Business rules live on the entities. For example, `StudyGroup` refuses a join request when the group is closed or full, and refuses a maximum size below the member count. `Student` keeps one `StudyPreference` per course and drops a preference when its course is removed.
 - **Study group leader.** `StudyGroupLeader extends Student`, as in the class diagram. It holds the leader operations (`createGroup`, `updateGroup`, `closeGroup`, `viewJoinRequests`, `acceptMember`, `rejectMember`, `removeMember`), and each one first checks that this leader leads the group. A student is promoted when they create their first group. JPA can't change an entity's class, so the promotion inserts the student's row into `study_group_leader` (JOINED inheritance), and from then on Hibernate loads that student as a `StudyGroupLeader`.
-- **Auth.** `POST /api/auth/login` checks the BCrypt hash and returns an opaque bearer token, kept in memory (a restart signs everyone out). `AuthInterceptor` checks the token on every `/api/**` call. `@RequireRole(Role.STUDENT)` on a controller restricts it to one role, and `@CurrentUser AuthenticatedUser` injects the caller. Hash passwords with the `PasswordEncoder` bean whenever an account is created.
+- **Auth.** Login and student registration return opaque bearer tokens, kept in memory (a restart signs everyone out). `AuthInterceptor` checks the token on `/api/**` calls except `POST /api/auth/login`, `POST /api/auth/register`, and `GET /api/public/courses`. `@RequireRole(Role.STUDENT)` on a controller restricts it to one role, and `@CurrentUser AuthenticatedUser` injects the caller. Hash passwords with the `PasswordEncoder` bean whenever an account is created.
 - **Errors.** Services throw `ValidationException` (400), `AuthenticationException` (401), `PermissionDeniedException` (403), `ResourceNotFoundException` (404) or `BusinessRuleException` (409). `GlobalExceptionHandler` turns them into `{ "message": ... }`.
 - **Configuration.** The `studybuddy.*` keys in `application.yaml` hold the token lifetime, the allowed group size range and the demo-data settings.
-- **Demo data.** On an empty local database, `DemoDataSeeder` loads `seed/demo-data.json`: the same 10 courses, 50 students (17 with two course preferences), groups and connections as the front-end mock. Every password is `password`. It never runs against Supabase unless `SUPABASE_SEED=true`. For Supabase, use the SQL script in `backend/supabase/` instead. To reseed locally, stop the app and delete `backend/data/`.
+- **Demo data.** On an empty local database, `DemoDataSeeder` loads `seed/demo-data.json`: the shared 10 courses, 50 student profiles (17 with two course preferences), groups and connections. Three mock accounts have different statuses, as documented in [Demo account statuses](backend/supabase/README.md#demo-account-statuses). Every password is `password`. It never runs against Supabase unless `SUPABASE_SEED=true`. For Supabase, use the SQL script in `backend/supabase/` instead. To reseed locally, stop the app and delete `backend/data/`.
 
 ## Architecture
 
@@ -269,20 +282,20 @@ Design principles applied:
 ## Assumptions
 
 - Accounts have two roles, `STUDENT` and `ADMIN`. A student becomes a **study group leader** (a `StudyGroupLeader`, still with the `STUDENT` role) when they create their first group. Leader tools appear on the groups that student leads.
-- Admins create accounts, so there is no self-registration page. A new student completes their profile on first login.
+- Students can self-register with a complete profile and are signed in immediately. Administrators can also create accounts; administrator accounts are created through account administration.
 - Students can browse study groups and request to join. The brief implies this, because leaders view and answer join requests.
 - The brief lists "preferred study mode" twice. The UI calls them **Meeting mode** (in-person / online / either) and **Group format** (one-to-one / small group / either).
-- A student keeps **one study preference per course** they need a buddy for (the class diagram's `ArrayList<StudyPreference>`). Matching for a course uses that course's preference. Removing a course from the profile removes its preference.
+- A student keeps **one study preference per course** they need a buddy for (the class diagram's `ArrayList<StudyPreference>`). A complete profile can have no study preferences, and basic profile details can still be saved. Matching for a course uses that course's preference. Removing a course from the profile removes its preference.
 - Searching by course or goal and the course filter share one control: the **Course** search field acts as the course filter.
 - The backend issues its own login token. Supabase is only the database.
-- The backend and the mock load the same demo data: 10 courses and 50 students.
+- The backend and mock share 10 demo courses and 50 student profiles; [three account statuses differ](backend/supabase/README.md#demo-account-statuses).
 
 ## API contract
 
-The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/` implements every one of them, and can be used as an executable reference.
+The API endpoints below are all under `/api`. The mock in `frontend/src/api/mock/` supports the UI workflows for authentication, courses, student profiles, matching, connections, groups, group availability, study sessions and administration. Telegram routes simulate the disabled integration; they do not contact a bot. The backend-only `GET /connections/{id}/best-times` endpoint is not registered in the mock. See `frontend/src/api/mock/routes.js` and its imported handlers for the supported mock routes.
 
-- **Auth.** Send `Authorization: Bearer <token>` on every request except login. A `401` sends the user back to the login page.
-- **Errors.** Use the HTTP status plus a JSON body `{ "message": "Human readable text" }`. The message is shown to the user.
+- **Auth.** Send `Authorization: Bearer <token>` except on `POST /auth/login`, `POST /auth/register`, and `GET /public/courses`. Tokens expire after 12 hours by default and server restarts invalidate them. A `401` sends the user back to the login page.
+- **Errors.** Application errors mapped by `GlobalExceptionHandler` use the HTTP status plus a JSON body `{ "message": "Human readable text" }`. The message is shown to the user. Some framework errors, such as unsupported HTTP methods, retain Spring's default response format.
 - **Privacy.** `contactNumber` and `telegramHandle` must be `null` unless the viewer owns the profile or has an `ACCEPTED` connection with that student. A group's `chatLink` is only sent to its members. The server enforces this. The UI only displays what it receives.
 
 ### Endpoints
@@ -290,9 +303,12 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | Area | Method and path | Notes |
 |---|---|---|
 | Auth | `POST /auth/login` | Body `{email, password}` returns `{token, user:{id,name,email,role}}`. `403` for suspended accounts. |
+| | `POST /auth/register` | Public. Body `{name,email,password,school,programme,yearOfStudy,contactNumber,telegramHandle?,courses:[code],newCourses?:[{courseCode,courseName}]}`. Creates an active student and returns the same session shape as login with `201`. Password must have at least 6 characters and at most 72 UTF-8 bytes. `400` for invalid input; `409` for an existing email or new course code. New courses can be selected in `courses` in the same request. |
 | | `GET /auth/me` | Returns `{id,name,email,role}`. |
 | | `POST /auth/logout` | Revokes the token. `204`. |
 | Courses | `GET /courses` | Returns `[{code, name, school}]`. |
+| | `GET /public/courses` | Public version of the same catalogue, used before signup. |
+| | `POST /courses` | Students only. Body `{courseCode,courseName}`; returns `{code,name,school}` with `201`. Code is trimmed, uppercased, alphanumeric and at most 20 characters; name is required and at most 255 characters. `409` if the code exists. |
 | Integrations | `GET /integrations` | Any signed-in user. Returns `{telegram:{enabled, botUsername}}`; `botUsername` is `null` when Telegram is off. |
 | Student | `GET /students/me` | Own profile, see shape below. |
 | | `PUT /students/me/profile` | Body `{name, school, programme, yearOfStudy, contactNumber, telegramHandle?, courses:[code]}`. `telegramHandle` is optional and may be a username, `@username` or a `t.me` link; it is stored as the bare username, and blank clears it. Removes preferences for courses no longer taken. |
@@ -306,6 +322,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `GET /connections?view=incoming\|sent\|active` | Lists pending requests or active connections. |
 | | `POST /connections/{id}/accept` and `/decline` | Recipient only. Accepting creates an active connection and reveals contact details to both students. |
 | | `DELETE /connections/{id}` | Either student can end an active connection. `204`; contact details are hidden again. |
+| | `GET /connections/{id}/best-times` | Either participant. Uses the active connection ID, not a request ID. Returns up to three distinct shared slots of at least 30 minutes across courses where both have preferences, longest first. `404` if missing or the caller is not a participant. |
 | Groups | `GET /groups?course=` | Open groups only. |
 | | `GET /groups/mine` | Groups the caller leads or belongs to, any status. |
 | | `POST /groups` | Caller becomes leader and first member. `201`. |
@@ -313,26 +330,25 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | | `PUT /groups/{id}` | Leader only. Course cannot change. Max size cannot go below the member count. |
 | | `POST /groups/{id}/close` | Leader only. Rejects pending requests. |
 | | `POST /groups/{id}/join-requests` | Body `{message}`. `409` if closed, full, already a member or already pending. |
-| | `GET /groups/{id}/join-requests` | Leader only. Pending requests. |
+| | `GET /groups/{id}/join-requests` | Members only. Pending requests, oldest first. Only the leader can accept or reject. |
 | | `POST /groups/{id}/join-requests/{rid}/accept` and `/reject` | Leader only. Accept returns `409` when the group is full. |
 | | `DELETE /groups/{id}/members/{studentId}` | Leader only. The leader cannot be removed. `204`. |
 | | `POST /groups/{id}/leave` | The caller leaves. `204`. `409` for the leader, a non-member or a closed group. |
 | | `PUT /groups/{id}/chat-link` | Leader only. Body `{url}`, which must start with `https://t.me/`. Returns the group. |
 | | `DELETE /groups/{id}/chat-link` | Leader only. `204`. |
-| | `GET /groups/{id}/sessions?scope=upcoming\|past` | Members only. `upcoming` is the default: sessions not yet finished, including cancelled ones, soonest first. `past` is newest first. |
+| Study sessions | `GET /groups/{id}/sessions?scope=upcoming\|past` | Members only. `upcoming` is the default: sessions not yet finished, including cancelled ones, soonest first. `past` is newest first. |
 | | `POST /groups/{id}/sessions` | Leader only. `201`. Body `{title, startsAt, endsAt, meetingMode, location?, note?, meetingLink?, groupVideoChat?}`. `meetingLink` (an `http` or `https` address) and `groupVideoChat` are for `ONLINE` sessions only, and a session can't have both. StudyBuddy doesn't create calls: the leader pastes the link. `meetingMode` is `IN_PERSON` or `ONLINE`; the start must be in the future and the length at most 8 hours. `409` if the group is closed. |
 | | `PUT /groups/{id}/sessions/{sid}` | Leader only. Same body. Moving the start clears everyone's answers, because they were for the old time. Saving with no changes does nothing. `409` once the session has started or been cancelled. |
 | | `POST /groups/{id}/sessions/{sid}/cancel` | Leader only. Returns the session. Works until an hour after the session ends, so a leader can show that it didn't happen. `409` after that, or if it's already cancelled. |
 | | `PUT /groups/{id}/sessions/{sid}/rsvp` | Members only. Body `{response}`, `GOING` or `NOT_GOING`. `409` once the session has started or been cancelled. |
 | | `GET /groups/{id}/sessions/{sid}/calendar.ics` | Members only. An iCalendar file (`text/calendar`). Errors are still JSON. |
 | | `GET /sessions/upcoming` | The caller's scheduled sessions in all their groups, soonest first. |
-| | `GET /groups/{id}/leadership` | Leader only. Returns `{id, name, status, eligibleMembers:[{id, name}]}`. |
+| Group leadership | `GET /groups/{id}/leadership` | Leader only. Returns `{id, name, status, eligibleMembers:[{id, name}]}`. |
 | | `PUT /groups/{id}/leader` | Leader only. Body `{studentId}`, another active member. Returns the same shape as `/leadership`. |
-| | `GET /groups/{id}/best-times` | Members only. Returns suggested windows and the 30-minute heatmap, see shape below. |
-| | `GET /connections/{id}/best-times` | Either student. Returns up to three shared slots. |
-| | `GET /groups/{id}/availability/me` | Members only. Returns `{source, revision, availability:[slot]}`. `source` is `GROUP` (saved for this group) or `PROFILE` (from the study preference). |
-| | `PUT /groups/{id}/availability/me` | Members only. Body `{revision, availability:[slot]}`. `409` if the group is closed or `revision` is out of date. |
-| | `DELETE /groups/{id}/availability/me?revision=` | Members only. Goes back to the profile availability. |
+| Group scheduling | `GET /groups/{id}/best-times` | Members only. Returns suggested windows and the 30-minute heatmap, see shape below. |
+| Group availability | `GET /groups/{id}/availability/me` | Members only. Returns `{source, revision, availability:[slot]}`. `source` is `GROUP` (saved for this group) or `PROFILE` (from the course's study preference). `revision` is null when there is no override. |
+| | `PUT /groups/{id}/availability/me` | Members only. Body `{revision, availability:[slot]}`. Use null revision for the first override; subsequent saves must send the latest returned UUID. An empty list means unavailable, not profile fallback. Returns the new state and revision with `200`. `409` if the group is closed or the revision is stale. |
+| | `DELETE /groups/{id}/availability/me?revision=` | Members only. Requires the current override's UUID revision. Removes the override and returns the profile-based state with `200`. `409` if closed or stale. |
 | Admin | `GET /admin/users` | Returns accounts with usage fields. |
 | | `POST /admin/users` | Body `{name,email,password,role,status}`. `409` for a duplicate email. |
 | | `PUT /admin/users/{id}` | Same body. `password` optional. |
@@ -363,6 +379,11 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 | Session status | `SCHEDULED`, `CANCELLED` |
 | RSVP response | `GOING`, `NOT_GOING` |
 | Connection status (in a match) | `NONE`, `PENDING_SENT`, `PENDING_RECEIVED`, `CONNECTED` |
+| Connection response status | `PENDING`, `ACCEPTED`, `DECLINED` |
+| Persisted connection status | `ACTIVE`, `ENDED` |
+| Persisted request status | `PENDING`, `ACCEPTED`, `REJECTED` |
+
+Connection request IDs and active connection IDs identify different records. Creating, accepting or declining a request returns its request ID. Obtain the active connection ID from `GET /connections?view=active` for ending a connection or requesting best times. `BuddyStatus` describes the viewer's relationship on profiles and matches; it is separate from the request and connection lifecycle enums. The API maps a rejected request to `DECLINED` and an active connection to `ACCEPTED`.
 
 ### Shapes
 
@@ -400,6 +421,12 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 // Connection (GET /connections)
 { "id": 7, "status": "PENDING", "direction": "INCOMING", "message": "…",
   "createdAt": "ISO-8601", "respondedAt": null, "other": { /* public profile */ } }
+
+// Group availability: first save (PUT /groups/{id}/availability/me)
+{ "revision": null, "availability": [{ "day": "WED", "start": "19:00", "end": "21:00" }] }
+// Response: use this revision for the next save or DELETE's revision query parameter.
+{ "source": "GROUP", "revision": "opaque-uuid", "availability": [{ "day": "WED", "start": "19:00", "end": "21:00" }] }
+// Saving [] keeps a GROUP override with no available times. DELETE restores PROFILE with revision null.
 
 // Group summary (GET /groups, /groups/mine); GET /groups/{id} adds "members"
 {
@@ -466,7 +493,7 @@ The UI depends on these endpoints, all under `/api`. The mock in `src/api/mock/`
 
 ## Mock matching rules
 
-The mock engine (`src/api/mock/matching.js`) is a stand-in for the real engine and follows Appendix A of the brief.
+The mock engine (`frontend/src/api/mock/matching.js`) is a stand-in for the real engine and follows Appendix A of the brief.
 
 - Scores use each student's preference for the searched course, or their first preference when no course is selected.
 - Each criterion scores 0 to 1: course match, hours of weekly overlap (3 hours or more scores 1), meeting-mode and group-format compatibility (identical 1, either side flexible 0.75, conflicting 0), and shared goals (overlap over union).
