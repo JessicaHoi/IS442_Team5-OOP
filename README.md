@@ -123,6 +123,17 @@ cd frontend && npm test        # frontend unit tests (Vitest)
 cd frontend && npm run build   # production bundle into backend/src/main/resources/static
 ```
 
+### Backend API documentation
+
+The backend uses Maven's Javadoc plugin to generate HTML API documentation from Java source comments. From the repository root, run:
+
+```bash
+cd backend
+./mvnw javadoc:javadoc
+```
+
+In Windows PowerShell, use `.\mvnw.cmd javadoc:javadoc` from the `backend` folder. Open `backend/target/reports/apidocs/index.html` to browse the generated documentation. Run the goal again after changing Java source comments.
+
 ## Configuration
 
 Nothing environment-specific is hard-coded. Settings live in `.env.development`, `.env.production` and `.env.example`.
